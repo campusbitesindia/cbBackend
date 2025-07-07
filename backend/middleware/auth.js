@@ -27,3 +27,64 @@ exports.isAuthenticated = async (req, res, next) => {
        });
     }
  };
+
+
+ exports.isStudent=async(req,res,next)=>{
+   try{
+      const role=req.user.role;
+      if(role!=="student"){
+         return res.status(401).json({
+            success:false,
+            message:"this is protect Route for Student"
+         })
+      }
+      next();
+   }
+   catch(err){
+      return res.status(500).json({
+         success:false,
+         message:"internal Server Error",
+         error:err.message
+      })
+   }
+ }
+
+ exports.isVendor=async(req,res,next)=>{
+   try{
+      const role=req.user.role;
+      if(role!=="canteen"){
+         return res.status(401).json({
+            success:false,
+            message:"this is protect Route for Vendors"
+         })
+      }
+      next();
+   }
+   catch(err){
+      return res.status(500).json({
+         success:false,
+         message:"internal Server Error",
+         error:err.message
+      })
+   }
+ }
+
+ exports.isAdmin=async(req,res,next)=>{
+   try{
+      const role=req.user.role;
+      if(role!=="Admin"){
+         return res.status(401).json({
+            success:false,
+            message:"this is protected Route for Admin"
+         })
+      }
+      next();
+   }
+   catch(err){
+      return res.status(500).json({
+         success:false,
+         message:"Inernal server error",
+         error:err.message
+      })
+   }
+ }
