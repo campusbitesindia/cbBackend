@@ -12,7 +12,7 @@ router.get('/orders/by-campus-canteen', getOrdersByCampusCanteen);
 router.get('/orders/status-wise', getOrderStatusBreakdown);
 router.get('/orders/top-tcanteens', getTopCanteensByOrderVolume);
 router.get('/orders/average-order-value', getAverageOrderValue);
-router.get('/orders/peak-hours', getPeakOrderTimes);
+router.get('/orders/peak-hours', getPeakOrderTimes);  
 router.get('/revenue/total', getTotalRevenue);
 router.get('/revenue/by-campus-canteen', getRevenueByCampusAndCanteen);
 router.get('/revenue/top-canteens', getTopCanteensByRevenue);

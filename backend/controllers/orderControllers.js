@@ -335,3 +335,85 @@ exports.GetallDeletedOrders=async(req,res)=>{
         })
     }
 }
+
+
+exports.getStudentOrderBystatus=async(req,res)=>{
+    try{
+        const {id:studentid}=req.params;
+        const {status}=req.body;
+        if(!studentid){
+            return res.status(400).json({
+                success:false,
+                message:'id not found'
+            })
+
+        }
+        const Student=await User.findById(studentid);
+        if(!Student){
+            return res.status(400).json({
+                success:false,
+                message:"Student not found"
+            })
+        }
+        const Orders=await Order.find({student:Student._id,status});
+        if(Orders.length===0){
+            return res.status(400).json({
+                success:false,
+                message:"No Order with this Status"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            message:"Orders fetched SuccessFully",
+            data:Orders
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
+
+
+exports.getCanteenOrderBystatus=async(req,res)=>{
+    try{
+        const {id:CanteenId}=req.params;
+        const {status}=req.body;
+        if(!CanteenId){
+            return res.status(400).json({
+                success:false,
+                message:'id not found'
+            })
+
+        }
+        const Canteen=await User.findById(CanteenId);
+        if(!Student){
+            return res.status(400).json({
+                success:false,
+                message:"canteen  not found"
+            })
+        }
+        const Orders=await Order.find({canteen:Canteen._id,status});
+        if(Orders.length===0){
+            return res.status(400).json({
+                success:false,
+                message:"No Order with this Status"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            message:"Orders fetched SuccessFully",
+            data:Orders
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
