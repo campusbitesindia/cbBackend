@@ -10,6 +10,7 @@ const UserSchema = new mongoose.Schema({
   canteenId: { type: mongoose.Schema.Types.ObjectId, ref: "Canteen" },
   profileImage: { type: String },
   isDeleted: { type: Boolean, default: false },
+  isBanned: { type: Boolean, default: false },
   resetPasswordToken:String,
   resetPasswordExpire: Date,
 }, { timestamps: true });
