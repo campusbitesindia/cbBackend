@@ -147,7 +147,7 @@ exports.loginUser = async (req, res, next) => {
                 message: "Enter complete data."
             });
         }
-
+        
         const user1 = await User.findOne({ email });
         if (!user1) {
             return res.status(400).json({
