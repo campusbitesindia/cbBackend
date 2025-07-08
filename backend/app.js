@@ -6,6 +6,8 @@ const userRoutes = require("./routes/userRoutes");
 const canteenRoutes = require("./routes/canteenRoutes");
 const campusRoutes = require("./routes/campusRoutes");
 const cookieParser = require("cookie-parser");
+const itemRoutes = require('./routes/itemRoutes');
+const reviewRoutes = require('./routes/reviewRoutes')
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use(cookieParser());
 app.use("/api/users", userRoutes);
 app.use("/api/canteens", canteenRoutes);
 app.use("/api/campuses", campusRoutes);
+app.use('/api/items', itemRoutes)
+app.use('/api/reviews', reviewRoutes)
 
 // Health check
 app.get("/", (req, res) => {
