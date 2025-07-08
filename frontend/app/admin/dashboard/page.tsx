@@ -19,6 +19,7 @@ import {
   Legend,
   BarElement, // <-- add this
   ArcElement, // <-- add this for Pie charts
+  ChartOptions,
 } from "chart.js"
 // @ts-ignore
 import ChartDataLabels from 'chartjs-plugin-datalabels';
@@ -253,24 +254,18 @@ export default function AdminDashboard() {
         backgroundColor: "#ef4444", // red
         borderColor: "#fff", // white border
         borderWidth: 2,
-        datalabels: {
-          color: '#fff',
-          anchor: 'end',
-          align: 'top',
-          formatter: (value: number) => value ? value.toFixed(1) + '%' : '',
-        },
       },
     ],
   }
 
-  const topCanteensChartOptions = {
+  const topCanteensChartOptions: ChartOptions<'bar'> = {
     responsive: true,
     plugins: {
       legend: { display: false },
       datalabels: {
         color: '#fff',
         anchor: 'end',
-        align: 'top',
+        align: 'center', // changed from 'end' to 'center' for compatibility
         font: { weight: 'bold', size: 14 },
         formatter: (value: number) => value ? value.toFixed(1) + '%' : '',
       },
@@ -370,15 +365,15 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-12">
             <div className="bg-white p-6 rounded-xl border border-[#ef4444]">
               <h3 className="text-lg text-black mb-2 font-semibold">New Users Per Month</h3>
-              {usersMonthly.length === 0 ? <div className="text-gray-400">No data</div> : <Line data={{...usersChartData, datasets: usersChartData.datasets.map(ds => ({...ds, borderColor: '#000', backgroundColor: 'rgba(0,0,0,0.05)'}))}} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />}
+              {usersMonthly.length === 0 ? <div className="text-gray-400">No data</div> : <Line data={{...usersChartData, datasets: usersChartData.datasets.map((ds: typeof usersChartData.datasets[0]) => ({...ds, borderColor: '#000', backgroundColor: 'rgba(0,0,0,0.05)'}))}} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />}
             </div>
             <div className="bg-white p-6 rounded-xl border border-[#ef4444]">
               <h3 className="text-lg text-black mb-2 font-semibold">Orders Per Month</h3>
-              {ordersMonthly.length === 0 ? <div className="text-gray-400">No data</div> : <Line data={{...ordersChartData, datasets: ordersChartData.datasets.map(ds => ({...ds, borderColor: '#000', backgroundColor: 'rgba(0,0,0,0.05)'}))}} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />}
+              {ordersMonthly.length === 0 ? <div className="text-gray-400">No data</div> : <Line data={{...ordersChartData, datasets: ordersChartData.datasets.map((ds: typeof ordersChartData.datasets[0]) => ({...ds, borderColor: '#000', backgroundColor: 'rgba(0,0,0,0.05)'}))}} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />}
             </div>
             <div className="bg-white p-6 rounded-xl border border-[#ef4444]">
               <h3 className="text-lg text-black mb-2 font-semibold">Revenue Per Month</h3>
-              {revenueMonthly.length === 0 ? <div className="text-gray-400">No data</div> : <Line data={{...revenueChartData, datasets: revenueChartData.datasets.map(ds => ({...ds, borderColor: '#000', backgroundColor: 'rgba(0,0,0,0.05)'}))}} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />}
+              {revenueMonthly.length === 0 ? <div className="text-gray-400">No data</div> : <Line data={{...revenueChartData, datasets: revenueChartData.datasets.map((ds: typeof revenueChartData.datasets[0]) => ({...ds, borderColor: '#000', backgroundColor: 'rgba(0,0,0,0.05)'}))}} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />}
             </div>
           </div>
 
@@ -420,7 +415,7 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-white p-6 rounded-xl border border-[#ef4444]">
               <h3 className="text-lg text-black mb-2 font-semibold">Top Canteens by Order Volume</h3>
-              {topCanteens.length === 0 ? <div className="text-gray-400">No data</div> : <Bar data={{...topCanteensChartData, datasets: topCanteensChartData.datasets.map(ds => ({...ds, backgroundColor: '#ef4444', borderColor: '#fff'}))}} options={{...topCanteensChartOptions, scales: { x: { ticks: { color: '#000' } }, y: { ...topCanteensChartOptions.scales.y, ticks: { color: '#000', callback: function(tickValue: string | number) { return tickValue + '%'; } } } } }} plugins={[ChartDataLabels]} />}
+              {topCanteens.length === 0 ? <div className="text-gray-400">No data</div> : <Bar data={{...topCanteensChartData, datasets: topCanteensChartData.datasets.map((ds: typeof topCanteensChartData.datasets[0]) => ({...ds, backgroundColor: '#ef4444', borderColor: '#fff'}))}} options={{...topCanteensChartOptions, scales: { x: { ticks: { color: '#000' } }, y: { ...(topCanteensChartOptions.scales?.y || {}), ticks: { color: '#000', callback: function(tickValue: string | number) { return tickValue + '%'; } } } } }} plugins={[ChartDataLabels]} />}
             </div>
           </div>
         </div>
