@@ -2,8 +2,8 @@ const jwt = require("jsonwebtoken");
 const user = require("../models/User.js");
 exports.isAuthenticated = async (req, res, next) => {
     try {
-       const token = req.cookies.token;
-       console.log(token);
+      
+       const token =   req.cookies.token || req.header("Authorization").replace("Bearer ","") ;
        if(token=="j:null"){
             return res.status(401).json({
                 success:false,
@@ -38,6 +38,7 @@ exports.isAuthenticated = async (req, res, next) => {
             message:"this is protect Route for Student"
          })
       }
+     
       next();
    }
    catch(err){
