@@ -14,8 +14,8 @@ const OrderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   status: {
     type: String,
-    enum: ["placed", "preparing", "ready", "completed", "cancelled"],
-    default: "placed",
+    enum: ["pending","placed", "preparing", "ready", "completed", "cancelled"],
+    default: "pending",
   },
   isDeleted: { type: Boolean, default: false },
   pickupTime:{

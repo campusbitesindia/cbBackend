@@ -177,7 +177,7 @@ exports.getAllOrdersByStudent=async(req,res)=>{
 
         const Orders=await Order.find({student:student._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).sort({createdAt:-1});
 
-        const filteredOrder= Orders.filter((ele)=>ele.isDeleted!==false);
+        const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false && ele.status!=="pending");
         return res.status(200).json({
             success:true,
             message:"Orders Fetched SuccessFully",
@@ -215,7 +215,7 @@ exports.getAllOrdersByCanteen=async(req,res)=>{
 
         const Orders=await Order.find({canteen:canteen._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).sort({createdAt:-1});
         console.log(Orders)
-        const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false);
+        const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false && ele.status!=="pending");
         return res.status(200).json({
             success:true,
             message:"All Orders Fetched SuccessFully",
