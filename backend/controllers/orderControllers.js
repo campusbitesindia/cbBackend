@@ -1,0 +1,425 @@
+const Order =require("../models/Order");
+const User =require("../models/User");
+const Item=require("../models/Item")
+const Canteen =require("../models/Canteen");
+const Campus = require("../models/Campus");
+exports.CreateOrder=async(req,res)=>{
+    try{
+        const UserId=req.user._id;
+        const campusId=req.user.campus;
+        
+       
+        const {items:_items,pickUpTime}=req.body; 
+        
+        //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
+        const Items=JSON.parse(_items); //converting _items to an Json array;
+
+
+        //If all field are not found;
+        if(!UserId || !campusId  || Items.length===0 ){
+            return res.status(400).json({
+                success:false,
+                message:"Please provide all the fields"
+            })
+        }
+        
+        //search for student with Given id
+        const student=await User.findById(UserId);
+        // if student not found return error
+        if(!student){
+            return res.status(400).json({
+                success:false,
+                message:"User not found"
+            })
+        }
+        // search canteen with given Id
+        console.log(campusId)
+         const canteen=await Canteen.findOne({campus:campusId})
+        //if canteen not found 
+        if(!canteen){
+            return res.status(400).json({
+                success:false,
+                message:"Canteen with this id Not found"
+            })
+        }
+
+        const OrderItem=[];
+        let Total=0;
+
+        for( const key of Items){
+            //find the item 
+            const item=await Item.findById(key.id);
+            //if item not found return status error
+            if(!item){
+                return res.status(400).json({
+                    success:false,
+                    message:"Item not found"
+                }
+                )
+            }
+            // if quantity is present in array we will take key.quantity other wise quantity will be 1
+            const quantity=key.quantity || 1;
+
+            //findt the total amount fo the order
+            Total+=item.price * quantity;
+            
+            // pushing data in OrderItem
+            OrderItem.push({
+                item:item._id,
+                quantity,
+                nameAtPurchase:item.name,
+                priceAtPurchase:item.price
+            })
+
+        }
+
+        //checking or valid pickup time and the difference will be in mircoseconds
+        const isValidPickUpTime=new Date(pickUpTime) -Date.now()>=10 *60*1000?true:false;
+
+        // if pickup time is less than 10 minutes return erro
+        if(!isValidPickUpTime){
+            return res.status(400).json({
+                success:false,
+                message:"PickUp time Can't Be less than 10 minutes"
+            })
+        }
+        
+        //create the order
+        const order=await Order.create({
+            student:student._id,
+            canteen:canteen._id,
+            items:OrderItem,
+            total:Total,
+            pickupTime:pickUpTime
+        });
+       
+
+        return res.status(200).json({
+            success:true,
+            message:"order Created SuccessFully",
+            data:order
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
+
+exports.UpdateOrderStatus=async(req,res)=>{
+    try{
+        const {id:OrderId}=req.params;
+        const {status}=req.body;
+
+        //check if both orderId and status is valid
+        if(!OrderId || !status){
+            return res.json(400).json({
+                success:false,
+                message:"Please Enter all Requried Field"
+            })
+        }
+         
+
+        const allowedStatuses = [ "preparing", "ready", "completed", "cancelled"];
+        //if the status is not from Schema Enum return errors
+        if(!allowedStatuses.includes(status)){
+            return res.status(400).json({
+                success:false,
+                message:"invalid order Status"
+            })
+        }
+        //find the order with give n ID
+        const order=await Order.findById(OrderId);
+        console.log(OrderId)
+        //if order not found 
+        if(!order){
+            return res.status(400).json({
+                success:false,
+                message:"Order with this id not found"
+            })
+        }
+        //update the Order and return the new object
+        const UpdatedOrder=await Order.findByIdAndUpdate(OrderId,{status:status},{new:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});;
+        console.log(UpdatedOrder);
+        return res.status(200).json({
+            success:true,
+            message:"Order Status Updated SuccessFully"
+        })
+
+        
+    }
+    catch(err){
+        console.log(err);
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
+
+//This is for Student Orders
+exports.getAllOrdersByStudent=async(req,res)=>{
+    try{
+        const studentId=req.user._id;
+        if(!studentId){
+            return res.status(400).json({
+                success:false,
+                message:"Student Id not found"
+            })
+        }
+        const student=await User.findById(studentId);
+        if(!student){
+            return res.status(400).json({
+                success:false,
+                message:"Student not found"
+            })
+        }
+
+        const Orders=await Order.find({student:student._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).sort({createdAt:-1});
+
+        const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false && ele.status!=="pending");
+        return res.status(200).json({
+            success:true,
+            message:"Orders Fetched SuccessFully",
+            data:filteredOrder
+        })
+
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal Server Error",
+            error:err.message
+        })
+    }
+}
+
+
+exports.getAllOrdersByCanteen=async(req,res)=>{
+    try{
+        //this is protected Route for Canteen only so we can fetch canteen id as it added by middleware
+        const canteenId=req.user.canteenId;    
+        if(!canteenId){
+            return res.status(400).json({
+                success:false,
+                message:"Canteen Id not found"
+            })
+        }
+
+        const canteen=await Canteen.findById(canteenId);
+        if(!canteen){
+            return res.status(400).json({
+                success:false,
+                message:"canteen Data not found"
+            })
+        }
+
+        const Orders=await Order.find({canteen:canteen._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).sort({createdAt:-1});
+        console.log(Orders)
+        const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false && ele.status!=="pending");
+        return res.status(200).json({
+            success:true,
+            message:"All Orders Fetched SuccessFully",
+            data:filteredOrder
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"Internal server Error",
+            error:err.message
+        })
+    }
+}
+
+
+exports.getOrderDetails=async(req,res)=>{
+    try{
+        const {id:orderId}=req.params;
+        if(!orderId){
+            return res.status(400).json({
+                success:false,
+                message:"orderId not found"
+            })
+        }
+        const order=await Order.findById(orderId).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});
+        if(!order){
+            return res.status(400).json({
+                success:false,
+                message:"order not found"
+            })
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"orderDetails fetched SuccessFully",
+            data:order
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
+
+exports.deleteOrder=async(req,res)=>{
+    try{
+        const {id:OrderId}=req.params;
+        if(!OrderId){
+            return res.status(400).json(
+                {
+                    success:false,
+                    message:"order ID not found"
+                }
+            )
+        }
+    
+        const order=await Order.findByIdAndUpdate(OrderId,{isDeleted:true},{new:true});
+        if(!order){
+            return res.status(400).json({
+                success:false,
+                message:"order not found with this id"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            message:"Order Deleted SuccessFully",
+            data:order
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server Error",
+            error:err.message
+        })
+    }
+}
+//this is for Student
+exports.GetallDeletedOrders=async(req,res)=>{
+    try{
+        const userId=req.user._id;
+        if(!userId){
+            return res.status(400).json({
+                success:false,
+                message:"User Id not found"
+            })
+        }
+        const user=await User.findById(userId);
+        if(!user){
+            return res.status(400).json({
+                success:false,
+                message:"User not found"
+            })
+        }
+
+        const Orders=await Order.find({student:user._id,isDeleted:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});
+        if(!Orders){
+            return res.status(400).json({
+                success:false,
+                message:"NO order Found"
+            })
+        }
+        return res.status(200).json({
+            success:false,
+            message:"Deleted Orders Fetched SuccessFully",
+            data:Orders
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error"
+        })
+    }
+}
+
+
+
+exports.getStudentOrderBystatus=async(req,res)=>{
+    try{
+        const {id:studentid}=req.params;
+        const {status}=req.body;
+        if(!studentid){
+            return res.status(400).json({
+                success:false,
+                message:'id not found'
+            })
+
+        }
+        const Student=await User.findById(studentid);
+        if(!Student){
+            return res.status(400).json({
+                success:false,
+                message:"Student not found"
+            })
+        }
+        const Orders=await Order.find({student:Student._id,status});
+        if(Orders.length===0){
+            return res.status(400).json({
+                success:false,
+                message:"No Order with this Status"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            message:"Orders fetched SuccessFully",
+            data:Orders
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
+
+
+exports.getCanteenOrderBystatus=async(req,res)=>{
+    try{
+        const {id:CanteenId}=req.params;
+        const {status}=req.body;
+        if(!CanteenId){
+            return res.status(400).json({
+                success:false,
+                message:'id not found'
+            })
+
+        }
+        const Canteen=await User.findById(CanteenId);
+        if(!Student){
+            return res.status(400).json({
+                success:false,
+                message:"canteen  not found"
+            })
+        }
+        const Orders=await Order.find({canteen:Canteen._id,status});
+        if(Orders.length===0){
+            return res.status(400).json({
+                success:false,
+                message:"No Order with this Status"
+            })
+        }
+        return res.status(200).json({
+            success:true,
+            message:"Orders fetched SuccessFully",
+            data:Orders
+        })
+    }
+    catch(err){
+        return res.status(500).json({
+            success:false,
+            message:"internal server error",
+            error:err.message
+        })
+    }
+}
