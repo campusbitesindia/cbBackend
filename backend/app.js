@@ -9,6 +9,8 @@ const adminRoutes = require("./routes/adminRoutes");
 const OrderRoutes =require("./routes/OrderRoutes");
 
 const cookieParser = require("cookie-parser");
+const itemRoutes = require('./routes/itemRoutes');
+const reviewRoutes = require('./routes/reviewRoutes')
 
 const app = express();
 
@@ -21,6 +23,8 @@ app.use(cookieParser());
 app.use("/api/users", userRoutes);
 app.use("/api/canteens", canteenRoutes);
 app.use("/api/campuses", campusRoutes);
+app.use('/api/items', itemRoutes)
+app.use('/api/reviews', reviewRoutes)
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/order",OrderRoutes);
 
