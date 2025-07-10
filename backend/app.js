@@ -9,8 +9,12 @@ const canteenRoutes = require("./routes/canteenRoutes");
 const campusRoutes = require("./routes/campusRoutes");
 const paymentRoutes = require("./routes/paymentRoutes")
 const webhookRoutes = require("./routes/webhookRoutes")
+const adminRoutes = require("./routes/adminRoutes");
+const OrderRoutes =require("./routes/OrderRoutes");
 
 const cookieParser = require("cookie-parser");
+const itemRoutes = require('./routes/itemRoutes');
+const reviewRoutes = require('./routes/reviewRoutes')
 
 const app = express();
 
@@ -47,6 +51,10 @@ app.use("/api/users", userRoutes);
 app.use("/api/canteens", canteenRoutes);
 app.use("/api/campuses", campusRoutes);
 app.use("/api/payments", paymentLimiter, paymentRoutes)
+app.use('/api/items', itemRoutes)
+app.use('/api/reviews', reviewRoutes)
+app.use("/api/v1/admin", adminRoutes);
+app.use("/api/order",OrderRoutes);
 
 // Health check
 app.get("/", (req, res) => {

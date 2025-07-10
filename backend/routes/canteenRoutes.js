@@ -2,12 +2,13 @@ const express = require("express");
 const router = express.Router();
 const upload = require("../middlewares/uploadMiddleware");
 const { createCanteen, getAllCanteens, deleteCanteen, getCanteenById, updateCanteen } = require("../controllers/canteenController");
+const { isAuthenticated, isVendor } = require("../middleware/auth")
 
 // Multer expects form-data with 'images' key
-router.post("/create", upload.array("images", 5), createCanteen);
+router.post("/create",isAuthenticated, isVendor, upload.array("images", 5), createCanteen);
 router.get("/", getAllCanteens);
 router.get("/:id", getCanteenById);
-router.put("/:id", upload.array("images", 5), updateCanteen);
-router.delete("/:id", deleteCanteen);
+router.put("/:id",isAuthenticated, isVendor, upload.array("images", 5), updateCanteen);
+router.delete("/:id",isAuthenticated, isVendor, deleteCanteen);
 
 module.exports = router;
