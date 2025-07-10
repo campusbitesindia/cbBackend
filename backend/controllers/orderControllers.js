@@ -2,24 +2,27 @@ const Order =require("../models/Order");
 const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
+const Campus = require("../models/Campus");
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
-        const CanteenId=req.user.canteenId
+        const campusId=req.user.campus;
+        
+       
         const {items:_items,pickUpTime}=req.body; 
-
+        
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
         const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
-        if(!UserId || !CanteenId || Items.length===0 ){
+        if(!UserId || !campusId  || Items.length===0 ){
             return res.status(400).json({
                 success:false,
                 message:"Please provide all the fields"
             })
         }
-
+        
         //search for student with Given id
         const student=await User.findById(UserId);
         // if student not found return error
@@ -30,7 +33,8 @@ exports.CreateOrder=async(req,res)=>{
             })
         }
         // search canteen with given Id
-        const canteen=await Canteen.findById(CanteenId);
+        console.log(campusId)
+         const canteen=await Canteen.findOne({campus:campusId})
         //if canteen not found 
         if(!canteen){
             return res.status(400).json({
@@ -87,7 +91,7 @@ exports.CreateOrder=async(req,res)=>{
             items:OrderItem,
             total:Total,
             pickupTime:pickUpTime
-        }).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});
+        });
        
 
         return res.status(200).json({
@@ -197,6 +201,7 @@ exports.getAllOrdersByStudent=async(req,res)=>{
 
 exports.getAllOrdersByCanteen=async(req,res)=>{
     try{
+        //this is protected Route for Canteen only so we can fetch canteen id as it added by middleware
         const canteenId=req.user.canteenId;    
         if(!canteenId){
             return res.status(400).json({
@@ -297,7 +302,7 @@ exports.deleteOrder=async(req,res)=>{
         })
     }
 }
-
+//this is for Student
 exports.GetallDeletedOrders=async(req,res)=>{
     try{
         const userId=req.user._id;
@@ -335,6 +340,7 @@ exports.GetallDeletedOrders=async(req,res)=>{
         })
     }
 }
+
 
 
 exports.getStudentOrderBystatus=async(req,res)=>{
