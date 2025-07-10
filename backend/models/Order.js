@@ -14,13 +14,19 @@ const OrderSchema = new mongoose.Schema({
   total: { type: Number, required: true },
   status: {
     type: String,
-    enum: ["pending","placed", "preparing", "ready", "completed", "cancelled"],
+    enum: ["pending","placed", "preparing", "ready", "completed", "cancelled","payment_pending"],
     default: "pending",
   },
   isDeleted: { type: Boolean, default: false },
   pickupTime:{
     type:String,
     required:true
+  },
+  paymentStatus:{
+    type:String
+  },
+  paidAt:{
+    type:Date
   }
 }, { timestamps: true });
 
