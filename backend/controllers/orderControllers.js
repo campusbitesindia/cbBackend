@@ -7,16 +7,9 @@ exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        
-       
-<<<<<<< HEAD
         const {items:_items,pickUpTime}=req.body; 
-=======
-        const {items:Items,pickUpTime}=req.body; 
->>>>>>> a9114a54df2ae5a273ab14b2d6983468f47d69e9
-        
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        // const Items=JSON.parse(_items); //converting _items to an Json array;
+        const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
