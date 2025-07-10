@@ -66,7 +66,7 @@ export interface CreateOrderResponse {
 // Get user's orders
 export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
   try {
-    const response = await api.get('/api/orders', {
+    const response = await api.get('/api/v1/order/getStudentAllOrders', {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -81,7 +81,7 @@ export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
 // Create a new order
 export const createOrder = async (orderData: CreateOrderPayload, token: string): Promise<CreateOrderResponse> => {
   try {
-    const response = await api.post('/api/orders', orderData, {
+    const response = await api.post('/api/v1/order/CreateOrder', orderData, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -96,7 +96,7 @@ export const createOrder = async (orderData: CreateOrderPayload, token: string):
 // Get order by ID
 export const getOrderById = async (orderId: string, token: string): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.get(`/api/orders/${orderId}`, {
+    const response = await api.get(`/api/v1/order/getOrderDetails/${orderId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

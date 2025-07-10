@@ -126,9 +126,9 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/canteens/")
+            fetch("/api/v1/canteens")
       .then(res => res.json())
-      .then(data => setCanteens(data.data || []));
+              .then(data => setCanteens(data.canteens || []));
   }, []);
 
   // Helper to update a single user in usersList

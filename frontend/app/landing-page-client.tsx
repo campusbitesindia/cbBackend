@@ -143,12 +143,12 @@ export default function LandingPageClient() {
               </motion.div>
 
               <motion.h1 
-                className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight"
+                className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8"
                 variants={itemVariants}
               >
-                <span className="block text-gray-900 dark:text-white">Ready to End</span>
-                <span className="block bg-gradient-to-r from-red-500 to-rose-500 bg-clip-text text-transparent">
-                  Hunger Games?
+                <span className="block text-gray-900 dark:text-white">Ready for the</span>
+                <span className="block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                  Feast Fest?
                 </span>
               </motion.h1>
 
@@ -217,17 +217,6 @@ export default function LandingPageClient() {
                     <Counter to={1} suffix="k+" />
                   </span>
                   <p className="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide mt-1">Customers</p>
-                </motion.div>
-
-                {/* Orders Delivered */}
-                <motion.div variants={itemVariants} className="flex flex-col items-center">
-                  <div className="bg-red-500/20 p-4 rounded-full mb-2">
-                    <Truck className="w-6 h-6 text-red-400" />
-                  </div>
-                  <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
-                    <Counter to={5} suffix="k+" />
-                  </span>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide mt-1">Orders Delivered</p>
                 </motion.div>
 
                 {/* Satisfaction */}

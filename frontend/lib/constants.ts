@@ -1,8 +1,13 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 export const API_ENDPOINTS = {
-  CANTEENS: `${API_BASE_URL}/api/canteens`,
-  MENU: `${API_BASE_URL}/api/menu`,
-  ORDERS: `${API_BASE_URL}/api/orders`,
-  USERS: `${API_BASE_URL}/api/users`,
+  CANTEENS: `${API_BASE_URL}/api/v1/canteens`,
+  MENU: `${API_BASE_URL}/api/v1/menu`,
+  ORDERS: `${API_BASE_URL}/api/v1/order`,
+  USERS: `${API_BASE_URL}/api/v1/users`,
+  USER_PROFILE: `${API_BASE_URL}/api/v1/users/profile`,
+  USER_PROFILE_IMAGE: `${API_BASE_URL}/api/v1/users/profile/image`,
+  LOGIN: `${API_BASE_URL}/api/v1/users/login`,
+  REGISTER: `${API_BASE_URL}/api/v1/users/register`,
+  LOGOUT: `${API_BASE_URL}/api/v1/users/logout`,
 }; 

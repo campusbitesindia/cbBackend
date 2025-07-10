@@ -1,8 +1,8 @@
+require("dotenv").config({ path: require("path").resolve(__dirname, "./config/config.env") });
 const mongoose = require("mongoose");
 const Canteen = require("./models/Canteen");
 const Campus = require("./models/Campus");
 const User = require("./models/User");
-require("dotenv").config({ path: "./config/config.env" });
 
 // Sample canteen data
 const sampleCanteens = [
@@ -75,6 +75,54 @@ const sampleCanteens = [
     featured: false,
     discount: null,
     description: "Coffee, tea, and light snacks for study sessions",
+    images: ["/placeholder.jpg"],
+    isOpen: true
+  },
+  {
+    name: "Noodle House",
+    cuisine: "Asian",
+    rating: 4.8,
+    deliveryTime: "15-20 min",
+    distance: "International Hostel",
+    featured: true,
+    discount: "Free Appetizer",
+    description: "Authentic Asian noodles and stir-fries.",
+    images: ["/placeholder.jpg"],
+    isOpen: true
+  },
+  {
+    name: "The Grill",
+    cuisine: "BBQ",
+    rating: 4.5,
+    deliveryTime: "30-40 min",
+    distance: "Sports Complex",
+    featured: false,
+    discount: null,
+    description: "Smoky BBQ ribs, burgers, and more.",
+    images: ["/placeholder.jpg"],
+    isOpen: true
+  },
+  {
+    name: "Taco Town",
+    cuisine: "Mexican",
+    rating: 4.6,
+    deliveryTime: "10-20 min",
+    distance: "Student Union",
+    featured: true,
+    discount: "Taco Tuesday Special",
+    description: "Flavorful tacos, burritos, and quesadillas.",
+    images: ["/placeholder.jpg"],
+    isOpen: false
+  },
+  {
+    name: "Sub Station",
+    cuisine: "Sandwiches",
+    rating: 4.3,
+    deliveryTime: "5-15 min",
+    distance: "Block F",
+    featured: false,
+    discount: "Meal Deal",
+    description: "Freshly made subs and sandwiches.",
     images: ["/placeholder.jpg"],
     isOpen: true
   }

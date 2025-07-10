@@ -11,7 +11,6 @@ const UserSchema = new mongoose.Schema({
   profileImage: { type: String },
   isDeleted: { type: Boolean, default: false },
   isBanned: { type: Boolean, default: false },
-  is_verified: { type: Boolean, default: false },
   resetPasswordToken:String,
   resetPasswordExpire: Date,
 }, { timestamps: true });

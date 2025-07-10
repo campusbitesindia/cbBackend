@@ -1,44 +1,111 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
-require('dotenv').config({ path: './config/config.env' });
-
-// Middleware to protect routes
-exports.protect = async (req, res, next) => {
-  let token;
-
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+const user = require("../models/User.js");
+exports.isAuthenticated = async (req, res, next) => {
     try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Get user from the token
-      req.user = await User.findById(decoded.id).select('-password');
-
-      if (!req.user) {
-        return res.status(401).json({ message: 'Not authorized, user not found' });
-      }
-
-      next();
+      
+       const token =   req.cookies.token || req.header("Authorization").replace("Bearer ","") ;
+       if(token=="j:null"){
+            return res.status(401).json({
+                success:false,
+                message:"Not logged in currently"
+            })
+       }
+       const decodedData= jwt.verify(token, process.env.JWT_SECRET);
+       const user1=await user.findOne({email: decodedData.email})
+       if(!user1){
+        return res.status(401).json({
+            success:false,
+            message:"Not logged in currently"
+        })
+       }
+       req.user=user1;
+       next(); 
     } catch (error) {
-      console.error(error);
-      if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
-          message: 'Token expired', 
-          code: 'TOKEN_EXPIRED',
-          expiredAt: error.expiredAt 
-        });
-      }
-      return res.status(401).json({ 
-        message: 'Not authorized, token failed',
-        code: 'TOKEN_INVALID'
-      });
+       res.status(500).json({
+          success: false,
+          message: `Internal server errorrrrrr: ${error}`,
+       });
     }
-  }
+ };
 
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+
+ exports.isStudent=async(req,res,next)=>{
+   try{
+      const role=req.user.role;
+      if(role!=="student"){
+         return res.status(401).json({
+            success:false,
+            message:"this is protect Route for Student"
+         })
+      }
+     
+      next();
+   }
+   catch(err){
+      return res.status(500).json({
+         success:false,
+         message:"internal Server Error",
+         error:err.message
+      })
+   }
+ }
+
+ exports.isVendor=async(req,res,next)=>{
+   try{
+      const role=req.user.role;
+      if(role!=="canteen"){
+         return res.status(401).json({
+            success:false,
+            message:"this is protect Route for Vendors"
+         })
+      }
+      next();
+   }
+   catch(err){
+      return res.status(500).json({
+         success:false,
+         message:"internal Server Error",
+         error:err.message
+      })
+   }
+ }
+
+ exports.isAdmin=async(req,res,next)=>{
+   try{
+      const role=req.user.role;
+      if(role!=="Admin"){
+         return res.status(401).json({
+            success:false,
+            message:"this is protected Route for Admin"
+         })
+      }
+      next();
+   }
+   catch(err){
+      return res.status(500).json({
+         success:false,
+         message:"Inernal server error",
+         error:err.message
+      })
+   }
+ }
+
+ // New middleware for admin OR vendor
+exports.isAdminOrVendor = async (req, res, next) => {
+  try {
+    const role = req.user.role
+    if (role !== "admin" && role !== "canteen") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins and canteen owners can access this route",
+      })
+    }
+    next()
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    })
   }
-};
+}

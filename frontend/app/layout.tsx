@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/auth-context"
 import { CartProvider } from "@/context/cart-context"
+import { SecurityProvider } from "@/context/security-context"
+import { SecurityNotification } from "@/components/security/SecurityNotification"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
 import "./globals.css"
@@ -23,33 +25,38 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <AuthProvider>
-            <CartProvider>
-              {/* Dynamic background that responds to theme */}
-              <div className="fixed inset-0 transition-all duration-1000 ease-in-out">
-                {/* Light mode background - Clean and bright */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:opacity-0 opacity-100 transition-opacity duration-1000">
-                  <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
-                  <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
-                  <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+            <SecurityProvider>
+              <CartProvider>
+                {/* Dynamic background that responds to theme */}
+                <div className="fixed inset-0 transition-all duration-1000 ease-in-out">
+                  {/* Light mode background - Clean and bright */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:opacity-0 opacity-100 transition-opacity duration-1000">
+                    <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+                    <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000"></div>
+                    <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000"></div>
+                  </div>
+                  
+                  {/* Dark mode background - Navy gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#0a192f] via-[#1e3a5f] to-[#2d4a6b] opacity-0 dark:opacity-100 transition-opacity duration-1000">
+                    <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl animate-pulse"></div>
+                    <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                    <div className="absolute top-1/2 left-0 w-64 h-64 bg-cyan-600/10 rounded-full filter blur-2xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 flex min-h-screen flex-col">
+                  <Navbar />
+                  <main className="flex-1 pt-20">{children}</main>
+                  <Footer />
                 </div>
                 
-                {/* Dark mode background - Navy gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#0a192f] via-[#1e3a5f] to-[#2d4a6b] opacity-0 dark:opacity-100 transition-opacity duration-1000">
-                  <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full filter blur-3xl animate-pulse"></div>
-                  <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                  <div className="absolute top-1/2 left-0 w-64 h-64 bg-cyan-600/10 rounded-full filter blur-2xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-                </div>
-              </div>
-
-              <div className="relative z-10 flex min-h-screen flex-col">
-                <Navbar />
-                <main className="flex-1 pt-20">{children}</main>
-                <Footer />
-              </div>
-              <Toaster />
-            </CartProvider>
+                {/* Security System Components */}
+                <SecurityNotification />
+                <Toaster />
+              </CartProvider>
+            </SecurityProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

@@ -1,6 +1,8 @@
 const express = require("express");
-const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail } = require("../controllers/userController");
-const { protect } = require("../middleware/auth");
+const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail, getProfile, updateProfile, uploadProfileImage } = require("../controllers/userController");
+const { isAuthenticated } = require("../middleware/auth");
+const upload = require("../middlewares/uploadMiddleware");
+const passport = require("passport");
 
 const router = express.Router();
 
@@ -8,11 +10,24 @@ router.route("/register").post(registerUser);
 router.route("/verify-email").post(verifyEmail);
 router.route("/login").post(loginUser);
 router.route("/logout").post(logoutUser);
-router.route("/forgotPass").post(forgotPass)
-router.route("/resetPass/:token").post(resetPassword)
-router.route("/me").get(protect, loadUser);
-router.get('/me', protect, async (req, res) => {
-  res.json({ user: req.user });
-});
+router.route("/forgotPass").post(forgotPass);
+router.route("/resetPass/:token").post(resetPassword);
+router.route("/me").get(isAuthenticated, loadUser);
+
+// Profile management routes
+router.route("/profile").get(isAuthenticated, getProfile);
+router.route("/profile").put(isAuthenticated, updateProfile);
+router.route("/profile/image").post(isAuthenticated, upload.single('profileImage'), uploadProfileImage);
+
+// Google OAuth
+router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/login', session: false }),
+  (req, res) => {
+    // On success, redirect with a token
+    res.redirect(`http://localhost:3000/login?token=${req.user}`);
+  }
+);
 
 module.exports = router;

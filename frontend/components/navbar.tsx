@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { memo } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -19,18 +20,68 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Menu, ShoppingCart, User, LogOut, Home, UtensilsCrossed, Package, Heart, X } from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import axios from '@/lib/axios';
 
-export default function Navbar() {
+interface UserProfile {
+  name: string;
+  email: string;
+  profileImage?: string;
+  role: string;
+}
+
+function Navbar() {
   const pathname = usePathname();
   const { isAuthenticated, user, logout } = useAuth();
   const { cart } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
 
+  // Fetch fresh user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await axios.get('/users/profile');
+          
+          if (response.data.success && response.data.user) {
+            const freshProfile = {
+              name: response.data.user.name,
+              email: response.data.user.email,
+              profileImage: response.data.user.profileImage,
+              role: response.data.user.role,
+            };
+            setUserProfile(freshProfile);
+          }
+        } catch (error) {
+          console.error('❌ Failed to fetch user profile:', error);
+          // Fallback to auth context data
+          if (user) {
+            const fallbackProfile = {
+              name: user.name,
+              email: user.email,
+              profileImage: user.profileImage,
+              role: user.role,
+            };
+            setUserProfile(fallbackProfile);
+          }
+        }
+      } else {
+        setUserProfile(null);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, user]);
+
+  // Use fresh profile data if available, otherwise fallback to auth context
+  const displayUser = userProfile || user;
+  const profileImageSrc = displayUser?.profileImage || '/placeholder-user.jpg';
+
   const navItems = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Menu', href: '/menu', icon: UtensilsCrossed },
+    { name: 'Outlets', href: '/menu', icon: UtensilsCrossed },
     { name: 'Orders', href: '/orders', icon: Package },
   ];
 
@@ -40,11 +91,7 @@ export default function Navbar() {
         <div className="flex h-20 items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <motion.div 
-              whileHover={{ scale: 1.05 }} 
-              transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-              className="flex items-center space-x-3"
-            >
+            <div className="flex items-center space-x-3">
               <Image
                 src="/logo.png"
                 alt="Campus Bites Logo"
@@ -61,7 +108,7 @@ export default function Navbar() {
                   Fast • Fresh • Delicious
                 </span>
               </div>
-            </motion.div>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
@@ -93,42 +140,40 @@ export default function Navbar() {
           {/* Right side actions */}
           <div className="flex items-center space-x-4">
             {/* Theme Toggle */}
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-              <ThemeToggle />
-            </motion.div>
+            <ThemeToggle />
 
             {/* Cart */}
-            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-              <Link href="/cart" className="relative group">
-                <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300">
-                  <ShoppingCart className="w-5 h-5 text-gray-700 dark:text-white" />
-                  {cartItemsCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50">
-                      {cartItemsCount}
-                    </Badge>
-                  )}
-                </div>
-              </Link>
-            </motion.div>
+            <Link href="/cart" className="relative group">
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300">
+                <ShoppingCart className="w-5 h-5 text-gray-700 dark:text-white" />
+                {cartItemsCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50">
+                    {cartItemsCount}
+                  </Badge>
+                )}
+              </div>
+            </Link>
 
             {/* Authentication */}
             {isAuthenticated ? (
               <DropdownMenu>
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative p-0 rounded-full h-10 w-10">
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10">
-                        <Image 
-                          src="/placeholder-user.jpg" 
-                          alt={user?.name || 'User'} 
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </motion.div>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative p-0 rounded-full h-10 w-10">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10">
+                      <Image 
+                        src={profileImageSrc} 
+                        alt={displayUser?.name || 'User'} 
+                        fill
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-user.jpg';
+                        }}
+                      />
+                    </div>
+                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900" />
+                  </Button>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent 
                   align="end" 
                   className="w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white"
@@ -137,15 +182,22 @@ export default function Navbar() {
                     <div className="flex items-center space-x-3">
                       <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
                         <Image 
-                          src="/placeholder-user.jpg" 
-                          alt={user?.name || 'User'} 
+                          src={profileImageSrc} 
+                          alt={displayUser?.name || 'User'} 
                           fill
                           className="object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-user.jpg';
+                          }}
                         />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">{user?.name}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{user?.email}</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{displayUser?.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{displayUser?.email}</p>
+                        {displayUser?.role && (
+                          <p className="text-xs text-red-500 dark:text-red-400 capitalize">{displayUser.role}</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -178,16 +230,12 @@ export default function Navbar() {
             ) : (
               // Login/Signup buttons
               <div className="hidden sm:flex items-center space-x-2">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button asChild variant="ghost" className="text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50">
-                    <Link href="/login">Login</Link>
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button asChild className="bg-red-600 hover:bg-red-700 text-white rounded-full px-5 py-2">
-                    <Link href="/register">Sign Up</Link>
-                  </Button>
-                </motion.div>
+                <Button asChild variant="ghost" className="text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                  <Link href="/login">Login</Link>
+                </Button>
+                <Button asChild className="bg-red-600 hover:bg-red-700 text-white rounded-full px-5 py-2">
+                  <Link href="/register">Sign Up</Link>
+                </Button>
               </div>
             )}
 
@@ -249,3 +297,5 @@ export default function Navbar() {
     </header>
   );
 }
+
+export default memo(Navbar);

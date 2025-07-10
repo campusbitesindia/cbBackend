@@ -164,10 +164,10 @@ export default function PaymentPage() {
       const itemData = await itemResponse.json()
       canteenId = itemData.data.canteen
     } else {
-      const canteensResponse = await fetch('http://localhost:8080/api/canteens')
+              const canteensResponse = await fetch('http://localhost:8080/api/v1/canteens')
       const canteensData = await canteensResponse.json()
-      if (canteensData.data && canteensData.data.length > 0) {
-        canteenId = canteensData.data[0]._id
+              if (canteensData.canteens && canteensData.canteens.length > 0) {
+          canteenId = canteensData.canteens[0]._id
       } else {
         throw new Error('No canteens available')
       }

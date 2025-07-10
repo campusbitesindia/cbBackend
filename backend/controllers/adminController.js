@@ -98,8 +98,8 @@ exports.getTopUsersBySpending = async (req, res) => {
 exports.getUsersByRoleList = async (req, res) => {
   try {
     const [students, owners] = await Promise.all([
-      User.find({ role: "student" }).select("name email isBanned campus"),
-      User.find({ role: "canteen" }).select("name email isBanned is_verified canteenId"),
+      User.find({ role: "student" }).select("name email"),
+      User.find({ role: "canteen" }).select("name email")
     ]);
     res.json({ students, canteenOwners: owners });
   } catch (error) {
@@ -524,11 +524,11 @@ exports.getMonthlyRevenue = async (req, res) => {
 
 exports.banUser = async (req, res) => {
   try {
-    const { userId, ban } = req.body; // ban: true to ban, false to unban
-    await User.findByIdAndUpdate(userId, { isBanned: ban });
-    res.json({ message: ban ? "User has been banned." : "User has been unbanned." });
+    const { userId } = req.body;
+    await User.findByIdAndUpdate(userId, { isBanned: true });
+    res.json({ message: "User has been banned." });
   } catch (error) {
-    console.error("Error banning/unbanning user:", error);
+    console.error("Error banning user:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -561,40 +561,6 @@ exports.adminRateVendor = async (req, res) => {
     res.json({ message: "Admin rating submitted." });
   } catch (error) {
     console.error("Error rating vendor:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// Get all users (for admin dashboard)
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find().select('name email isBanned is_verified role campus canteenId');
-    res.json(users);
-  } catch (error) {
-    console.error("Error getting all users:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-exports.approveCanteen = async (req, res) => {
-  try {
-    const { canteenId } = req.body;
-    const canteen = await Canteen.findByIdAndUpdate(canteenId, { is_verified: true }, { new: true });
-    if (!canteen) return res.status(404).json({ message: "Canteen not found" });
-    res.json({ message: "Canteen approved", canteen });
-  } catch (error) {
-    console.error("Error approving canteen:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-exports.banCanteen = async (req, res) => {
-  try {
-    const { canteenId, ban } = req.body; // ban: true to ban, false to unban
-    await Canteen.findByIdAndUpdate(canteenId, { isBanned: ban });
-    res.json({ message: ban ? "Canteen has been banned." : "Canteen has been unbanned." });
-  } catch (error) {
-    console.error("Error banning/unbanning canteen:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
