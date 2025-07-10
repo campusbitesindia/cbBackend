@@ -4,13 +4,13 @@ const Order = require("../models/Order")
 const Notification = require("../models/Notification")
 
 // Razorpay webhook handler
-const handleRazorpayWebhook = async (req, res) => {
+exports.handleRazorpayWebhook = async (req, res) => {
   try {
     // Verify webhook signature
     const webhookSignature = req.headers["x-razorpay-signature"]
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
 
-    if (!webhookSignature || !webhookSecret) {
+    if (!webhookSignature || !webhookSecret) { 
       return res.status(400).json({
         success: false,
         message: "Missing webhook signature or secret",
@@ -231,6 +231,3 @@ const createNotification = async (userId, title, message, type) => {
   }
 }
 
-module.exports = {
-  handleRazorpayWebhook,
-}

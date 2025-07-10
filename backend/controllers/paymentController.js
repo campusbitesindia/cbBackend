@@ -21,7 +21,7 @@ const createPaymentOrder = async (req, res) => {
     const userId = req.user.id
 
     // Find the order
-    const order = await Order.findById(orderId).populate("userId")
+    const order = await Order.findById(orderId).populate("student")
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -30,7 +30,7 @@ const createPaymentOrder = async (req, res) => {
     }
 
     // Check if user owns the order
-    if (order.userId._id.toString() !== userId) {
+    if (order.student._id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized access to order",
@@ -60,20 +60,18 @@ const createPaymentOrder = async (req, res) => {
     }
 
     // Calculate amount (in paise for Razorpay)
-    const amount = Math.round(order.totalAmount * 100)
-
+    const amount = Math.round(order.total * 100)
+  
     // Create Razorpay order with UPI preference
     const razorpayOrder = await razorpay.orders.create({
       amount: amount,
       currency: "INR",
-      receipt: `order_${orderId}_${Date.now()}`,
-      method: {
-        upi: 1, // Enable UPI only
-      },
+      receipt: `receipt_order_${new Date().getTime()}`,//length of Reciept was greater than 40 so it was throwing error
+       //method field was removed as it was not a part of orders.create method and giving error
       notes: {
-        orderId: orderId.toString(),
-        userId: userId.toString(),
-        canteenId: order.canteenId.toString(),
+        orderId: orderId,
+        userId:userId ,
+        canteenId: order.canteen,
       },
     })
 
@@ -82,7 +80,7 @@ const createPaymentOrder = async (req, res) => {
       orderId: orderId,
       userId: userId,
       razorpayOrderId: razorpayOrder.id,
-      amount: order.totalAmount,
+      amount: order.total,
       currency: "INR",
       status: "created",
       paymentMethod: "upi",
@@ -105,6 +103,7 @@ const createPaymentOrder = async (req, res) => {
         key: process.env.RAZORPAY_KEY_ID,
         method: "upi",
       },
+      razorpayOrder
     })
   } catch (error) {
     console.error("Create payment order error:", error)
@@ -193,7 +192,7 @@ const verifyPayment = async (req, res) => {
 
     // Update order status
     const order = transaction.orderId
-    order.status = "confirmed"
+    order.status = "placed"
     order.paymentStatus = "paid"
     order.paidAt = new Date()
     await order.save()

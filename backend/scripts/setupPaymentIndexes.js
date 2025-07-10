@@ -11,7 +11,7 @@ const setupIndexes = async () => {
     // Create indexes for Transaction model
     await Transaction.collection.createIndex({ orderId: 1 })
     await Transaction.collection.createIndex({ userId: 1 })
-    await Transaction.collection.createIndex({ razorpayOrderId: 1 }, { unique: true })
+    await Transaction.collection.createIndex({ razorpayOrderId: 1 })
     await Transaction.collection.createIndex({ razorpayPaymentId: 1 })
     await Transaction.collection.createIndex({ status: 1 })
     await Transaction.collection.createIndex({ createdAt: -1 })

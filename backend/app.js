@@ -43,12 +43,13 @@ const paymentLimiter = rateLimit({
 app.use("/api/webhooks", webhookRoutes) // Webhooks need raw body
 app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ extended: true }))
-
+ 
 
 
 // API routes
 app.use("/api/users", userRoutes);
 app.use("/api/canteens", canteenRoutes);
+app.use("/api/order",OrderRoutes)
 app.use("/api/campuses", campusRoutes);
 app.use("/api/payments", paymentLimiter, paymentRoutes)
 app.use('/api/items', itemRoutes)
@@ -56,7 +57,7 @@ app.use('/api/reviews', reviewRoutes)
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/order",OrderRoutes);
 
-// Health check
+// Health check  
 app.get("/", (req, res) => {
     res.send("Campus Bites API is running 🚀");
 });
