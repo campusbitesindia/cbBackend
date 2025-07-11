@@ -11,7 +11,7 @@ const OrderRoutes =require("./routes/OrderRoutes");
 const cookieParser = require("cookie-parser");
 const itemRoutes = require('./routes/itemRoutes');
 const reviewRoutes = require('./routes/reviewRoutes')
-
+const notificationRoutes = require('./routes/notificationRoutes');
 const app = express();
 
 // Middleware
@@ -27,6 +27,7 @@ app.use('/api/items', itemRoutes)
 app.use('/api/reviews', reviewRoutes)
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/order",OrderRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -38,4 +39,5 @@ app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
 });
 
+// Export server
 module.exports = app;
