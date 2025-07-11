@@ -41,7 +41,7 @@ const createPaymentOrder = async (req, res) => {
     if (order.status !== "pending") {
       return res.status(400).json({
         success: false,
-        message: "Order is not in pending status",
+        message: "please Create a New Order",
       })
     }
 
@@ -219,6 +219,7 @@ const verifyPayment = async (req, res) => {
 
 // Handle payment failure
 const handlePaymentFailure = async (req, res) => {
+  console.log("handle Payment started");
     try {
         const { razorpay_order_id, error } = req.body
 
@@ -244,12 +245,12 @@ const handlePaymentFailure = async (req, res) => {
 
         // Update transaction as failed
         transaction.status = "failed"
-        transaction.failureReason = error.description || "UPI payment failed"
+        transaction.failureReason = error?.description || "UPI payment failed"
         await transaction.save()
 
         // Update order status
         const order = transaction.orderId
-        order.status = "payment_failed"
+        order.status = "pending"
         order.paymentStatus = "failed"
         await order.save()
 
@@ -263,7 +264,7 @@ const handlePaymentFailure = async (req, res) => {
         },
         })
     } catch (error) {
-        console.error("Handle payment failure error:", error)
+        console.error("Handle payment failure error:", error.message)
         res.status(500).json({
         success: false,
         message: "Failed to handle payment failure",
