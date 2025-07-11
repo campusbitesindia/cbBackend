@@ -3,6 +3,8 @@ const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
+const sendNotification = require("../utils/notify")
+
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
@@ -43,6 +45,7 @@ exports.CreateOrder=async(req,res)=>{
             })
         }
 
+        
         const OrderItem=[];
         let Total=0;
 
@@ -92,7 +95,14 @@ exports.CreateOrder=async(req,res)=>{
             total:Total,
             pickupTime:pickUpTime
         });
-       
+
+       // Notify Vendor (socket room: vendor_<vendorId>)
+        sendNotification(`vendor_${canteen._id}`, {
+            title: "New Order",
+            message: `Hey! ${student.name} just placed an order.`,
+            type: "new_order",
+            timestamp: new Date()
+        });
 
         return res.status(200).json({
             success:true,
@@ -144,6 +154,15 @@ exports.UpdateOrderStatus=async(req,res)=>{
         //update the Order and return the new object
         const UpdatedOrder=await Order.findByIdAndUpdate(OrderId,{status:status},{new:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});;
         console.log(UpdatedOrder);
+
+        // Notify user (socket room: user_<userId>)
+        sendNotification(`user_${order.student}`, {
+            title: "Order Update",
+            message: `Your order is now marked as "${status}"`,
+            type: "order_status_update",
+            timestamp: new Date()
+        });
+
         return res.status(200).json({
             success:true,
             message:"Order Status Updated SuccessFully"
