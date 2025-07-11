@@ -10,7 +10,7 @@ import { Search, Star, Clock, MapPin, Filter, Heart, Plus, Minus, Utensils, Arro
 import Image from "next/image"
 import { Canteen, Item } from "@/types"
 import { useCart } from "@/context/cart-context"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
 import { API_ENDPOINTS } from "@/lib/constants"
 
