@@ -1,11 +1,5 @@
-"use client"
+import LandingPageClient from './landing-page-client'
 
-import dynamic from 'next/dynamic'
-
-const LandingPageClient = dynamic(() => import('./landing-page-client'), {
-  ssr: false,
-})
-
-export default function LandingPage() {
+export default function HomePage() {
   return <LandingPageClient />
 }
