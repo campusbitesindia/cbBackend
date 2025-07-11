@@ -86,7 +86,7 @@ const handlePaymentCaptured = async (payment) => {
 
       // Update order
       const order = transaction.orderId
-      order.status = "confirmed"
+      order.status = "placed"
       order.paymentStatus = "paid"
       order.paidAt = new Date(payment.created_at * 1000)
       await order.save()
@@ -108,11 +108,11 @@ const handlePaymentCaptured = async (payment) => {
 
 // Handle payment failed event
 const handlePaymentFailed = async (payment) => {
+  console.log("started");
   try {
     const transaction = await Transaction.findOne({
       razorpayOrderId: payment.order_id,
     }).populate("orderId userId")
-
     if (!transaction) {
       console.error(`Transaction not found for order ID: ${payment.order_id}`)
       return
@@ -125,8 +125,9 @@ const handlePaymentFailed = async (payment) => {
     await transaction.save()
 
     // Update order
-    const order = transaction.orderId
-    order.status = "payment_failed"
+    const orderid = transaction.orderId._id
+    const order=await Order.findOne({_id:orderid});
+    order.status = "pending"
     order.paymentStatus = "failed"
     await order.save()
 
@@ -217,9 +218,10 @@ const handleRefundFailed = async (refund) => {
 
 // Helper function to create notifications
 const createNotification = async (userId, title, message, type) => {
+  
   try {
     const notification = new Notification({
-      userId,
+      user:userId,
       title,
       message,
       type,
@@ -227,7 +229,7 @@ const createNotification = async (userId, title, message, type) => {
     })
     await notification.save()
   } catch (error) {
-    console.error("Create notification error:", error)
+    console.error("Create notification error:", error.message)
   }
 }
 
