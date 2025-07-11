@@ -94,7 +94,6 @@ const transactionSchema = new mongoose.Schema(
 // Indexes for better performance
 transactionSchema.index({ orderId: 1 })
 transactionSchema.index({ userId: 1 })
-transactionSchema.index({ razorpayOrderId: 1 })
 transactionSchema.index({ razorpayPaymentId: 1 })
 transactionSchema.index({ status: 1 })
 transactionSchema.index({ createdAt: -1 })
