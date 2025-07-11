@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Campus = require('../models/Campus');
 const Canteen = require('../models/Canteen');
 const Transaction = require("../models/Transaction");
+const CampusRequest = require("../models/campusRequest");
 
 exports.getTotalCounts = async (req, res) => {
   try {
@@ -562,5 +563,118 @@ exports.adminRateVendor = async (req, res) => {
   } catch (error) {
     console.error("Error rating vendor:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getCampusesSummary = async (req, res) => {
+  try {
+    const campuses = await Campus.find();
+
+    const result = await Promise.all(
+      campuses.map(async (campus) => {
+        const userCount = await User.countDocuments({ campus: campus._id });
+        const canteenCount = await Canteen.countDocuments({ campus: campus._id });
+        return {
+          campusId: campus._id,
+          name: campus.name,
+          code: campus.code,
+          city: campus.city,
+          userCount,
+          canteenCount,
+        };
+      })
+    );
+    console.log(result);
+    res.status(200).json({
+      success: true,
+      campuses: result,
+    });
+  } catch (error) {
+    console.error("Error fetching campus summary:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+exports.getCampusUsers = async (req, res) => {
+  try {
+    const campusId = req.params.campusId;
+    const users = await User.find({ campus: campusId }).select("name email role");
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  } catch (error) {
+    console.error("Error fetching campus users:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+exports.getCampusCanteens = async (req, res) => {
+  try {
+    const campusId = req.params.campusId;
+    const canteens = await Canteen.find({ campus: campusId }).select("name isOpen owner");
+
+    res.status(200).json({
+      success: true,
+      canteens,
+    });
+  } catch (error) {
+    console.error("Error fetching campus canteens:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+exports.getUserDetails = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId).populate("campus canteenId");
+
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    res.status(200).json({ success: true, user });
+  } catch (error) {
+    console.error("Error getting user details:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+exports.getCanteenDetails = async (req, res) => {
+  try {
+    const canteen = await Canteen.findById(req.params.canteenId)
+      .populate("owner campus")
+      .populate({
+        path: "items",
+        select: "name price available",
+      });
+
+    if (!canteen) return res.status(404).json({ success: false, message: "Canteen not found" });
+
+    res.status(200).json({ success: true, canteen });
+  } catch (error) {
+    console.error("Error getting canteen details:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+exports.submitCampusRequest = async (req, res) => {
+  try {
+    const { name, email, mobile, role, collegeName, city, message } = req.body;
+
+    if (!name || !email || !mobile || !role || !collegeName || !city) {
+      return res.status(400).json({ success: false, message: "All required fields must be filled." });
+    }
+
+    const newRequest = await CampusRequest.create({
+      name, email, mobile, role, collegeName, city, message
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Campus request submitted successfully. We’ll get back to you shortly!"
+    });
+
+  } catch (error) {
+    console.error("Campus Request Error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
