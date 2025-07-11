@@ -10,7 +10,7 @@ const {
   initiateRefund,
   getRefundStatus,
 } = require("../controllers/paymentController")
-const { CreateCODTransaction } = require("../controllers/cashOnDelievery")
+const { CreateCODTransaction } = require("../controllers/cashOnDelivery")
 
 const router = express.Router()
 
