@@ -358,7 +358,14 @@ export default function MenuPage() {
                         {CUISINE_FILTERS.map((cuisine) => (
                           <Button
                             key={cuisine.value}
-                            onClick={() => setSelectedCuisine(cuisine.value)}
+                            onClick={() => {
+                              // Toggle behavior: if already selected, go back to 'all', otherwise select this cuisine
+                              if (selectedCuisine === cuisine.value && cuisine.value !== 'all') {
+                                setSelectedCuisine('all');
+                              } else {
+                                setSelectedCuisine(cuisine.value);
+                              }
+                            }}
                             variant={selectedCuisine === cuisine.value ? 'default' : 'outline'}
                             size='sm'
                             className={`${
@@ -380,7 +387,14 @@ export default function MenuPage() {
                         {SORT_OPTIONS.map((option) => (
                           <Button
                             key={option.value}
-                            onClick={() => setSortBy(option.value)}
+                            onClick={() => {
+                              // Toggle behavior: if already selected, go back to 'featured', otherwise select this option
+                              if (sortBy === option.value && option.value !== 'featured') {
+                                setSortBy('featured');
+                              } else {
+                                setSortBy(option.value);
+                              }
+                            }}
                             variant={sortBy === option.value ? 'default' : 'outline'}
                             size='sm'
                             className={`${
