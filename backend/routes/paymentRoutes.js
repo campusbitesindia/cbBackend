@@ -10,6 +10,7 @@ const {
   initiateRefund,
   getRefundStatus,
 } = require("../controllers/paymentController")
+const { CreateCODTransaction } = require("../controllers/cashOnDelievery")
 
 const router = express.Router()
 
@@ -57,5 +58,8 @@ router.post(
 
 // Get refund status
 router.get("/refund/:transactionId", isAuthenticated, getRefundStatus)
+
+// router for cod transaction
+router.post("/COD",CreateCODTransaction)
 
 module.exports = router

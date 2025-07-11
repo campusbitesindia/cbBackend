@@ -3,12 +3,13 @@ const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser
 const { isAuthenticated } = require("../middleware/auth");
 const upload = require("../middlewares/uploadMiddleware");
 const passport = require("passport");
+const { smartLoginMonitoring } = require("../middleware/smartSecurity");
 
 const router = express.Router();
 
 router.route("/register").post(registerUser);
 router.route("/verify-email").post(verifyEmail);
-router.route("/login").post(loginUser);
+router.route("/login").post(smartLoginMonitoring,loginUser);
 router.route("/logout").post(logoutUser);
 router.route("/forgotPass").post(forgotPass);
 router.route("/resetPass/:token").post(resetPassword);

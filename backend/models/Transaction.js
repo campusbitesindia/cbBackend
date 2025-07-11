@@ -14,8 +14,8 @@ const transactionSchema = new mongoose.Schema(
     },
     razorpayOrderId: {
       type: String,
-      required: true,
       unique: true,
+      sparse:true
     },
     razorpayPaymentId: {
       type: String,
@@ -41,7 +41,7 @@ const transactionSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["upi"],
+      enum: ["upi","COD"],
       default: "upi",
     },
     failureReason: {

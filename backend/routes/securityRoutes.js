@@ -5,7 +5,8 @@ const {
   getSecurityDashboard,
   manageDevice,
   sendVerificationCode,
-  verifyCode
+  verifyCode,
+  smartLoginMonitoring
 } = require('../middleware/smartSecurity');
 
 // 🔐 Security Dashboard - Shows user's security overview
@@ -199,5 +200,9 @@ router.post('/recovery/check', async (req, res) => {
     res.status(500).json({ error: 'Recovery check failed' });
   }
 });
+router.post("/smart",smartLoginMonitoring);
 
 module.exports = router; 
+
+
+

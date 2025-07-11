@@ -3,13 +3,16 @@ const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
+const Penalty = require("../models/penaltySchema");
+const Transaction   =require("../models/Transaction");
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:_items,pickUpTime}=req.body; 
+        const {items:Items,pickUpTime}=req.body; 
+        const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        const Items=JSON.parse(_items); //converting _items to an Json array;
+        // const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
@@ -81,7 +84,11 @@ exports.CreateOrder=async(req,res)=>{
             })
         }
         
-        //create the order
+        //create the order with penalty amount if applicable
+        const penalty=await Penalty.find({deviceId,isPaid:false});
+        for(const data of penalty){
+            Total+=data.Amount;
+        }
         const order=await Order.create({
             student:student._id,
             canteen:canteen._id,
@@ -93,7 +100,7 @@ exports.CreateOrder=async(req,res)=>{
 
         return res.status(200).json({
             success:true,
-            message:"order Created SuccessFully",
+            message:"order Created SuccessFully,penalty Applied If applicable",
             data:order
         })
     }
@@ -106,57 +113,112 @@ exports.CreateOrder=async(req,res)=>{
     }
 }
 
-exports.UpdateOrderStatus=async(req,res)=>{
-    try{
-        const {id:OrderId}=req.params;
-        const {status}=req.body;
+exports.UpdateOrderStatus = async (req, res) => {
+  try {
+    const { id: OrderId } = req.params;
+    const { status } = req.body;
+    const role=req.user.role;
 
-        //check if both orderId and status is valid
-        if(!OrderId || !status){
-            return res.json(400).json({
-                success:false,
-                message:"Please Enter all Requried Field"
-            })
-        }
-         
-
-        const allowedStatuses = [ "preparing", "ready", "completed", "cancelled"];
-        //if the status is not from Schema Enum return errors
-        if(!allowedStatuses.includes(status)){
-            return res.status(400).json({
-                success:false,
-                message:"invalid order Status"
-            })
-        }
-        //find the order with give n ID
-        const order=await Order.findById(OrderId);
-        console.log(OrderId)
-        //if order not found 
-        if(!order){
-            return res.status(400).json({
-                success:false,
-                message:"Order with this id not found"
-            })
-        }
-        //update the Order and return the new object
-        const UpdatedOrder=await Order.findByIdAndUpdate(OrderId,{status:status},{new:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});;
-        console.log(UpdatedOrder);
-        return res.status(200).json({
-            success:true,
-            message:"Order Status Updated SuccessFully"
-        })
-
-        
+    // Validate input
+    if (!OrderId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter all required fields",
+      });
     }
-    catch(err){
-        console.log(err);
-        return res.status(500).json({
+
+    const allowedStatuses = ["preparing", "ready", "completed", "cancelled"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status",
+      });
+    }
+
+    // Fetch order
+    const order = await Order.findById(OrderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order with this ID not found",
+      });
+    }
+
+    if(order.status==="cancelled"){
+        return res.status(400).json({
             success:false,
-            message:"internal server error",
-            error:err.message
+            message:"Cant Update Order Status As it is cancelled"
         })
     }
-}
+
+    // Handle cancellation + penalty for both Cod and online payment
+    if (status === "cancelled" && role=="student") {
+      const penaltyApplicableStatuses = ["preparing", "ready"];
+
+      if (penaltyApplicableStatuses.includes(order.status)) {
+        const penaltyAmount = Math.round(order.total * 0.5);
+        const deviceId = req.deviceInfo?.deviceId;
+
+        await Penalty.create({
+          deviceId,
+          user: order.student,
+          Order: order._id,
+          Amount: penaltyAmount,
+          isPaid:false,
+          reason: "Order cancelled after it moved to preparing or ready stage",
+        });
+        await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
+        order.status = "cancelled";
+        await order.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Order cancelled and penalty applied",
+        });
+      } 
+        // No penalty applied
+        order.status = "cancelled";
+        await order.save();
+        await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
+
+        return res.status(200).json({
+          success: true,
+          message: "Order cancelled with no penalty",
+        });
+     
+
+    }
+   
+    if(status==="completed"){
+       // update the penalty and transaction status for cod as user had paid  them
+        const deviceId = req.deviceInfo?.deviceId;
+        await Penalty.updateMany({deviceId,isPaid:false},{isPaid:true});
+        await Transaction.findOneAndUpdate({orderId:OrderId},{status:"paid",paidAt:new Date(Date.now())});
+    }
+
+    // For normal status updates
+    const updatedOrder = await Order.findByIdAndUpdate(
+      OrderId,
+      { status },
+      { new: true }
+    )
+      .populate({ path: "student", select: "name" })
+      .populate({ path: "canteen", select: "name" });
+
+    return res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+      data: updatedOrder,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
 
 //This is for Student Orders
 exports.getAllOrdersByStudent=async(req,res)=>{
@@ -393,7 +455,7 @@ exports.getCanteenOrderBystatus=async(req,res)=>{
 
         }
         const Canteen=await User.findById(CanteenId);
-        if(!Student){
+        if(!Canteen){
             return res.status(400).json({
                 success:false,
                 message:"canteen  not found"
