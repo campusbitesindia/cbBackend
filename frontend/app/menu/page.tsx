@@ -1,50 +1,188 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Search, Star, Clock, MapPin, Heart, Utensils, Sparkles, ChefHat } from "lucide-react"
-import Image from "next/image"
-import { Canteen } from "@/types"
-import Link from "next/link"
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search,
+  Filter, 
+  Star,
+  Clock,
+  MapPin,
+  Heart,
+  Utensils,
+  ChefHat, 
+  Sparkles,
+  Badge as BadgeIcon,
+  Users,
+  TrendingUp,
+  Award,
+  Zap,
+  Shield,
+  CheckCircle
+} from 'lucide-react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { API_ENDPOINTS } from '@/lib/constants';
+
+interface Campus {
+  _id: string;
+  name: string;
+  code: string;
+  city: string;
+}
+
+interface Canteen {
+  _id: string;
+  name: string;
+  campus: Campus;
+  owner: string;
+  isOpen: boolean;
+  items: any[];
+  images: string[];
+  isDeleted: boolean;
+  is_verified: boolean;
+  isBanned: boolean;
+  isSuspended: boolean;
+  cuisine: string;
+  rating: number;
+  deliveryTime: string;
+  distance: string;
+  featured: boolean;
+  discount: string | null;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const CUISINE_FILTERS = [
+  { value: 'all', label: 'All Cuisines', icon: '🍽️' },
+  { value: 'Multi-Cuisine', label: 'Multi-Cuisine', icon: '🌍' },
+  { value: 'Indian', label: 'Indian', icon: '🍛' },
+  { value: 'Italian', label: 'Italian', icon: '🍕' },
+  { value: 'Fast Food', label: 'Fast Food', icon: '🍔' },
+  { value: 'Healthy', label: 'Healthy', icon: '🥗' },
+  { value: 'Beverages', label: 'Beverages', icon: '☕' },
+  { value: 'Mixed', label: 'Mixed', icon: '🍜' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'featured', label: 'Featured First' },
+  { value: 'rating', label: 'Highest Rated' },
+  { value: 'delivery', label: 'Fastest Delivery' },
+  { value: 'discount', label: 'Best Offers' },
+];
 
 export default function MenuPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [restaurants, setRestaurants] = useState<Canteen[]>([])
-  const [filteredRestaurants, setFilteredRestaurants] = useState<Canteen[]>([])
-  const [loading, setLoading] = useState(true)
-  const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [canteens, setCanteens] = useState<Canteen[]>([]);
+  const [filteredCanteens, setFilteredCanteens] = useState<Canteen[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCuisine, setSelectedCuisine] = useState('all');
+  const [sortBy, setSortBy] = useState('featured');
+  const [showFilters, setShowFilters] = useState(false);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
     const fetchCanteens = async () => {
       try {
-        const response = await fetch("/api/v1/canteens")
+      setLoading(true);
+        console.log('🔍 Fetching canteens from:', API_ENDPOINTS.CANTEENS);
+        const response = await fetch(API_ENDPOINTS.CANTEENS);
+        
         if (!response.ok) {
-          throw new Error("Failed to fetch canteens")
+          throw new Error(`Failed to fetch canteens: ${response.status} ${response.statusText}`);
         }
-        const data = await response.json()
-        setRestaurants(data.data)
-        setFilteredRestaurants(data.data)
+        
+        const data = await response.json();
+        console.log('📋 Received data:', data);
+        
+      const visibleCanteens = (data.canteens || []).filter(
+        (c: Canteen) => c.is_verified === true && c.isBanned === false && c.isDeleted === false
+        );
+      
+        setCanteens(visibleCanteens);
+        setFilteredCanteens(visibleCanteens);
       } catch (error) {
-        console.error("Error fetching canteens:", error)
+        console.error('❌ Error fetching canteens:', error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-
-    fetchCanteens()
-  }, [])
+    };
 
   useEffect(() => {
-    const filtered = restaurants.filter((restaurant) =>
-      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    setFilteredRestaurants(filtered)
-  }, [searchQuery, restaurants])
+    fetchCanteens();
+  }, []);
+
+  useEffect(() => {
+    let filtered = canteens.filter((canteen) => {
+      const matchesSearch = 
+        canteen.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        canteen.cuisine.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        canteen.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        canteen.campus?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesCuisine = selectedCuisine === 'all' || canteen.cuisine === selectedCuisine;
+      
+      return matchesSearch && matchesCuisine;
+    });
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'featured':
+          if (a.featured !== b.featured) return b.featured ? 1 : -1;
+          return b.rating - a.rating;
+        case 'rating':
+          return b.rating - a.rating;
+        case 'delivery':
+          const aTime = parseInt(a.deliveryTime.split('-')[0]);
+          const bTime = parseInt(b.deliveryTime.split('-')[0]);
+          return aTime - bTime;
+        case 'discount':
+          if (a.discount && !b.discount) return -1;
+          if (!a.discount && b.discount) return 1;
+          return 0;
+        default:
+          return 0;
+      }
+    });
+
+    setFilteredCanteens(filtered);
+  }, [searchQuery, selectedCuisine, sortBy, canteens]);
+
+  const toggleFavorite = (canteenId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev);
+      if (newFavorites.has(canteenId)) {
+        newFavorites.delete(canteenId);
+      } else {
+        newFavorites.add(canteenId);
+      }
+      return newFavorites;
+    });
+  };
+
+  const getCanteenImage = (canteen: Canteen) => {
+    if (canteen.images && canteen.images.length > 0 && canteen.images[0] !== '/placeholder.jpg') {
+      return canteen.images[0];
+    }
+    // Return cuisine-specific placeholder
+    const cuisineImages: { [key: string]: string } = {
+      'Multi-Cuisine': '🍽️',
+      'Indian': '🍛',
+      'Italian': '🍕',
+      'Fast Food': '🍔',
+      'Healthy': '🥗',
+      'Beverages': '☕',
+      'Mixed': '🍜'
+    };
+    return cuisineImages[canteen.cuisine] || '🍽️';
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -52,326 +190,393 @@ export default function MenuPage() {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
-    }
-  }
+        delayChildren: 0.2,
+      },
+    },
+  };
 
   const cardVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 50,
-      scale: 0.9
-    },
+    hidden: { opacity: 0, y: 50, scale: 0.95 },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 100,
         damping: 15,
-        duration: 0.6
-      }
-    }
-  }
-
-  const searchVariants = {
-    hidden: { opacity: 0, y: -50 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: "spring",
-        stiffness: 120,
-        damping: 20
-      }
-    }
-  }
-
-  const floatingVariants = {
-    animate: {
-      y: [-10, 10, -10],
-      rotate: [0, 2, -2, 0],
-      transition: {
-        duration: 6,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  }
+        duration: 0.6,
+      },
+    },
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center'>
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
+          className='text-center'>
           <motion.div
             animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className='w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full mx-auto mb-4'
           />
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-white text-xl font-light"
-          >
-            Preparing your culinary journey...
+            className='text-slate-700 dark:text-slate-300 text-xl font-medium'>
+            Discovering campus delicacies...
           </motion.p>
         </motion.div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <motion.div
-          variants={floatingVariants}
-          animate="animate"
-          className="absolute top-20 left-20 w-32 h-32 bg-purple-500/10 rounded-full blur-xl"
-        />
-        <motion.div
-          variants={floatingVariants}
-          animate="animate"
-          style={{ animationDelay: "2s" }}
-          className="absolute top-40 right-32 w-24 h-24 bg-pink-500/10 rounded-full blur-xl"
-        />
-        <motion.div
-          variants={floatingVariants}
-          animate="animate"
-          style={{ animationDelay: "4s" }}
-          className="absolute bottom-32 left-16 w-40 h-40 bg-blue-500/10 rounded-full blur-xl"
-        />
-        
-        {/* Cinematic light rays */}
-        <motion.div
-          initial={{ opacity: 0, rotate: 0 }}
-          animate={{ opacity: [0.1, 0.3, 0.1], rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-0 left-1/2 w-96 h-96 bg-gradient-conic from-purple-500/20 via-transparent to-purple-500/20 -translate-x-1/2 -translate-y-1/2"
-        />
-      </div>
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900'>
+      {/* Hero Section */}
+      <section className='relative pt-24 pb-12 px-6 overflow-hidden'>
+        {/* Background Elements */}
+      <div className='absolute inset-0 overflow-hidden'>
+          <motion.div
+            animate={{ 
+              scale: [1, 1.1, 1],
+              rotate: [0, 180, 360]
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className='absolute -top-1/2 -right-1/2 w-96 h-96 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 rounded-full blur-3xl'
+          />
+          <motion.div
+            animate={{ 
+              scale: [1.1, 1, 1.1],
+              rotate: [360, 180, 0]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className='absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-full blur-3xl'
+          />
+        </div>
 
-      <div className="relative z-10">
-        {/* Hero Section with Search */}
-        <motion.section
-          initial="hidden"
-          animate="visible"
-          variants={searchVariants}
-          className="pt-24 pb-16 px-6"
-        >
-          <div className="max-w-7xl mx-auto text-center">
+        <div className='relative z-10 max-w-7xl mx-auto text-center'>
             <motion.div
               initial={{ opacity: 0, y: -30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.8 }}
-              className="mb-8"
-            >
-              <h1 className="text-6xl md:text-8xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
-                Menu
+            transition={{ duration: 0.8 }}
+              className='mb-8'>
+            <h1 className='text-5xl md:text-7xl lg:text-8xl font-bold mb-6'>
+              <span className='bg-gradient-to-r from-slate-900 via-red-600 to-rose-600 dark:from-white dark:via-red-300 dark:to-rose-300 bg-clip-text text-transparent'>
+                Campus
+              </span>
+              <br />
+              <span className='bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 dark:from-red-300 dark:via-rose-300 dark:to-pink-300 bg-clip-text text-transparent'>
+                Delicacies
+              </span>
               </h1>
               <motion.div
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
-                className="w-24 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto mb-6"
+              className='w-32 h-1 bg-gradient-to-r from-red-500 to-rose-500 mx-auto mb-6'
               />
-              <p className="text-xl text-gray-300 max-w-2xl mx-auto font-light">
-                Discover extraordinary culinary experiences crafted by passionate chefs
+            <p className='text-xl md:text-2xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto font-light leading-relaxed'>
+              Discover exceptional dining experiences across campus. From local favorites to international cuisines, all delivered fresh to your doorstep.
               </p>
             </motion.div>
 
-            {/* Cinematic Search Bar */}
+          {/* Stats Bar */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className='flex flex-wrap justify-center gap-8 mb-12'>
+            <div className='text-center'>
+              <div className='text-3xl font-bold text-slate-900 dark:text-white'>{canteens.length}</div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>Active Canteens</div>
+            </div>
+            <div className='text-center'>
+              <div className='text-3xl font-bold text-slate-900 dark:text-white'>
+                {canteens.filter(c => c.isOpen).length}
+              </div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>Open Now</div>
+            </div>
+            <div className='text-center'>
+              <div className='text-3xl font-bold text-slate-900 dark:text-white'>
+                {canteens.filter(c => c.featured).length}
+              </div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>Featured</div>
+            </div>
+            <div className='text-center'>
+              <div className='text-3xl font-bold text-slate-900 dark:text-white'>
+                {(canteens.reduce((sum, c) => sum + c.rating, 0) / canteens.length).toFixed(1)}⭐
+              </div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>Avg Rating</div>
+            </div>
+          </motion.div>
+
+          {/* Search and Filter Section */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="relative max-w-2xl mx-auto"
-            >
-              <div className="relative group">
-                <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6 group-hover:text-purple-400 transition-colors duration-300" />
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className='max-w-4xl mx-auto'>
+            <div className='bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl p-6 shadow-2xl border border-slate-200/50 dark:border-slate-700/50'>
+              {/* Search Bar */}
+              <div className='relative mb-6'>
+                <Search className='absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5' />
                 <Input
-                  type="text"
-                  placeholder="Search restaurants, cuisines, or dishes..."
+                  type='text'
+                  placeholder='Search canteens, cuisines, or locations...'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-16 pr-6 py-6 bg-white/10 backdrop-blur-xl border-white/20 rounded-2xl text-white placeholder-gray-400 text-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 hover:bg-white/15"
+                  className='pl-12 pr-16 h-14 bg-slate-50 dark:bg-slate-700 border-slate-200 dark:border-slate-600 rounded-xl text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent'
                 />
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant='outline'
+                  size='sm'
+                  className='absolute right-2 top-2 h-10 px-4 bg-white dark:bg-slate-600 border-slate-200 dark:border-slate-500'>
+                  <Filter className='w-4 h-4 mr-2' />
+                  Filters
+                </Button>
+              </div>
+
+              {/* Filter Options */}
+              <AnimatePresence>
+                {showFilters && (
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: searchQuery ? 1 : 0 }}
-                  className="absolute right-6 top-1/2 transform -translate-y-1/2"
-                >
-                  <Sparkles className="w-5 h-5 text-purple-400" />
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className='space-y-4'>
+                    <Separator />
+                    
+                    {/* Cuisine Filter */}
+                    <div>
+                      <h3 className='font-semibold text-slate-700 dark:text-slate-300 mb-3'>Cuisine Type</h3>
+                      <div className='flex flex-wrap gap-2'>
+                        {CUISINE_FILTERS.map((cuisine) => (
+                          <Button
+                            key={cuisine.value}
+                            onClick={() => setSelectedCuisine(cuisine.value)}
+                            variant={selectedCuisine === cuisine.value ? 'default' : 'outline'}
+                            size='sm'
+                            className={`${
+                              selectedCuisine === cuisine.value
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-600'
+                            }`}>
+                            <span className='mr-2'>{cuisine.icon}</span>
+                            {cuisine.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sort Options */}
+                    <div>
+                      <h3 className='font-semibold text-slate-700 dark:text-slate-300 mb-3'>Sort By</h3>
+                      <div className='flex flex-wrap gap-2'>
+                        {SORT_OPTIONS.map((option) => (
+                          <Button
+                            key={option.value}
+                            onClick={() => setSortBy(option.value)}
+                            variant={sortBy === option.value ? 'default' : 'outline'}
+                            size='sm'
+                            className={`${
+                              sortBy === option.value
+                                ? 'bg-red-500 hover:bg-red-600 text-white'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-600'
+                            }`}>
+                            {option.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                 </motion.div>
+                )}
+              </AnimatePresence>
               </div>
             </motion.div>
           </div>
-        </motion.section>
+      </section>
 
-        {/* Restaurant Grid */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="px-6 pb-24"
-        >
-          <div className="max-w-7xl mx-auto">
-            <AnimatePresence mode="wait">
-              {filteredRestaurants.length > 0 ? (
+      {/* Results Section */}
+      <section className='px-6 pb-24'>
+          <div className='max-w-7xl mx-auto'>
+          {/* Results Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className='flex items-center justify-between mb-8'>
+            <div>
+              <h2 className='text-2xl font-bold text-slate-900 dark:text-white mb-2'>
+                Available Canteens
+              </h2>
+              <p className='text-slate-600 dark:text-slate-400'>
+                {filteredCanteens.length} of {canteens.length} canteens
+                {searchQuery && (
+                  <span> matching "{searchQuery}"</span>
+                )}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Canteen Grid */}
+            <AnimatePresence mode='wait'>
+              {filteredCanteens.length > 0 ? (
                 <motion.div
-                  key="restaurants"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-                >
-                  {filteredRestaurants.map((restaurant, index) => (
+                key='canteens'
+                variants={containerVariants}
+                initial='hidden'
+                animate='visible'
+                className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+                  {filteredCanteens.map((canteen, index) => (
                     <motion.div
-                      key={restaurant._id}
+                      key={canteen._id}
                       variants={cardVariants}
-                      whileHover={{ 
-                        scale: 1.05, 
-                        rotateY: 5,
-                        transition: { type: "spring", stiffness: 300, damping: 20 }
-                      }}
-                      onHoverStart={() => setHoveredCard(restaurant._id)}
+                    whileHover={{ y: -8, scale: 1.02 }}
+                      onHoverStart={() => setHoveredCard(canteen._id)}
                       onHoverEnd={() => setHoveredCard(null)}
-                      className="group relative"
-                    >
-                      <Card className="bg-white/10 backdrop-blur-xl border-white/20 overflow-hidden hover:bg-white/15 transition-all duration-500 h-full">
-                        <div className="relative overflow-hidden">
+                    className='group'>
+                    <Card className='bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 h-full'>
+                      {/* Image Section */}
+                      <div className='relative overflow-hidden h-48'>
                           <motion.div
                             whileHover={{ scale: 1.1 }}
                             transition={{ duration: 0.6 }}
-                            className="relative"
-                          >
-                            <Image
-                              src={restaurant.image || "/placeholder.svg"}
-                              alt={restaurant.name}
-                              width={400}
-                              height={250}
-                              className="w-full h-64 object-cover"
-                            />
-                            
-                            {/* Cinematic overlay */}
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: hoveredCard === restaurant._id ? 1 : 0 }}
-                              className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
-                            />
+                          className='relative w-full h-full bg-gradient-to-br from-red-100 to-rose-100 dark:from-red-900/20 dark:to-rose-900/20 flex items-center justify-center'>
+                          <span className='text-6xl'>{getCanteenImage(canteen)}</span>
+                          
+                          {/* Gradient Overlay */}
+                          <div className='absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
                           </motion.div>
 
-                          {/* Floating badges */}
-                          <div className="absolute top-4 left-4 flex flex-col gap-2">
-                            {restaurant.featured && (
+                        {/* Status Badges */}
+                        <div className='absolute top-3 left-3 flex flex-col gap-2'>
+                            {canteen.featured && (
                               <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                              >
-                                <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-3 py-1 shadow-lg">
-                                  <Sparkles className="w-4 h-4 mr-1" />
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.1 }}>
+                                <Badge className='bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-3 py-1 shadow-lg'>
+                                <Award className='w-3 h-3 mr-1' />
                                   Featured
                                 </Badge>
                               </motion.div>
                             )}
-                            {restaurant.discount && (
+                            {canteen.discount && (
                               <motion.div
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.1 + 0.1 }}
-                              >
-                                <Badge className="bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-3 py-1 shadow-lg">
-                                  {restaurant.discount}
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.1 + 0.1 }}>
+                                <Badge className='bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-3 py-1 shadow-lg'>
+                                <Zap className='w-3 h-3 mr-1' />
+                                  {canteen.discount}
                                 </Badge>
                               </motion.div>
                             )}
+                          {canteen.is_verified && (
+                            <Badge className='bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium px-2 py-1'>
+                              <CheckCircle className='w-3 h-3 mr-1' />
+                              Verified
+                            </Badge>
+                            )}
                           </div>
 
-                          {/* Heart button */}
+                        {/* Favorite Button */}
                           <motion.div
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            className="absolute top-4 right-4"
-                          >
+                          className='absolute top-3 right-3'>
                             <Button
-                              size="sm"
-                              variant="outline"
-                              className="border-white/30 bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 rounded-full w-10 h-10 p-0"
-                            >
-                              <Heart className="w-4 h-4" />
+                            onClick={() => toggleFavorite(canteen._id)}
+                              size='sm'
+                              variant='outline'
+                            className='bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-white/50 hover:bg-white dark:hover:bg-slate-700 rounded-full w-9 h-9 p-0'>
+                            <Heart className={`w-4 h-4 ${favorites.has(canteen._id) ? 'fill-red-500 text-red-500' : 'text-slate-600 dark:text-slate-400'}`} />
                             </Button>
                           </motion.div>
 
-                          {/* Closed overlay */}
+                        {/* Closed Overlay */}
                           <AnimatePresence>
-                            {!restaurant.isOpen && (
+                            {!canteen.isOpen && (
                               <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center"
-                              >
-                                <Badge variant="destructive" className="text-lg px-6 py-2 font-bold">
-                                  Closed
+                                className='absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center'>
+                              <Badge variant='destructive' className='text-lg px-4 py-2 font-bold'>
+                                Currently Closed
                                 </Badge>
                               </motion.div>
                             )}
                           </AnimatePresence>
                         </div>
 
-                        <CardHeader className="pb-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <CardTitle className="text-2xl text-white mb-2 group-hover:text-purple-200 transition-colors">
-                                {restaurant.name}
+                      {/* Content Section */}
+                      <CardHeader className='pb-3'>
+                        <div className='flex items-start justify-between mb-2'>
+                          <CardTitle className='text-lg font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-tight'>
+                                {canteen.name}
                               </CardTitle>
-                              <CardDescription className="text-gray-300 flex items-center gap-2">
-                                <ChefHat className="w-4 h-4" />
-                                {restaurant.cuisine}
-                              </CardDescription>
-                            </div>
                             <motion.div
-                              whileHover={{ scale: 1.1 }}
-                              className="flex items-center gap-1 bg-yellow-500/20 px-3 py-1 rounded-full"
-                            >
-                              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                              <span className="text-white font-bold">{restaurant.rating}</span>
+                            whileHover={{ scale: 1.05 }}
+                            className='flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded-full'>
+                            <Star className='w-3 h-3 text-yellow-500 fill-current' />
+                            <span className='text-sm font-bold text-slate-900 dark:text-white'>
+                                {canteen.rating}
+                              </span>
                             </motion.div>
+                          </div>
+                        
+                        <div className='space-y-2'>
+                          <CardDescription className='flex items-center gap-2 text-slate-600 dark:text-slate-400'>
+                            <ChefHat className='w-4 h-4 text-red-500' />
+                            {canteen.cuisine}
+                          </CardDescription>
+                          
+                          {canteen.description && (
+                            <p className='text-xs text-slate-500 dark:text-slate-400 line-clamp-2'>
+                              {canteen.description}
+                            </p>
+                          )}
                           </div>
                         </CardHeader>
 
-                        <CardContent className="pt-0">
-                          <div className="flex items-center justify-between text-sm text-gray-300 mb-6">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-purple-400" />
-                              <span>{restaurant.deliveryTime}</span>
+                      <CardContent className='pt-0 pb-4'>
+                        {/* Info Grid */}
+                        <div className='grid grid-cols-2 gap-3 mb-4 text-sm'>
+                          <div className='flex items-center gap-2 text-slate-600 dark:text-slate-400'>
+                            <Clock className='w-4 h-4 text-red-500' />
+                              <span>{canteen.deliveryTime}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-purple-400" />
-                              <span>{restaurant.distance}</span>
+                          <div className='flex items-center gap-2 text-slate-600 dark:text-slate-400'>
+                            <MapPin className='w-4 h-4 text-red-500' />
+                            <span className='truncate'>{canteen.distance}</span>
+                          </div>
+                          {canteen.campus && (
+                            <div className='col-span-2 flex items-center gap-2 text-slate-600 dark:text-slate-400'>
+                              <BadgeIcon className='w-4 h-4 text-red-500' />
+                              <span className='truncate'>{canteen.campus.name}</span>
                             </div>
+                          )}
                           </div>
 
-                          <Link href={`/menu/${restaurant._id}`}>
+                        {/* Action Button */}
+                          <Link href={`/menu/${canteen._id}`}>
                             <motion.div
                               whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
+                              whileTap={{ scale: 0.98 }}>
                               <Button
-                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
-                                disabled={!restaurant.isOpen}
-                              >
-                                <Utensils className="w-5 h-5 mr-2" />
-                                {restaurant.isOpen ? "View Menu" : "Closed"}
+                              className={`w-full font-semibold py-2.5 rounded-lg transition-all duration-300 ${
+                                canteen.isOpen
+                                  ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg hover:shadow-red-500/25'
+                                  : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                              }`}
+                                disabled={!canteen.isOpen}>
+                              <Utensils className='w-4 h-4 mr-2' />
+                              {canteen.isOpen ? 'Explore Menu' : 'Currently Closed'}
                               </Button>
                             </motion.div>
                           </Link>
@@ -382,30 +587,38 @@ export default function MenuPage() {
                 </motion.div>
               ) : (
                 <motion.div
-                  key="no-results"
+                  key='no-results'
                   initial={{ opacity: 0, y: 50 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -50 }}
-                  className="text-center py-20"
-                >
+                  className='text-center py-20'>
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 100, delay: 0.2 }}
-                    className="w-32 h-32 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mx-auto mb-8"
-                  >
-                    <Search className="w-16 h-16 text-purple-400" />
+                    transition={{ type: 'spring', stiffness: 100, delay: 0.2 }}
+                    className='w-32 h-32 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-8'>
+                    <Search className='w-16 h-16 text-red-400' />
                   </motion.div>
-                  <h3 className="text-3xl font-bold text-white mb-4">No matches found</h3>
-                  <p className="text-gray-400 text-lg max-w-md mx-auto">
-                    Try adjusting your search to discover amazing restaurants
-                  </p>
+                <h3 className='text-3xl font-bold text-slate-900 dark:text-white mb-4'>
+                    No canteens found
+                  </h3>
+                <p className='text-slate-600 dark:text-slate-400 text-lg max-w-md mx-auto mb-6'>
+                  Try adjusting your search criteria or filters to discover amazing campus dining options
+                </p>
+                <Button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedCuisine('all');
+                    setSortBy('featured');
+                  }}
+                  variant='outline'
+                  className='border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950'>
+                  Clear All Filters
+                </Button>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-        </motion.section>
-      </div>
+      </section>
     </div>
-  )
+  );
 }
