@@ -25,12 +25,14 @@
     "mongoose": "^8.16.1",
     "multer": "^2.0.1",
     "nodemailer": "^7.0.4",
-    "razorpay": "^2.9.6",
     "nodemon": "^3.1.10",
-    "readdirp": "^4.1.2"
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "razorpay": "^2.9.6",
+    "readdirp": "^4.1.2",
+    "ua-parser-js": "^2.0.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
-
   }
 }
