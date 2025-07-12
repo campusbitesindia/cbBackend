@@ -63,7 +63,7 @@ type SecurityContextType = {
   currentPrompt: SecurityPrompt | null
   
   // Actions
-  fetchSecurityDashboard: () => Promise<void>
+  // fetchSecurityDashboard: () => Promise<void>
   handleSecurityPrompt: (prompt: SecurityPrompt) => void
   dismissPrompt: () => void
   manageDevice: (deviceId: string, action: 'trust' | 'remove' | 'rename', newName?: string) => Promise<void>
@@ -166,7 +166,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         setSecurityScore(data.securityScore)
         
         // Update devices list
-        await fetchSecurityDashboard()
+        // await fetchSecurityDashboard()
         
         toast({
           title: "Device Updated",
@@ -183,7 +183,8 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         description: "Unable to update device settings"
       })
     }
-  }, [fetchSecurityDashboard, toast])
+  }, [toast])
+  // }, [fetchSecurityDashboard, toast])
 
   // 📧 Send Verification Code
   const sendVerification = useCallback(async (purpose = 'login_verification') => {
@@ -310,9 +311,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) {
-      fetchSecurityDashboard()
+      // fetchSecurityDashboard()
     }
-  }, [fetchSecurityDashboard])
+  // }, [fetchSecurityDashboard])
+     }, [])
 
   return (
     <SecurityContext.Provider
@@ -325,7 +327,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         settings,
         isLoading,
         currentPrompt,
-        fetchSecurityDashboard,
+        // fetchSecurityDashboard,
         handleSecurityPrompt,
         dismissPrompt,
         manageDevice,

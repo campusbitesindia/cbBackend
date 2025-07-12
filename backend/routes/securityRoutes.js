@@ -205,4 +205,3 @@ router.post("/smart",smartLoginMonitoring);
 module.exports = router; 
 
 
-
