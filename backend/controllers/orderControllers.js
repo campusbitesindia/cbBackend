@@ -5,14 +5,15 @@ const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
+const Counter=require("../models/CounterSchema")
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:_items,pickUpTime}=req.body; 
+        const {items:Items,pickUpTime}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        const Items=JSON.parse(_items); //converting _items to an Json array;
+        // const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
@@ -75,7 +76,7 @@ exports.CreateOrder=async(req,res)=>{
 
         //checking or valid pickup time and the difference will be in mircoseconds
         const isValidPickUpTime=new Date(pickUpTime) -Date.now()>=10 *60*1000?true:false;
-
+        
         // if pickup time is less than 10 minutes return erro
         if(!isValidPickUpTime){
             return res.status(400).json({
@@ -83,13 +84,17 @@ exports.CreateOrder=async(req,res)=>{
                 message:"PickUp time Can't Be less than 10 minutes"
             })
         }
-        
+
+        //generate the Order Number for the Order
+        const customid=await Counter.findByIdAndUpdate("order#",{$inc:{seq:1}},{new:true,upsert:true});
+        const OrderNumber= customid._id+customid.seq;
         //create the order with penalty amount if applicable
         const penalty=await Penalty.find({deviceId,isPaid:false});
         for(const data of penalty){
             Total+=data.Amount;
         }
         const order=await Order.create({
+            OrderNumber:OrderNumber,
             student:student._id,
             canteen:canteen._id,
             items:OrderItem,

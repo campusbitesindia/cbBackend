@@ -9,13 +9,13 @@ const passport = require("passport");
 require("./config/passport");
 
 const userRoutes = require("./routes/userRoutes");
-const canteenRoutes = require("./routes/canteenRoutes");
-const campusRoutes = require("./routes/campusRoutes");
+const canteenRoutes = require("./routes/canteenRoutes"); 
+const campusRoutes = require("./routes/campusRoutes"); 
 const adminRoutes = require("./routes/adminRoutes");
 const advancedRoutes = require("./routes/advanceRoutes");
-const paymentRoutes = require("./routes/paymentRoutes")
+const paymentRoutes = require("./routes/paymentRoutes") 
 const webhookRoutes = require("./routes/webhookRoutes")
-const OrderRoutes =require("./routes/OrderRoutes");
+const OrderRoutes =require("./routes/OrderRoutes"); 
 const menuRoutes = require("./routes/menuRoutes");
 const securityRoutes = require("./routes/securityRoutes"); // 🔐 Smart Security Routes
 
