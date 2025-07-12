@@ -22,9 +22,11 @@ const securityRoutes = require("./routes/securityRoutes"); // 🔐 Smart Securit
 const cookieParser = require("cookie-parser");
 const itemRoutes = require('./routes/itemRoutes');
 const reviewRoutes = require('./routes/reviewRoutes')
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // 🔐 Smart Security Middleware
 const { smartLoginMonitoring, registerDeviceOnLogin, checkVerificationRequired } = require('./middleware/smartSecurity');
+
 
 const app = express();
 
@@ -80,6 +82,7 @@ app.use('/api/v1/reviews', reviewRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/security", securityRoutes); // 🔐 Smart Security API
 app.use("/api/v1/adv", advancedRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check  
 app.get("/", (req, res) => {
@@ -91,4 +94,5 @@ app.use((req, res) => {
     res.status(404).json({ message: "Route not found" });
 });
 
+// Export server
 module.exports = app;

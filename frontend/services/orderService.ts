@@ -20,10 +20,17 @@ const handleAuthError = (error: any) => {
       // Clear expired token
       localStorage.removeItem('token');
       // Trigger a page reload to reset auth state
-      window.location.href = '/login?message=Session expired, please login again';
-      throw new AuthError('Your session has expired. Please login again.', 'TOKEN_EXPIRED');
+      window.location.href =
+        '/login?message=Session expired, please login again';
+      throw new AuthError(
+        'Your session has expired. Please login again.',
+        'TOKEN_EXPIRED'
+      );
     }
-    throw new AuthError('Authentication failed. Please login again.', 'AUTH_FAILED');
+    throw new AuthError(
+      'Authentication failed. Please login again.',
+      'AUTH_FAILED'
+    );
   }
   throw error;
 };
@@ -66,10 +73,10 @@ export interface CreateOrderResponse {
 // Get user's orders
 export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
   try {
-    const response = await api.get('/api/v1/order/getStudentAllOrders', {
+    const response = await api.get('/api/orders', {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
     return response.data;
   } catch (error) {
@@ -79,12 +86,15 @@ export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
 };
 
 // Create a new order
-export const createOrder = async (orderData: CreateOrderPayload, token: string): Promise<CreateOrderResponse> => {
+export const createOrder = async (
+  orderData: CreateOrderPayload,
+  token: string
+): Promise<CreateOrderResponse> => {
   try {
-    const response = await api.post('/api/v1/order/CreateOrder', orderData, {
+    const response = await api.post('/api/orders', orderData, {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
     return response.data;
   } catch (error) {
@@ -94,16 +104,42 @@ export const createOrder = async (orderData: CreateOrderPayload, token: string):
 };
 
 // Get order by ID
-export const getOrderById = async (orderId: string, token: string): Promise<{ success: boolean; data: Order }> => {
+export const getOrderById = async (
+  orderId: string,
+  token: string
+): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.get(`/api/v1/order/getOrderDetails/${orderId}`, {
+    const response = await api.get(`/api/orders/${orderId}`, {
       headers: {
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     });
     return response.data;
   } catch (error) {
     handleAuthError(error);
     return Promise.reject(error);
   }
-}; 
+};
+
+// Update order status
+export const updateOrderStatus = async (
+  orderId: string,
+  status: Order['status'],
+  token: string
+): Promise<{ success: boolean; data: Order }> => {
+  try {
+    const response = await api.patch(
+      `/api/orders/${orderId}/status`,
+      { status },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};

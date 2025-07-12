@@ -6,7 +6,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: function() { return !this.googleId; } }, // Only required if not Google OAuth
   googleId: { type: String, sparse: true }, // For Google OAuth users
-  role: { type: String, enum: ["student", "canteen", "campus"], required: true },
+  role: { type: String, enum: ["student", "canteen", "campus", "admin"], required: true },
   campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus", required: function() { return !this.googleId; } }, // Only required if not Google OAuth
   canteenId: { type: mongoose.Schema.Types.ObjectId, ref: "Canteen" },
   profileImage: { type: String },

@@ -31,7 +31,8 @@
     "razorpay": "^2.9.6",
     "readdirp": "^4.1.2",
     "ua-parser-js": "^2.0.4",
-    "web-push": "^3.6.7"
+    "web-push": "^3.6.7",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

@@ -3,6 +3,7 @@ const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
+const sendNotification = require("../utils/notify")
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
 const Counter=require("../models/CounterSchema")
@@ -43,7 +44,7 @@ exports.CreateOrder=async(req,res)=>{
                 message:"Canteen with this id Not found"
             })
         }
-
+        
         const OrderItem=[];
         let Total=0;
 
@@ -93,6 +94,7 @@ exports.CreateOrder=async(req,res)=>{
         for(const data of penalty){
             Total+=data.Amount;
         }
+
         const order=await Order.create({
             OrderNumber:OrderNumber,
             student:student._id,
@@ -101,7 +103,14 @@ exports.CreateOrder=async(req,res)=>{
             total:Total,
             pickupTime:pickUpTime
         });
-       
+
+       // Notify Vendor (socket room: vendor_<vendorId>)
+        sendNotification(`vendor_${canteen._id}`, {
+            title: "New Order",
+            message: `Hey! ${student.name} just placed an order.`,
+            type: "new_order",
+            timestamp: new Date()
+        });
 
         return res.status(200).json({
             success:true,
@@ -210,6 +219,13 @@ exports.UpdateOrderStatus = async (req, res) => {
       .populate({ path: "student", select: "name" })
       .populate({ path: "canteen", select: "name" });
 
+    // Notify user (socket room: user_<userId>)
+    sendNotification(`user_${order.student}`, {
+        title: "Order Update",
+        message: `Your order is now marked as "${status}"`,
+        type: "order_status_update",
+        timestamp: new Date()
+    });
     return res.status(200).json({
       success: true,
       message: "Order status updated successfully",

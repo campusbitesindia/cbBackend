@@ -73,7 +73,7 @@ exports.isAuthenticated = async (req, res, next) => {
  exports.isAdmin=async(req,res,next)=>{
    try{
       const role=req.user.role;
-      if(role!=="Admin"){
+      if(role!=="admin"){
          return res.status(401).json({
             success:false,
             message:"this is protected Route for Admin"

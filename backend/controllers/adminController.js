@@ -99,8 +99,8 @@ exports.getTopUsersBySpending = async (req, res) => {
 exports.getUsersByRoleList = async (req, res) => {
   try {
     const [students, owners] = await Promise.all([
-      User.find({ role: "student" }).select("name email"),
-      User.find({ role: "canteen" }).select("name email")
+      User.find({ role: "student" }).select("name email isBanned"),
+      User.find({ role: "canteen" }).select("name email isBanned")
     ]);
     res.json({ students, canteenOwners: owners });
   } catch (error) {
@@ -525,9 +525,9 @@ exports.getMonthlyRevenue = async (req, res) => {
 
 exports.banUser = async (req, res) => {
   try {
-    const { userId } = req.body;
-    await User.findByIdAndUpdate(userId, { isBanned: true });
-    res.json({ message: "User has been banned." });
+    const { userId, ban } = req.body;
+    await User.findByIdAndUpdate(userId, { isBanned: ban });
+    res.json({ message: ban ? "User has been banned." : "User has been unbanned." });
   } catch (error) {
     console.error("Error banning user:", error);
     res.status(500).json({ message: "Server error" });
@@ -675,6 +675,26 @@ exports.submitCampusRequest = async (req, res) => {
 
   } catch (error) {
     console.error("Campus Request Error:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+exports.getAllCanteens = async (req, res) => {
+  try {
+    const canteens = await Canteen.find();
+    res.status(200).json({ success: true, canteens });
+  } catch (error) {
+    console.error("Error fetching all canteens:", error);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Get all campus requests
+exports.getAllCampusRequests = async (req, res) => {
+  try {
+    const requests = await require("../models/campusRequest").find();
+    res.status(200).json({ success: true, requests });
+  } catch (error) {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
