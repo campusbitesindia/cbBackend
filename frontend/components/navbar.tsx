@@ -1,143 +1,153 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { memo } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/context/auth-context"
-import { useCart } from "@/context/cart-context"
-import { useMobile } from "@/hooks/use-mobile"
-import { Menu, ShoppingCart, User, LogOut, Home, UtensilsCrossed, Package, Heart, X } from "lucide-react"
-import Image from "next/image"
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/context/auth-context';
+import { useCart } from '@/context/cart-context';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { Menu, ShoppingCart, User, LogOut, Home, UtensilsCrossed, Package, Heart, X } from 'lucide-react';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
+import axios from '@/lib/axios';
 
-export default function Navbar() {
-  const pathname = usePathname()
-  const { isAuthenticated, user, logout } = useAuth()
-  const { cart } = useCart()
-  const isMobile = useMobile()
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+interface UserProfile {
+  name: string;
+  email: string;
+  profileImage?: string;
+  role: string;
+}
 
-  const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0)
+function Navbar() {
+  const pathname = usePathname();
+  const { isAuthenticated, user, logout } = useAuth();
+  const { cart } = useCart();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // Fetch fresh user profile data
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+    const fetchUserProfile = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await axios.get('/users/profile');
+          
+          if (response.data.success && response.data.user) {
+            const freshProfile = {
+              name: response.data.user.name,
+              email: response.data.user.email,
+              profileImage: response.data.user.profileImage,
+              role: response.data.user.role,
+            };
+            setUserProfile(freshProfile);
+          }
+        } catch (error) {
+          console.error('❌ Failed to fetch user profile:', error);
+          // Fallback to auth context data
+          if (user) {
+            const fallbackProfile = {
+              name: user.name,
+              email: user.email,
+              profileImage: user.profileImage,
+              role: user.role,
+            };
+            setUserProfile(fallbackProfile);
+          }
+        }
+      } else {
+        setUserProfile(null);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, user]);
+
+  // Use fresh profile data if available, otherwise fallback to auth context
+  const displayUser = userProfile || user;
+  const profileImageSrc = displayUser?.profileImage || '/placeholder-user.jpg';
 
   const navItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "Menu", href: "/menu", icon: UtensilsCrossed },
-    { name: "Orders", href: "/orders", icon: Package },
-  ]
-
-  // Food particles data
-  const foodParticles = ['🍕', '🍔', '🌮', '🍟', '🥤', '🍩', '🌭', '🥪', '🍰', '🧁']
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'Outlets', href: '/menu', icon: UtensilsCrossed },
+    { name: 'Orders', href: '/orders', icon: Package },
+  ];
 
   return (
-    <header
-      className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-gradient-to-r from-red-600 via-red-500 to-orange-500 shadow-2xl' 
-          : 'bg-gradient-to-r from-red-500 via-red-400 to-orange-400'
-      }`}
-    >
-      {/* Animated Background Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600/20 via-transparent to-orange-600/20"></div>
-        
-        {/* Floating Food Particles */}
-        {foodParticles.map((particle, index) => (
-          <div
-            key={index}
-            className="absolute text-lg opacity-20 animate-float"
-            style={{
-              left: `${(index * 15) % 100}%`,
-              top: `${20 + (index * 10) % 60}%`,
-              animationDelay: `${index * 0.5}s`,
-              animationDuration: `${8 + (index % 4)}s`,
-            }}
-          >
-            {particle}
-          </div>
-        ))}
-        
-        {/* Moving Wave Effect */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 animate-wave"></div>
-        </div>
-        
-        {/* Sparkle Effect */}
-        <div className="absolute inset-0">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-white rounded-full opacity-40 animate-sparkle"
-              style={{
-                left: `${20 + i * 15}%`,
-                top: `${30 + (i * 20) % 40}%`,
-                animationDelay: `${i * 1.2}s`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <header className="fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex h-20 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 group relative z-10">
-            <div className="relative w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 flex items-center justify-center border border-white/30 group-hover:bg-white/30">
-              <UtensilsCrossed className="w-5 h-5 text-white group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <div className="hidden sm:block">
-              <span className="text-xl font-bold text-white drop-shadow-md group-hover:drop-shadow-lg transition-all duration-300">
-                Campus Bites
-              </span>
+          <Link href="/" className="flex items-center group">
+            <div className="flex items-center space-x-3">
+              <Image
+                src="/logo.png"
+                alt="Campus Bites Logo"
+                width={50}
+                height={50}
+                priority
+                className="transition-all duration-300 group-hover:brightness-110"
+              />
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300">
+                  Campus Bites
+                </span>
+                <span className="text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider">
+                  Fast • Fresh • Delicious
+                </span>
+              </div>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1 relative z-10">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 group ${
-                  pathname === item.href
-                    ? "text-white bg-white/20 backdrop-blur-sm shadow-lg border border-white/30"
-                    : "text-white/90 hover:text-white hover:bg-white/15 backdrop-blur-sm"
-                }`}
-              >
-                <span className="relative z-10 drop-shadow-sm">{item.name}</span>
-                {pathname === item.href && (
-                  <div className="absolute inset-0 bg-white/20 rounded-lg border border-white/30 backdrop-blur-sm"></div>
-                )}
-                <div className="absolute inset-0 bg-white/15 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm"></div>
-              </Link>
-            ))}
+          <nav className="hidden md:flex">
+            <div className="relative flex items-center bg-gray-100/70 dark:bg-gray-900/50 backdrop-blur-lg rounded-full p-1 border border-gray-300/50 dark:border-white/10">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative px-6 py-2 text-sm font-medium transition-colors duration-300 rounded-full ${
+                    pathname === item.href
+                      ? "text-white"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  }`}
+                >
+                  <span className="relative z-10">{item.name}</span>
+                  {pathname === item.href && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute inset-0 z-0 rounded-full bg-red-600"
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              ))}
+            </div>
           </nav>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-3 relative z-10">
+          <div className="flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
             {/* Cart */}
             <Link href="/cart" className="relative group">
-              <div className="relative p-2 rounded-lg hover:bg-white/20 transition-all duration-300 backdrop-blur-sm">
-                <ShoppingCart className="w-5 h-5 text-white group-hover:scale-110 transition-transform duration-300 drop-shadow-sm" />
+              <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300">
+                <ShoppingCart className="w-5 h-5 text-gray-700 dark:text-white" />
                 {cartItemsCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-yellow-400 text-red-600 text-xs font-bold rounded-full border-2 border-white shadow-lg animate-bounce">
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50">
                     {cartItemsCount}
                   </Badge>
                 )}
@@ -148,71 +158,83 @@ export default function Navbar() {
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative p-0 rounded-full h-10 w-10 hover:bg-white/20 transition-colors duration-300">
-                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 backdrop-blur-sm border border-white/30">
+                  <Button variant="ghost" className="relative p-0 rounded-full h-10 w-10">
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10">
                       <Image 
-                        src="/placeholder-user.jpg" 
-                        alt={user?.name || 'User'} 
+                        src={profileImageSrc} 
+                        alt={displayUser?.name || 'User'} 
                         fill
                         className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-user.jpg';
+                        }}
                       />
                     </div>
-                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-white shadow-lg" />
+                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
                   align="end" 
-                  className="w-64 bg-white/95 backdrop-blur-lg border border-gray-200/50 shadow-xl rounded-xl p-2 mt-2"
+                  className="w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white"
                 >
-                  <div className="p-3 border-b border-gray-100">
+                  <div className="p-2 border-b border-gray-200/50 dark:border-white/10">
                     <div className="flex items-center space-x-3">
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-red-600">
+                      <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
                         <Image 
-                          src="/placeholder-user.jpg" 
-                          alt={user?.name || 'User'} 
+                          src={profileImageSrc} 
+                          alt={displayUser?.name || 'User'} 
                           fill
                           className="object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder-user.jpg';
+                          }}
                         />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{user?.name}</p>
-                        <p className="text-sm text-gray-500">View Profile</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{displayUser?.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{displayUser?.email}</p>
+                        {displayUser?.role && (
+                          <p className="text-xs text-red-500 dark:text-red-400 capitalize">{displayUser.role}</p>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  <DropdownMenuItem asChild className="mt-2">
-                    <Link href="/orders" className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-300">
-                      <Package className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-700">My Orders</span>
+                  <DropdownMenuItem asChild className="mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white">
+                    <Link href="/profile" className="flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200">
+                      <User className="h-5 w-5" />
+                      <span>View Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   
-                  <DropdownMenuItem asChild>
-                    <Link href="/favorites" className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-300">
-                      <Heart className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-700">Favorites</span>
+                  <DropdownMenuItem asChild className="focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white">
+                    <Link href="/orders" className="flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200">
+                      <Package className="h-5 w-5" />
+                      <span>My Orders</span>
                     </Link>
                   </DropdownMenuItem>
                   
-                  <DropdownMenuSeparator className="my-2" />
+                  <DropdownMenuSeparator className="my-2 bg-gray-200/50 dark:bg-white/10" />
                   
                   <DropdownMenuItem 
                     onClick={logout} 
-                    className="flex items-center space-x-3 w-full px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors duration-300"
+                    className="flex items-center space-x-3 w-full p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 focus:bg-red-50 dark:focus:bg-red-500/20 focus:text-red-600 dark:focus:text-red-400"
                   >
-                    <LogOut className="h-4 w-4" />
+                    <LogOut className="h-5 w-5" />
                     <span>Sign Out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
+              // Login/Signup buttons
               <div className="hidden sm:flex items-center space-x-2">
-                <Button asChild variant="ghost" className="text-white/90 hover:text-white hover:bg-white/20 transition-all duration-300 backdrop-blur-sm">
-                  <Link href="/login">Sign In</Link>
+                <Button asChild variant="ghost" className="text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                  <Link href="/login">Login</Link>
                 </Button>
-                <Button asChild className="bg-white/20 hover:bg-white/30 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-white/30">
-                  <Link href="/register">Get Started</Link>
+                <Button asChild className="bg-red-600 hover:bg-red-700 text-white rounded-full px-5 py-2">
+                  <Link href="/register">Sign Up</Link>
                 </Button>
               </div>
             )}
@@ -220,52 +242,49 @@ export default function Navbar() {
             {/* Mobile Menu */}
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 transition-colors duration-300 backdrop-blur-sm">
+                <Button variant="ghost" size="icon" className="text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80 bg-gradient-to-br from-red-50 to-orange-50 backdrop-blur-lg border-l border-red-200/50">
+              <SheetContent side="right" className="w-full max-w-sm bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border-l border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white p-0">
                 <div className="flex flex-col h-full">
-                  {/* Mobile Header */}
-                  <div className="flex items-center justify-between p-4 border-b border-red-200">
+                  <div className="flex items-center justify-between p-6 border-b border-white/10">
                     <Link href="/" className="flex items-center space-x-3" onClick={() => setIsMenuOpen(false)}>
-                      <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-lg">
+                      <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center">
                         <UtensilsCrossed className="w-4 h-4 text-white" />
                       </div>
-                      <span className="font-bold text-lg text-red-800">Campus Bites</span>
+                      <span className="font-semibold text-lg text-white">Campus Bites</span>
                     </Link>
-                    <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
-                      <X className="h-5 w-5 text-red-600" />
+                    <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)} className="rounded-full text-white hover:bg-white/10">
+                      <X className="h-5 w-5" />
                     </Button>
                   </div>
 
-                  {/* Mobile Navigation */}
-                  <nav className="flex-1 p-4 space-y-2">
+                  <nav className="flex-1 p-6 space-y-2">
                     {navItems.map((item) => (
                       <Link
                         key={item.href}
                         href={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+                        className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-lg ${
                           pathname === item.href
-                            ? "bg-red-100 text-red-700 border border-red-200 shadow-sm"
-                            : "text-red-600 hover:bg-red-50 hover:text-red-700"
+                            ? "bg-red-600 text-white"
+                            : "text-gray-300 hover:bg-gray-800/80"
                         }`}
                       >
-                        <item.icon className="h-5 w-5" />
-                        <span className="font-medium">{item.name}</span>
+                        <item.icon className="h-6 w-6" />
+                        <span>{item.name}</span>
                       </Link>
                     ))}
                   </nav>
 
-                  {/* Mobile Auth */}
                   {!isAuthenticated && (
-                    <div className="p-4 border-t border-red-200 space-y-3">
-                      <Button asChild variant="outline" className="w-full justify-center border-red-200 text-red-600 hover:bg-red-50">
-                        <Link href="/login" onClick={() => setIsMenuOpen(false)}>Sign In</Link>
+                    <div className="p-6 border-t border-white/10 space-y-4">
+                      <Button asChild variant="outline" className="w-full h-12 rounded-xl border-white/20 text-lg text-white hover:bg-white/10 hover:text-white">
+                        <Link href="/login" onClick={() => setIsMenuOpen(false)}>Login</Link>
                       </Button>
-                      <Button asChild className="w-full justify-center bg-red-600 hover:bg-red-700 text-white shadow-lg">
-                        <Link href="/register" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
+                      <Button asChild className="w-full h-12 bg-red-600 hover:bg-red-700 rounded-xl text-lg">
+                        <Link href="/register" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
                       </Button>
                     </div>
                   )}
@@ -275,37 +294,8 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          25% { transform: translateY(-10px) rotate(5deg); }
-          50% { transform: translateY(-5px) rotate(-5deg); }
-          75% { transform: translateY(-15px) rotate(3deg); }
-        }
-        
-        @keyframes wave {
-          0% { transform: translateX(-100%) skewX(-12deg); }
-          100% { transform: translateX(200%) skewX(-12deg); }
-        }
-        
-        @keyframes sparkle {
-          0%, 100% { opacity: 0; transform: scale(0); }
-          50% { opacity: 1; transform: scale(1); }
-        }
-        
-        .animate-float {
-          animation: float 8s ease-in-out infinite;
-        }
-        
-        .animate-wave {
-          animation: wave 8s linear infinite;
-        }
-        
-        .animate-sparkle {
-          animation: sparkle 3s ease-in-out infinite;
-        }
-      `}</style>
     </header>
-  )
+  );
 }
+
+export default memo(Navbar);

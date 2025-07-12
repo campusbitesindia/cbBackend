@@ -1,5 +1,5 @@
-const app = require("./app");
 const dotenv = require("dotenv");
+const app = require("./app");
 const {connectDB} = require("./config/database");
 const http = require('http');
 const { Server } = require('socket.io');
@@ -35,8 +35,8 @@ io.on('connection', (socket) => {
 });
 
 // Start server
-app.listen(process.env.port, ()=>{
-    console.log(`Server is up on port: ${process.env.port}`);
+app.listen(process.env.PORT, ()=>{
+    console.log(`Server is up on port: ${process.env.PORT}`);
 })
 
 // DB connection

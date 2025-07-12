@@ -27,6 +27,9 @@ const notificationRoutes = require('./routes/notificationRoutes');
 // 🔐 Smart Security Middleware
 const { smartLoginMonitoring, registerDeviceOnLogin, checkVerificationRequired } = require('./middleware/smartSecurity');
 
+// 🔐 Smart Security Middleware
+const { smartLoginMonitoring, registerDeviceOnLogin, checkVerificationRequired } = require('./middleware/smartSecurity');
+
 const app = express();
 
 // Security middleware
@@ -69,7 +72,6 @@ app.use(express.urlencoded({ extended: true }))
 app.use(registerDeviceOnLogin);
 app.use(checkVerificationRequired);
 
-
 // API routes
 app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/canteens", canteenRoutes);
@@ -84,7 +86,7 @@ app.use("/api/v1/security", securityRoutes); // 🔐 Smart Security API
 app.use("/api/v1/adv", advancedRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-// Health check
+// Health check  
 app.get("/", (req, res) => {
     res.send("Campus Bites API is running 🚀");
 });

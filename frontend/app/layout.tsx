@@ -1,8 +1,7 @@
+import { Providers } from "@/components/providers"; // ✅ you'll create this file
 import type React from "react"
-// ✅ THIS STAYS ON SERVER
-import "./globals.css";
-import { Inter } from "next/font/google";
-import { ReactNode } from "react";
+import { Inter } from "next/font/google"
+import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/context/auth-context"
 import { CartProvider } from "@/context/cart-context"
@@ -10,15 +9,14 @@ import { SecurityProvider } from "@/context/security-context"
 import { SecurityNotification } from "@/components/security/SecurityNotification"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { Toaster } from "@/components/ui/toaster";
-import { Providers } from "@/components/providers"; // ✅ you'll create this file
+import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"] })
 
 export const metadata = {
   title: "Campus Bites",
   description: "Order delicious food from campus outlets"
-};
+}
 
 export default function RootLayout({
   children,
@@ -69,3 +67,4 @@ export default function RootLayout({
     </html>
   )
 }
+

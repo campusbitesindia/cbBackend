@@ -6,11 +6,10 @@ const Campus = require("../models/Campus");
 const sendNotification = require("../utils/notify")
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
-
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
-        const campusId=req.user.campus; 
+        const campusId=req.user.campus;
         const {items:_items,pickUpTime}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
@@ -91,7 +90,7 @@ exports.CreateOrder=async(req,res)=>{
         for(const data of penalty){
             Total+=data.Amount;
         }
-        //create the order
+
         const order=await Order.create({
             student:student._id,
             canteen:canteen._id,
@@ -110,7 +109,7 @@ exports.CreateOrder=async(req,res)=>{
 
         return res.status(200).json({
             success:true,
-            message:"order Created SuccessFully",
+            message:"order Created SuccessFully,penalty Applied If applicable",
             data:order
         })
     }
@@ -123,125 +122,119 @@ exports.CreateOrder=async(req,res)=>{
     }
 }
 
-exports.UpdateOrderStatus=async(req,res)=>{
-    try{
-        const {id:OrderId}=req.params;
-        const {status}=req.body;
+exports.UpdateOrderStatus = async (req, res) => {
+  try {
+    const { id: OrderId } = req.params;
+    const { status } = req.body;
+    const role=req.user.role;
 
-        //check if both orderId and status is valid
-        if(!OrderId || !status){
-            return res.json(400).json({
-                success:false,
-                message:"Please Enter all Requried Field"
-            })
-        } 
+    // Validate input
+    if (!OrderId || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter all required fields",
+      });
+    }
 
-        const allowedStatuses = [ "preparing", "ready", "completed", "cancelled"];
-        //if the status is not from Schema Enum return errors
-        if(!allowedStatuses.includes(status)){
-            return res.status(400).json({
-                success:false,
-                message:"invalid order Status"
-            })
-        }
-        //find the order with give n ID
-        const order=await Order.findById(OrderId);
-        console.log(OrderId)
-        //if order not found 
-        if(!order){
-            return res.status(400).json({
-                success:false,
-                message:"Order with this id not found"
-            })
-        }
+    const allowedStatuses = ["preparing", "ready", "completed", "cancelled"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order status",
+      });
+    }
 
-        if(order.status==="cancelled"){
-            return res.status(400).json({
-                success:false,
-                message:"Cant Update Order Status As it is cancelled"
-            })
-        }
-        // //update the Order and return the new object
-        // const UpdatedOrder=await Order.findByIdAndUpdate(OrderId,{status:status},{new:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});;
-        // console.log(UpdatedOrder);
+    // Fetch order
+    const order = await Order.findById(OrderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order with this ID not found",
+      });
+    }
 
-        // Handle cancellation + penalty for both Cod and online payment
+    if(order.status==="cancelled"){
+        return res.status(400).json({
+            success:false,
+            message:"Cant Update Order Status As it is cancelled"
+        })
+    }
+
+    // Handle cancellation + penalty for both Cod and online payment
     if (status === "cancelled" && role=="student") {
-        const penaltyApplicableStatuses = ["preparing", "ready"];
+      const penaltyApplicableStatuses = ["preparing", "ready"];
 
-        if (penaltyApplicableStatuses.includes(order.status)) {
-            const penaltyAmount = Math.round(order.total * 0.5);
-            const deviceId = req.deviceInfo?.deviceId;
+      if (penaltyApplicableStatuses.includes(order.status)) {
+        const penaltyAmount = Math.round(order.total * 0.5);
+        const deviceId = req.deviceInfo?.deviceId;
 
-            await Penalty.create({
-            deviceId,
-            user: order.student,
-            Order: order._id,
-            Amount: penaltyAmount,
-            isPaid:false,
-            reason: "Order cancelled after it moved to preparing or ready stage",
-            });
-            await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
-            order.status = "cancelled";
-            await order.save();
+        await Penalty.create({
+          deviceId,
+          user: order.student,
+          Order: order._id,
+          Amount: penaltyAmount,
+          isPaid:false,
+          reason: "Order cancelled after it moved to preparing or ready stage",
+        });
+        await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
+        order.status = "cancelled";
+        await order.save();
 
-            return res.status(200).json({
-            success: true,
-            message: "Order cancelled and penalty applied",
-            });
-        } 
+        return res.status(200).json({
+          success: true,
+          message: "Order cancelled and penalty applied",
+        });
+      } 
         // No penalty applied
         order.status = "cancelled";
         await order.save();
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
 
         return res.status(200).json({
-        success: true,
-        message: "Order cancelled with no penalty",
+          success: true,
+          message: "Order cancelled with no penalty",
         });
+     
+
     }
    
-
-        if(status==="completed"){
-            // update the penalty and transaction status for cod as user had paid  them
-            const deviceId = req.deviceInfo?.deviceId;
-            await Penalty.updateMany({deviceId,isPaid:false},{isPaid:true});
-            await Transaction.findOneAndUpdate({orderId:OrderId},{status:"paid",paidAt:new Date(Date.now())});
-        }
-
-
-        // For normal status updates
-        const updatedOrder = await Order.findByIdAndUpdate(
-            OrderId,
-            { status },
-            { new: true }
-        )
-            .populate({ path: "student", select: "name" })
-            .populate({ path: "canteen", select: "name" });
-
-
-        // Notify user (socket room: user_<userId>)
-        sendNotification(`user_${order.student}`, {
-            title: "Order Update",
-            message: `Your order is now marked as "${status}"`,
-            type: "order_status_update",
-            timestamp: new Date()
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Order status updated successfully",
-            data: updatedOrder,
-        });
-    } catch(err){
-        console.log(err);
-        return res.status(500).json({
-            success:false,
-            message:"internal server error",
-            error:err.message
-        })
+    if(status==="completed"){
+       // update the penalty and transaction status for cod as user had paid  them
+        const deviceId = req.deviceInfo?.deviceId;
+        await Penalty.updateMany({deviceId,isPaid:false},{isPaid:true});
+        await Transaction.findOneAndUpdate({orderId:OrderId},{status:"paid",paidAt:new Date(Date.now())});
     }
-}
+
+    // For normal status updates
+    const updatedOrder = await Order.findByIdAndUpdate(
+      OrderId,
+      { status },
+      { new: true }
+    )
+      .populate({ path: "student", select: "name" })
+      .populate({ path: "canteen", select: "name" });
+
+    // Notify user (socket room: user_<userId>)
+    sendNotification(`user_${order.student}`, {
+        title: "Order Update",
+        message: `Your order is now marked as "${status}"`,
+        type: "order_status_update",
+        timestamp: new Date()
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Order status updated successfully",
+      data: updatedOrder,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
+  }
+};
 
 //This is for Student Orders
 exports.getAllOrdersByStudent=async(req,res)=>{

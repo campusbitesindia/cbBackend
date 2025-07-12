@@ -3,14 +3,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8080/api/:path*',
-      },
-    ]
-  },
+  // Removed API rewrites since we're calling backend directly via axios
+  // The rewrites were causing double /api/v1/ in URLs
 }
 
 export default nextConfig

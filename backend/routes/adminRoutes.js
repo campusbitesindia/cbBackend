@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { getTotalCounts, getMonthlyUserCount, getUserCountByRole, getTopUsersBySpending, getUsersByRoleList, getMonthlyOrders, getOrdersByCampusCanteen, getOrderStatusBreakdown, getTopCanteensByOrderVolume, getAverageOrderValue, getPeakOrderTimes, getTotalRevenue, getRevenueByPaymentMethod, getDailyRevenue, getWeeklyRevenue, getMonthlyRevenue, banUser, suspendCanteen, adminRateVendor, getRevenueByCampusAndCanteen, getTopCampusesByRevenue, getTopCanteensByRevenue } = require('../controllers/adminController');
+const { getTotalCounts, getMonthlyUserCount, getUserCountByRole, getTopUsersBySpending, getUsersByRoleList, getMonthlyOrders, getOrdersByCampusCanteen, getOrderStatusBreakdown, getTopCanteensByOrderVolume, getAverageOrderValue, getPeakOrderTimes, getTotalRevenue, getRevenueByPaymentMethod, getDailyRevenue, getWeeklyRevenue, getMonthlyRevenue, banUser, suspendCanteen, adminRateVendor, getRevenueByCampusAndCanteen, getTopCampusesByRevenue, getTopCanteensByRevenue, getCampusesSummary, getCampusUsers, getCampusCanteens, getUserDetails, getCanteenDetails, submitCampusRequest,getAllCanteens, getAllCampusRequests } = require('../controllers/adminController');
+const { isAdmin } = require('../middleware/auth');
 
 router.get('/totals', getTotalCounts);
 router.get('/users/monthly', getMonthlyUserCount);
@@ -24,5 +25,13 @@ router.get('/revenue/monthly', getMonthlyRevenue);
 router.post('/banUser', banUser);
 router.post('/suspendCanteen', suspendCanteen);
 router.post('/rateVendors', adminRateVendor);
+router.get('/campuses-summary', getCampusesSummary);
+router.get('/campus/:campusId/users', getCampusUsers);
+router.get('/campus/:campusId/canteens', getCampusCanteens);
+router.get('/user/:userId', getUserDetails);
+router.get('/canteen/:canteenId', getCanteenDetails);
+router.post("/campus-request", submitCampusRequest);
+router.get('/canteens', getAllCanteens);
+router.get('/campus-requests', isAdmin, getAllCampusRequests);
 
 module.exports = router;

@@ -1,11 +1,26 @@
-const express = require("express");
-const router = express.Router();
-const { createCampus, getAllCampuses, deleteCampus, getCampusById, updateCampus } = require("../controllers/campusController");
+const express = require("express")
+const router = express.Router()
+const {
+  createCampus,
+  getAllCampuses,
+  deleteCampus,
+  getCampusById,
+  updateCampus,
+  requestCampusCreation,
+} = require("../controllers/campusController")
 
-router.post("/create", createCampus);
-router.get("/", getAllCampuses);
-router.get("/:id", getCampusById);
-router.put("/:id", updateCampus);
-router.delete("/:id", deleteCampus);
+const { isAuthenticated, isAdmin, isVendor } = require("../middleware/auth")
 
-module.exports = router;
+// Admin only routes
+router.post("/create", isAuthenticated, isAdmin, createCampus)
+router.put("/:id", isAuthenticated, isAdmin, updateCampus)
+router.delete("/:id", isAuthenticated, isAdmin, deleteCampus)
+
+// Vendor can request campus creation
+router.post("/request", isAuthenticated, isVendor, requestCampusCreation)
+
+// Public routes (anyone can view campuses)
+router.get("/", getAllCampuses)
+router.get("/:id", getCampusById)
+
+module.exports = router

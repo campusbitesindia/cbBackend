@@ -9,9 +9,10 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { useToast } from "@/components/ui/use-toast"
+import { useToast } from "@/hooks/use-toast"
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/context/auth-context"
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Gift } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Gift, LogIn, RefreshCw } from "lucide-react"
 
 const registerSchema = z
   .object({
@@ -32,6 +33,20 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [existingUserDialog, setExistingUserDialog] = useState<{
+    open: boolean
+    message: string
+    suggestions: string[]
+    userInfo?: {
+      hasGoogleAuth: boolean
+      isVerified: boolean
+      registrationMethod: string
+    }
+  }>({
+    open: false,
+    message: "",
+    suggestions: [],
+  })
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -46,59 +61,88 @@ export default function RegisterPage() {
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true)
     try {
-      await register(values.name, values.email, values.password)
+      await register(values.name, values.email, values.password, 'student', 'Main Campus')
       toast({
         title: "Welcome to Campus Bites! 🎉",
         description: "Your account has been created successfully",
       }) 
       router.push("/menu")
     } catch (error) {
+      // Handle existing user professionally
+      if (error instanceof Error) {
+        try {
+          const errorData = JSON.parse(error.message)
+          if (errorData.userExists) {
+            setExistingUserDialog({
+              open: true,
+              message: errorData.message,
+              suggestions: errorData.suggestions || [],
+              userInfo: errorData.userInfo
+            })
+            return
+          }
+        } catch {
+          // Not a JSON error, fall through to regular error handling
+        }
+      }
+      
+      // Regular error handling for other types of errors
       toast({
         variant: "destructive",
         title: "Registration failed",
-        description: "An error occurred during registration. Please try again.",
+        description: error instanceof Error ? error.message : "An error occurred during registration. Please try again.",
       })
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleGoogleSignIn = () => {
+    window.location.href = "http://localhost:8080/api/v1/users/auth/google"
+  }
+
+  const handleGoToSignIn = () => {
+    setExistingUserDialog(prev => ({ ...prev, open: false }))
+    router.push('/login')
+  }
+
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0">
+    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-[#0a192f] dark:via-[#1e3a5f] dark:to-[#0f172a] text-gray-900 dark:text-white flex items-center justify-center relative overflow-hidden transition-all duration-500">
+      {/* Professional Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Animated Background Elements */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl animate-pulse transition-colors duration-500"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000 transition-colors duration-500"></div>
+        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-500/5 dark:bg-white/5 rounded-full blur-2xl animate-pulse delay-2000 transition-colors duration-500"></div>
+
         {/* Floating Food Icons */}
-        <div className="absolute top-20 right-20 w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center animate-float">
+        <div className="absolute top-20 right-20 w-16 h-16 bg-purple-500/10 dark:bg-purple-500/10 rounded-full flex items-center justify-center animate-float">
           <span className="text-2xl">🎂</span>
         </div>
-        <div className="absolute top-40 left-32 w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center animate-float-delayed">
+        <div className="absolute top-40 left-32 w-12 h-12 bg-green-500/10 dark:bg-green-500/10 rounded-full flex items-center justify-center animate-float-delayed">
           <span className="text-xl">🥤</span>
         </div>
-        <div className="absolute bottom-32 right-16 w-14 h-14 bg-blue-500/10 rounded-full flex items-center justify-center animate-bounce-slow">
+        <div className="absolute bottom-32 right-16 w-14 h-14 bg-blue-500/10 dark:bg-blue-500/10 rounded-full flex items-center justify-center animate-bounce-slow">
           <span className="text-xl">🍜</span>
         </div>
-        <div className="absolute bottom-20 left-20 w-10 h-10 bg-pink-500/10 rounded-full flex items-center justify-center animate-pulse">
+        <div className="absolute bottom-20 left-20 w-10 h-10 bg-pink-500/10 dark:bg-pink-500/10 rounded-full flex items-center justify-center animate-pulse">
           <span className="text-lg">🍰</span>
         </div>
-
-        {/* Gradient Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-purple-500/5 to-pink-500/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-2xl animate-pulse delay-1000"></div>
       </div>
 
       <div className="flex w-full max-w-6xl mx-auto relative z-10">
         {/* Left Side - Registration Form */}
         <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
           <div className="w-full max-w-md">
-            <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 rounded-3xl p-8 shadow-2xl animate-slide-in-left">
+            <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200/50 dark:border-white/20 rounded-3xl p-8 shadow-2xl animate-slide-in-left transition-all duration-500">
               <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-gentle">
+                <div className="w-16 h-16 bg-gradient-to-r from-red-500 to-rose-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce-gentle">
                   <Gift className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-3xl font-bold text-white mb-2">Join Campus Bites!</h2>
-                <p className="text-gray-400">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-500">Join Campus Bites!</h2>
+                <p className="text-gray-600 dark:text-slate-300 transition-colors duration-500">
                   Already have an account?{" "}
-                  <Link href="/login" className="text-orange-400 hover:text-orange-300 font-medium transition-colors">
+                  <Link href="/login" className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors">
                     Sign in here
                   </Link>
                 </p>
@@ -111,19 +155,19 @@ export default function RegisterPage() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-300">Full Name</FormLabel>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Full Name</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 transition-colors duration-500" />
                             <Input
                               placeholder="Enter your full name"
                               autoComplete="name"
-                              className="pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-xl h-12 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                              className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
                               {...field}
                             />
                           </div>
                         </FormControl>
-                        <FormMessage className="text-red-400" />
+                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
                       </FormItem>
                     )}
                   />
@@ -133,20 +177,20 @@ export default function RegisterPage() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-300">Email Address</FormLabel>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Email Address</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 transition-colors duration-500" />
                             <Input
                               placeholder="Enter your email"
                               type="email"
                               autoComplete="email"
-                              className="pl-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-xl h-12 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                              className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
                               {...field}
                             />
                           </div>
                         </FormControl>
-                        <FormMessage className="text-red-400" />
+                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
                       </FormItem>
                     )}
                   />
@@ -156,27 +200,27 @@ export default function RegisterPage() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-300">Password</FormLabel>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Password</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 transition-colors duration-500" />
                             <Input
                               placeholder="Create a password"
                               type={showPassword ? "text" : "password"}
                               autoComplete="new-password"
-                              className="pl-10 pr-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-xl h-12 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                              className="pl-10 pr-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowPassword(!showPassword)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition-colors duration-500"
                             >
                               {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                           </div>
                         </FormControl>
-                        <FormMessage className="text-red-400" />
+                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
                       </FormItem>
                     )}
                   />
@@ -186,27 +230,27 @@ export default function RegisterPage() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-gray-300">Confirm Password</FormLabel>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Confirm Password</FormLabel>
                         <FormControl>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 transition-colors duration-500" />
                             <Input
                               placeholder="Confirm your password"
                               type={showConfirmPassword ? "text" : "password"}
                               autoComplete="new-password"
-                              className="pl-10 pr-10 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-xl h-12 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                              className="pl-10 pr-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
                               {...field}
                             />
                             <button
                               type="button"
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition-colors duration-500"
                             >
                               {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                             </button>
                           </div>
                         </FormControl>
-                        <FormMessage className="text-red-400" />
+                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
                       </FormItem>
                     )}
                   />
@@ -214,7 +258,7 @@ export default function RegisterPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-orange-500/25 group"
+                    className="w-full bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25 group"
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-2">
@@ -234,10 +278,10 @@ export default function RegisterPage() {
               <div className="mt-8">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-600"></div>
+                    <div className="w-full border-t border-gray-300 dark:border-white/20 transition-colors duration-500"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="bg-gray-800 px-4 text-gray-400">Or sign up with</span>
+                    <span className="bg-white/90 dark:bg-white/10 backdrop-blur-xl px-4 text-gray-600 dark:text-slate-400 transition-all duration-500">Or sign up with</span>
                   </div>
                 </div>
 
@@ -245,7 +289,7 @@ export default function RegisterPage() {
                   <a href="http://localhost:8080/api/auth/google" className="w-full">
                     <Button
                       variant="outline"
-                      className="w-full bg-gray-700/50 border-gray-600 text-white hover:bg-gray-700 transition-all duration-300 hover:scale-105"
+                      className="w-full bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/20 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
                     >
                       <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
                         <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
@@ -264,13 +308,13 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <p className="mt-6 text-xs text-center text-gray-500">
+              <p className="mt-6 text-xs text-center text-gray-500 dark:text-slate-500 transition-colors duration-500">
                 By creating an account, you agree to our{" "}
-                <Link href="#" className="text-orange-400 hover:text-orange-300 transition-colors">
+                <Link href="#" className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors">
                   Terms of Service
                 </Link>{" "}
                 and{" "}
-                <Link href="#" className="text-orange-400 hover:text-orange-300 transition-colors">
+                <Link href="#" className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors">
                   Privacy Policy
                 </Link>
                 .
@@ -283,11 +327,11 @@ export default function RegisterPage() {
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative">
           <div className="text-center animate-slide-in-right">
             {/* Special Offer */}
-            <div className="mb-8 p-6 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-2xl">
+            <div className="mb-8 p-6 bg-gradient-to-r from-red-500/5 dark:from-red-500/10 to-rose-500/5 dark:to-rose-500/10 border border-red-500/10 dark:border-red-500/20 rounded-2xl backdrop-blur-sm transition-all duration-500">
               <div className="text-4xl mb-4">🎉</div>
-              <h2 className="text-2xl font-bold text-white mb-2">Welcome Bonus!</h2>
-              <p className="text-orange-300 font-semibold text-lg">Get 20% OFF on your first order</p>
-              <p className="text-gray-400 text-sm mt-2">Plus free delivery for your first month</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-500">Welcome Bonus!</h2>
+              <p className="text-red-600 dark:text-red-300 font-semibold text-lg transition-colors duration-500">Get 20% OFF on your first order</p>
+              <p className="text-gray-600 dark:text-slate-400 text-sm mt-2 transition-colors duration-500">Plus free delivery for your first month</p>
             </div>
 
             {/* Benefits */}
@@ -297,8 +341,8 @@ export default function RegisterPage() {
                   <span className="text-xl">🚀</span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Instant Access</h3>
-                  <p className="text-gray-400 text-sm">Start ordering immediately after signup</p>
+                  <h3 className="text-gray-900 dark:text-white font-semibold transition-colors duration-500">Instant Access</h3>
+                  <p className="text-gray-600 dark:text-slate-400 text-sm transition-colors duration-500">Start ordering immediately after signup</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-left">
@@ -306,8 +350,8 @@ export default function RegisterPage() {
                   <span className="text-xl">💎</span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Premium Features</h3>
-                  <p className="text-gray-400 text-sm">Order tracking, favorites, and more</p>
+                  <h3 className="text-gray-900 dark:text-white font-semibold transition-colors duration-500">Premium Features</h3>
+                  <p className="text-gray-600 dark:text-slate-400 text-sm transition-colors duration-500">Order tracking, favorites, and more</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-left">
@@ -315,14 +359,82 @@ export default function RegisterPage() {
                   <span className="text-xl">🏆</span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold">Loyalty Rewards</h3>
-                  <p className="text-gray-400 text-sm">Earn points with every order</p>
+                  <h3 className="text-gray-900 dark:text-white font-semibold transition-colors duration-500">Loyalty Rewards</h3>
+                  <p className="text-gray-600 dark:text-slate-400 text-sm transition-colors duration-500">Earn points with every order</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Professional Existing User Dialog */}
+      <AlertDialog open={existingUserDialog.open} onOpenChange={(open) => setExistingUserDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/20 transition-all duration-500">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-900 dark:text-white transition-colors duration-500">
+              Account Already Exists
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-slate-300 transition-colors duration-500">
+              {existingUserDialog.message}
+              
+              {existingUserDialog.suggestions.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="font-medium text-gray-700 dark:text-slate-200">What you can do:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {existingUserDialog.suggestions.map((suggestion, index) => (
+                      <li key={index} className="text-gray-600 dark:text-slate-400">{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="space-x-2">
+            {existingUserDialog.userInfo?.hasGoogleAuth ? (
+              <>
+                <AlertDialogAction
+                  onClick={handleGoogleSignIn}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20" className="mr-2">
+                    <path fill="#fbc02d" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                    <path fill="#e53935" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+                    <path fill="#4caf50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.641-3.252-11.284-7.614l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+                    <path fill="#1565c0" d="M43.611,20.083L43.595,20L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.018,35.244,44,30.028,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                  </svg>
+                  Sign in with Google
+                </AlertDialogAction>
+              </>
+            ) : (
+              <>
+                <AlertDialogAction
+                  onClick={handleGoToSignIn}
+                  className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white transition-all duration-300"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In Instead
+                </AlertDialogAction>
+                {!existingUserDialog.userInfo?.isVerified && (
+                  <AlertDialogAction
+                    onClick={() => {
+                      setExistingUserDialog(prev => ({ ...prev, open: false }))
+                      toast({
+                        title: "Check your email",
+                        description: "Please check your email for the verification link or request a new one from the login page.",
+                      })
+                    }}
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-300"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Verify Email
+                  </AlertDialogAction>
+                )}
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
