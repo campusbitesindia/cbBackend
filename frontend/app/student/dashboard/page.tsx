@@ -10,6 +10,8 @@ import Image from "next/image"
 import Link from "next/link"
 import { Canteen } from "@/types"
 import { useCart } from "@/context/cart-context"
+import { useNotificationToast } from "@/hooks/use-notification"
+import NotificationList from "@/components/notification-list"
 
 export default function StudentDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -18,6 +20,8 @@ export default function StudentDashboard() {
   const { cart } = useCart()
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0)
+
+  useNotificationToast()
 
   useEffect(() => {
     const fetchCanteens = async () => {
@@ -55,6 +59,10 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+      
+      {/* HARDCODED USER - Use it if wanna show user history too */}
+      <NotificationList userId="686e5ed1e3781b0cca2fb3c9"/>
+
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden -z-10">
         <div className="absolute top-20 left-20 w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center animate-float">

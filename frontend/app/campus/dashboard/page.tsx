@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Store, TrendingUp, DollarSign, Package, Users, Star, Eye } from "lucide-react"
+import { useNotificationToast } from "@/hooks/use-notification"
+import NotificationList from "@/components/notification-list"
 
 export default function CampusDashboard() {
   const [activeOrders] = useState([
@@ -42,8 +44,14 @@ export default function CampusDashboard() {
     totalCustomers: 156,
   }
 
+  useNotificationToast()
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black p-6">
+
+      {/* HARDCODED USER - Use it if wanna show user history too */}
+      <NotificationList userId="686e5ed1e3781b0cca2fb3c9"/>
+
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-green-500/5 to-emerald-500/5 rounded-full blur-3xl animate-pulse"></div>
