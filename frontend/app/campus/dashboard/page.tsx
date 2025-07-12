@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
@@ -84,7 +83,8 @@ import { Order } from '@/types';
 import { uploadImage, validateImage } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
-
+import { useNotificationToast } from "@/hooks/use-notification"
+import NotificationList from "@/components/notification-list"
 // Real data will be calculated from orders and menu items
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -456,6 +456,8 @@ export default function CampusDashboard() {
   const categories = Array.from(
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
+
+  useNotificationToast()
 
   return (
     <div className='flex h-screen bg-white'>
