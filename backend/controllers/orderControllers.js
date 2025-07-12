@@ -4,15 +4,15 @@ const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
 const sendNotification = require("../utils/notify")
+const Penalty = require("../models/penaltySchema");
+const Transaction   =require("../models/Transaction");
 
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
-        const campusId=req.user.campus;
-        
-       
+        const campusId=req.user.campus; 
         const {items:_items,pickUpTime}=req.body; 
-        
+        const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
         const Items=JSON.parse(_items); //converting _items to an Json array;
 
@@ -44,7 +44,6 @@ exports.CreateOrder=async(req,res)=>{
                 message:"Canteen with this id Not found"
             })
         }
-
         
         const OrderItem=[];
         let Total=0;
@@ -87,6 +86,11 @@ exports.CreateOrder=async(req,res)=>{
             })
         }
         
+        //create the order with penalty amount if applicable
+        const penalty=await Penalty.find({deviceId,isPaid:false});
+        for(const data of penalty){
+            Total+=data.Amount;
+        }
         //create the order
         const order=await Order.create({
             student:student._id,
@@ -130,8 +134,7 @@ exports.UpdateOrderStatus=async(req,res)=>{
                 success:false,
                 message:"Please Enter all Requried Field"
             })
-        }
-         
+        } 
 
         const allowedStatuses = [ "preparing", "ready", "completed", "cancelled"];
         //if the status is not from Schema Enum return errors
@@ -151,9 +154,71 @@ exports.UpdateOrderStatus=async(req,res)=>{
                 message:"Order with this id not found"
             })
         }
-        //update the Order and return the new object
-        const UpdatedOrder=await Order.findByIdAndUpdate(OrderId,{status:status},{new:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});;
-        console.log(UpdatedOrder);
+
+        if(order.status==="cancelled"){
+            return res.status(400).json({
+                success:false,
+                message:"Cant Update Order Status As it is cancelled"
+            })
+        }
+        // //update the Order and return the new object
+        // const UpdatedOrder=await Order.findByIdAndUpdate(OrderId,{status:status},{new:true}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"});;
+        // console.log(UpdatedOrder);
+
+        // Handle cancellation + penalty for both Cod and online payment
+    if (status === "cancelled" && role=="student") {
+        const penaltyApplicableStatuses = ["preparing", "ready"];
+
+        if (penaltyApplicableStatuses.includes(order.status)) {
+            const penaltyAmount = Math.round(order.total * 0.5);
+            const deviceId = req.deviceInfo?.deviceId;
+
+            await Penalty.create({
+            deviceId,
+            user: order.student,
+            Order: order._id,
+            Amount: penaltyAmount,
+            isPaid:false,
+            reason: "Order cancelled after it moved to preparing or ready stage",
+            });
+            await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
+            order.status = "cancelled";
+            await order.save();
+
+            return res.status(200).json({
+            success: true,
+            message: "Order cancelled and penalty applied",
+            });
+        } 
+        // No penalty applied
+        order.status = "cancelled";
+        await order.save();
+        await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
+
+        return res.status(200).json({
+        success: true,
+        message: "Order cancelled with no penalty",
+        });
+    }
+   
+
+        if(status==="completed"){
+            // update the penalty and transaction status for cod as user had paid  them
+            const deviceId = req.deviceInfo?.deviceId;
+            await Penalty.updateMany({deviceId,isPaid:false},{isPaid:true});
+            await Transaction.findOneAndUpdate({orderId:OrderId},{status:"paid",paidAt:new Date(Date.now())});
+        }
+
+
+        // For normal status updates
+        const updatedOrder = await Order.findByIdAndUpdate(
+            OrderId,
+            { status },
+            { new: true }
+        )
+            .populate({ path: "student", select: "name" })
+            .populate({ path: "canteen", select: "name" });
+
 
         // Notify user (socket room: user_<userId>)
         sendNotification(`user_${order.student}`, {
@@ -164,13 +229,11 @@ exports.UpdateOrderStatus=async(req,res)=>{
         });
 
         return res.status(200).json({
-            success:true,
-            message:"Order Status Updated SuccessFully"
-        })
-
-        
-    }
-    catch(err){
+            success: true,
+            message: "Order status updated successfully",
+            data: updatedOrder,
+        });
+    } catch(err){
         console.log(err);
         return res.status(500).json({
             success:false,
@@ -415,7 +478,7 @@ exports.getCanteenOrderBystatus=async(req,res)=>{
 
         }
         const Canteen=await User.findById(CanteenId);
-        if(!Student){
+        if(!Canteen){
             return res.status(400).json({
                 success:false,
                 message:"canteen  not found"
