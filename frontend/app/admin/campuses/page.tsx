@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
+import { useAdminAuth } from "@/context/admin-auth-context";
+import { useRouter } from "next/navigation";
 
 export default function AdminCampusesPage() {
   const [campuses, setCampuses] = useState<any[]>([]);
@@ -12,7 +14,6 @@ export default function AdminCampusesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [selectedCampus, setSelectedCampus] = useState<any | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addForm, setAddForm] = useState({ name: "", code: "", city: "" });
   const [addLoading, setAddLoading] = useState(false);
@@ -20,13 +21,22 @@ export default function AdminCampusesPage() {
   const [campusRequests, setCampusRequests] = useState<any[]>([]);
   const [requestsLoading, setRequestsLoading] = useState(true);
   const [requestsError, setRequestsError] = useState("");
+  const { checkAdmin } = useAdminAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    (async () => {
+      const ok = await checkAdmin();
+      if (!ok) router.replace("/admin/login");
+    })();
+  }, [checkAdmin, router]);
 
   useEffect(() => {
     async function fetchCampuses() {
       setLoading(true);
       setError("");
       try {
-        const res = await api.get("/api/v1/campuses");
+        const res = await api.get("/api/v1/admin/campuses-summary");
         const data = res.data;
         setCampuses(data.campuses || []);
         setFilteredCampuses(data.campuses || []);
@@ -68,12 +78,17 @@ export default function AdminCampusesPage() {
       }
     }
     fetchCampusRequests();
+    // Expose for manual refresh
+    setRefreshCampusRequests(() => fetchCampusRequests);
   }, []);
+
+  // Add refresh state
+  const [refreshCampusRequests, setRefreshCampusRequests] = useState<() => void>(() => () => {});
 
   async function handleAddCampus() {
     setAddLoading(true);
     try {
-      const res = await api.post("/api/v1/campus/create", addForm);
+      const res = await api.post("/api/v1/campuses/create", addForm);
       if (res.data.campus) {
         toast({ title: "Campus added" });
         setCampuses((prev) => [...prev, res.data.campus]);
@@ -86,6 +101,41 @@ export default function AdminCampusesPage() {
       toast({ title: "Failed to add campus", description: err.message, variant: "destructive" });
     } finally {
       setAddLoading(false);
+    }
+  }
+
+  async function handleCampusClick(campus: any) {
+    router.push(`/admin/campuses/${campus.campusId}`);
+  }
+
+  // Approve campus request
+  async function handleApproveRequest(req: any) {
+    try {
+      // Only create campus on approve
+      const res = await api.post("/api/v1/campuses/create", {
+        name: req.collegeName,
+        code: req.collegeName.replace(/\s+/g, "_").toUpperCase().slice(0, 8),
+        city: req.city,
+      });
+      await api.patch(`/api/v1/admin/campus-requests/${req._id}/review`, { approved: true });
+      toast({ title: "Campus approved and created!" });
+      setCampusRequests((prev) => prev.filter((r) => r._id !== req._id));
+      const campusesRes = await api.get("/api/v1/admin/campuses-summary");
+      setCampuses(campusesRes.data.campuses || []);
+      setFilteredCampuses(campusesRes.data.campuses || []);
+    } catch (err: any) {
+      toast({ title: "Failed to approve campus", description: err.message, variant: "destructive" });
+    }
+  }
+  // Reject campus request (mark as reviewed/rejected in backend)
+  async function handleRejectRequest(req: any) {
+    try {
+      // Only mark as reviewed/rejected, do NOT create campus
+      await api.patch(`/api/v1/admin/campus-requests/${req._id}/review`, { approved: false });
+      setCampusRequests((prev) => prev.filter((r) => r._id !== req._id));
+      toast({ title: "Campus request rejected" });
+    } catch (err: any) {
+      toast({ title: "Failed to reject campus request", description: err.message, variant: "destructive" });
     }
   }
 
@@ -113,7 +163,9 @@ export default function AdminCampusesPage() {
                 <th className="px-4 py-2 font-semibold">Name</th>
                 <th className="px-4 py-2 font-semibold">Code</th>
                 <th className="px-4 py-2 font-semibold">City</th>
-                {/* <th className="px-4 py-2 font-semibold">Actions</th> */}
+                <th className="px-4 py-2 font-semibold">Outlets</th>
+                <th className="px-4 py-2 font-semibold">Users</th>
+                <th className="px-4 py-2 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -124,12 +176,16 @@ export default function AdminCampusesPage() {
               ) : (
                 filteredCampuses.map((campus) => (
                   <tr key={campus._id} className="border-b border-white/10 hover:bg-white/10 transition group">
-                    <td className="px-4 py-2 font-medium cursor-pointer" onClick={() => setSelectedCampus(campus)}>{campus.name}</td>
+                    <td className="px-4 py-2 font-medium">{campus.name}</td>
                     <td className="px-4 py-2">{campus.code}</td>
                     <td className="px-4 py-2">{campus.city}</td>
-                    {/* <td className="px-4 py-2">
-                      <Button size="sm" variant="outline" onClick={() => setSelectedCampus(campus)}>View Details</Button>
-                    </td> */}
+                    <td className="px-4 py-2">{campus.canteenCount}</td>
+                    <td className="px-4 py-2">{campus.userCount}</td>
+                    <td className="px-4 py-2">
+                      <Button size="sm" className="bg-black hover:bg-neutral-900 text-white font-semibold" onClick={() => handleCampusClick(campus)}>
+                        View Details
+                      </Button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -138,14 +194,16 @@ export default function AdminCampusesPage() {
         </div>
       )}
       {/* Campus Requests Section */}
-      {/*
       <div className="mt-12 bg-white/10 rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-4 text-white">Campus Requests</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-white">Campus Requests</h2>
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => refreshCampusRequests()}>Refresh</Button>
+        </div>
         {requestsLoading ? (
           <div className="text-slate-300 py-8 text-center">Loading campus requests...</div>
         ) : requestsError ? (
           <div className="text-red-400 py-8 text-center">{requestsError}</div>
-        ) : campusRequests.length === 0 ? (
+        ) : campusRequests.filter(r => r.isReviewed === false).length === 0 ? (
           <div className="text-slate-400 py-8 text-center">No campus requests found.</div>
         ) : (
           <div className="overflow-x-auto bg-white/5 rounded-xl">
@@ -159,11 +217,11 @@ export default function AdminCampusesPage() {
                   <th className="px-4 py-2 font-semibold">College</th>
                   <th className="px-4 py-2 font-semibold">City</th>
                   <th className="px-4 py-2 font-semibold">Message</th>
-                  <th className="px-4 py-2 font-semibold">Reviewed</th>
+                  <th className="px-4 py-2 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {campusRequests.map((req) => (
+                {campusRequests.filter(r => r.isReviewed === false).map((req) => (
                   <tr key={req._id} className="border-b border-white/10 hover:bg-white/10 transition group">
                     <td className="px-4 py-2">{req.name}</td>
                     <td className="px-4 py-2">{req.email}</td>
@@ -172,7 +230,10 @@ export default function AdminCampusesPage() {
                     <td className="px-4 py-2">{req.collegeName}</td>
                     <td className="px-4 py-2">{req.city}</td>
                     <td className="px-4 py-2">{req.message || '-'}</td>
-                    <td className="px-4 py-2">{req.isReviewed ? 'Yes' : 'No'}</td>
+                    <td className="px-4 py-2 flex gap-2">
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleApproveRequest(req)}>Approve</Button>
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white" onClick={() => handleRejectRequest(req)}>Reject</Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -180,22 +241,7 @@ export default function AdminCampusesPage() {
           </div>
         )}
       </div>
-      */}
-      {/* Campus Details Modal */}
-      <Dialog open={!!selectedCampus} onOpenChange={() => setSelectedCampus(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Campus Details</DialogTitle>
-          </DialogHeader>
-          {selectedCampus && (
-            <div className="space-y-2">
-              <div><span className="font-semibold">Name:</span> {selectedCampus.name}</div>
-              <div><span className="font-semibold">Code:</span> {selectedCampus.code}</div>
-              <div><span className="font-semibold">City:</span> {selectedCampus.city}</div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
       {/* Add Campus Modal */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
         <DialogContent className="max-w-md">

@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { login as adminLogin } from "@/services/authService";
+import { useAdminAuth } from "@/context/admin-auth-context";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
@@ -8,17 +10,23 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login: setAdminAuth } = useAdminAuth();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    // Placeholder: Replace with real API call
-    if (email === "admin@campusbites.com" && password === "admin123") {
-      localStorage.setItem("isAdmin", "true");
-      router.push("/admin/dashboard");
-    } else {
-      setError("Invalid credentials");
+    try {
+      const data = await adminLogin({ email, password, role: "admin" });
+      if (data && data.token && data.user1?.role === "admin") {
+        localStorage.setItem("token", data.token);
+        setAdminAuth();
+        router.push("/admin/dashboard");
+      } else {
+        setError("Invalid admin credentials");
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || "Login failed");
     }
     setLoading(false);
   }
@@ -51,6 +59,9 @@ export default function AdminLoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        <div className="mt-2 text-center">
+          <span className="text-gray-300">Contact system administrator for access</span>
+        </div>
       </form>
     </div>
   );

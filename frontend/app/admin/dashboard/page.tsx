@@ -45,6 +45,7 @@ ChartJS.register(
 )
 
 import { useRouter } from "next/navigation";
+import { useAdminAuth } from "@/context/admin-auth-context";
 
 interface PendingRequest {
   id: string
@@ -114,6 +115,15 @@ function CountUp({ end, duration = 1.2, className = "" }: { end: number, duratio
 export default function AdminDashboard() {
   const { toast } = useToast()
   const router = useRouter();
+  const { checkAdmin } = useAdminAuth();
+
+  useEffect(() => {
+    (async () => {
+      const ok = await checkAdmin();
+      if (!ok) router.replace("/admin/login");
+    })();
+  }, [checkAdmin, router]);
+
   const [summary, setSummary] = useState<any>(null)
   const [usersMonthly, setUsersMonthly] = useState<any[]>([])
   const [ordersMonthly, setOrdersMonthly] = useState<any[]>([])
@@ -130,6 +140,8 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<{[userId: string]: boolean}>({});
   const [canteens, setCanteens] = useState<any[]>([]);
   const [canteenActionLoading, setCanteenActionLoading] = useState<{[canteenId: string]: boolean}>({});
+  const [totalOrders, setTotalOrders] = useState<number>(0);
+  const [ordersByCampusCanteen, setOrdersByCampusCanteen] = useState<any[]>([]);
 
   // Fetch users/vendors from backend
   const fetchUsersByRole = async () => {
@@ -156,6 +168,18 @@ export default function AdminDashboard() {
     fetch("http://localhost:8080/api/v1/admin/canteens")
       .then(res => res.json())
       .then(data => setCanteens(data.canteens || []));
+  }, []);
+
+  // Fetch total orders from /api/v1/admin/orders/by-campus-canteen
+  useEffect(() => {
+    fetch("http://localhost:8080/api/v1/admin/orders/by-campus-canteen")
+      .then(res => res.json())
+      .then(data => {
+        setOrdersByCampusCanteen(data || []);
+        // Calculate total orders
+        const total = (data || []).reduce((sum: number, item: any) => sum + (item.totalOrders || 0), 0);
+        setTotalOrders(total);
+      });
   }, []);
 
   // Helper to update a single user in usersList
@@ -479,28 +503,6 @@ export default function AdminDashboard() {
                 </Card>
               </motion.div>
             )}
-            {/* --- ADDED: Total Campuses Card --- */}
-            {summary && typeof summary.totalCampuses !== 'undefined' && (
-              <motion.div variants={cardVariants}>
-                <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-yellow-500/30 transition-all duration-300 group cursor-pointer" onClick={() => router.push('/admin/campuses')}>
-                  <CardContent className="p-8">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Total Campuses</p>
-                        <p className="text-4xl font-bold text-white">{summary.totalCampuses.toLocaleString()}</p>
-                        <div className="flex items-center mt-2">
-                          <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
-                          <span className="text-green-400 text-sm font-medium">+5% this month</span>
-                        </div>
-                      </div>
-                      <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <MapPin className="w-8 h-8 text-white" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
             {summary && typeof summary.totalCanteens !== 'undefined' && (
               <motion.div variants={cardVariants}>
                 <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-red-500/30 transition-all duration-300 group cursor-pointer" onClick={() => router.push('/admin/vendors')}>
@@ -522,15 +524,14 @@ export default function AdminDashboard() {
                 </Card>
               </motion.div>
             )}
-            {/* --- ADDED: Total Orders Card --- */}
-            {summary && typeof summary.totalOrders !== 'undefined' && (
+            {typeof totalOrders !== 'undefined' && (
               <motion.div variants={cardVariants}>
                 <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-purple-500/30 transition-all duration-300 group cursor-pointer" onClick={() => router.push('/admin/orders')}>
                   <CardContent className="p-8">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Total Orders</p>
-                        <p className="text-4xl font-bold text-white">{summary.totalOrders.toLocaleString()}</p>
+                        <p className="text-4xl font-bold text-white">{totalOrders.toLocaleString()}</p>
                         <div className="flex items-center mt-2">
                           <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
                           <span className="text-green-400 text-sm font-medium">+15% this month</span>
@@ -544,7 +545,6 @@ export default function AdminDashboard() {
                 </Card>
               </motion.div>
             )}
-            {/* --- END ADDED --- */}
           </div>
 
           {/* Core Analytics Charts */}

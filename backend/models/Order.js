@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const OrderSchema = new mongoose.Schema({
+  OrderNumber:{
+    type:String,
+    required:true
+  },
   student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   canteen: { type: mongoose.Schema.Types.ObjectId, ref: "Canteen", required: true },
   items: [

@@ -16,11 +16,11 @@ type RegisterPayload = {
 };
 
 export const login = async (payload: LoginPayload) => {
-  const response = await api.post('/api/users/login', payload);
+  const response = await api.post('/api/v1/users/login', payload);
   return response.data;
 };
 
 export const register = async (payload: RegisterPayload) => {
-  const response = await api.post('/api/users/register', payload);
+  const response = await api.post('/api/v1/users/register', payload);
   return response.data;
 };
