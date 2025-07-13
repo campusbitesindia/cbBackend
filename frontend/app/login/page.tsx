@@ -455,7 +455,7 @@ export default function LoginPage() {
                       Want to partner with us?
                     </h3>
                     <p className='text-gray-400 text-sm mb-4'>
-                      Join as a campus restaurant partner
+                      Join as a campus Vendor partner
                     </p>
                     <Button
                       suppressHydrationWarning
@@ -463,7 +463,7 @@ export default function LoginPage() {
                       variant='outline'
                       className='border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 transition-all duration-300 bg-transparent'>
                       <Link href='/campus/register'>
-                        Register Your Restaurant
+                        Register Your Vendor
                       </Link>
                     </Button>
                   </div>

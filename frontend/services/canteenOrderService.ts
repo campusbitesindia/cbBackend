@@ -64,7 +64,7 @@ export const getCanteenOrders = async (
   try {
     // Since backend doesn't have canteen-specific endpoints, we'll get all orders
     // and filter them on the frontend based on the canteen ID
-    const response = await api.get('/api/orders', {
+    const response = await api.get('/api/v1/order/getCanteenAllOrders', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -94,7 +94,7 @@ export const getCanteenStats = async (
 ): Promise<CanteenStatsResponse> => {
   try {
     // Get all orders and filter for this canteen
-    const response = await api.get('/api/orders', {
+    const response = await api.get('/api/v1/order/getCanteenAllOrders', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -145,7 +145,7 @@ export const updateCanteenOrderStatus = async (
     // Since there's no specific canteen order update endpoint,
     // we'll use a generic approach - this would need backend support
     // For now, we'll simulate the update by refetching the order
-    const response = await api.get(`/api/orders/${orderId}`, {
+    const response = await api.get(`/api/v1/order/ChangeStatus/:id${orderId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -168,7 +168,7 @@ export const getCanteenOrderById = async (
   token: string
 ): Promise<CanteenOrderResponse> => {
   try {
-    const response = await api.get(`/api/orders/${orderId}`, {
+    const response = await api.get(`/api/v1/order/getOrderDetails/:id${orderId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -187,7 +187,7 @@ export const getCanteenOrdersByStatus = async (
   token: string
 ): Promise<CanteenOrdersResponse> => {
   try {
-    const response = await api.get('/api/orders', {
+    const response = await api.get('/api/v1/order/ChangeStatus/:id', {
       headers: {
         Authorization: `Bearer ${token}`,
       },

@@ -33,7 +33,7 @@ export interface UpdateMenuItemRequest {
 }
 
 export async function getMenuByCanteenId(canteenId: string): Promise<MenuItem[]> {
-  const res = await axios.get(`/api/menu/${canteenId}`, {
+  const res = await axios.get(`/api/menu/:canteenId${canteenId}`, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     }
@@ -51,7 +51,7 @@ export async function createMenuItem(data: CreateMenuItemRequest): Promise<MenuI
 }
 
 export async function updateMenuItem(id: string, data: UpdateMenuItemRequest): Promise<MenuItem> {
-  const res = await axios.put(`/api/menu/${id}`, data, {
+  const res = await axios.put(`/api/menu/:id${id}`, data, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     }
@@ -60,7 +60,7 @@ export async function updateMenuItem(id: string, data: UpdateMenuItemRequest): P
 }
 
 export async function deleteMenuItem(id: string): Promise<void> {
-  await axios.delete(`/api/menu/${id}`, {
+  await axios.delete(`/api/menu/:id${id}`, {
     headers: {
       'Authorization': `Bearer ${localStorage.getItem('token')}`
     }
