@@ -698,3 +698,84 @@ exports.getAllCampusRequests = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+
+// Approve or reject a campus request
+exports.reviewCampusRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { approved } = req.body;
+    const request = await require("../models/campusRequest").findById(id);
+    if (!request) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+    request.isReviewed = true;
+    request.approved = approved;
+    await request.save();
+    res.status(200).json({ success: true, message: `Campus request ${approved ? "approved" : "rejected"}.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+// Create admin account
+exports.createAdminAccount = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Name, email, and password are required" 
+      });
+    }
+
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ email });
+    if (existingAdmin) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Admin account with this email already exists" 
+      });
+    }
+
+    // Hash password
+    const bcrypt = require("bcryptjs");
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Find or create a default campus
+    let campus = await Campus.findOne({ name: "Main Campus" });
+    if (!campus) {
+      campus = await Campus.create({
+        name: "Main Campus",
+        code: "MC",
+        city: "University City"
+      });
+    }
+
+    // Create admin user
+    const admin = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: "admin",
+      campus: campus._id,
+      is_verified: true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Admin account created successfully",
+      admin: {
+        name: admin.name,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error("Error creating admin account:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error" 
+    });
+  }
+};
