@@ -20,6 +20,7 @@ import {
   Package,
   RefreshCw,
   Leaf,
+  Bell,
 } from 'lucide-react';
 import {
   LineChart,
@@ -84,12 +85,10 @@ import { uploadImage, validateImage } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
 import { useNotificationToast } from '@/hooks/use-notification';
-import NotificationList from '@/components/notification-list';
-// Real data will be calculated from orders and menu items
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-export default function CampusDashboard() {
+export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -102,10 +101,6 @@ export default function CampusDashboard() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-  console.log(user, 'userDetails');
-  const UserDetails: any = JSON.parse(
-    localStorage.getItem('userDetails') || '{}'
-  );
 
   // Form state for new/edit item
   const [formData, setFormData] = useState({
@@ -181,14 +176,13 @@ export default function CampusDashboard() {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  console.log(user);
-
+  console.log(user, 'UserDetails');
   const fetchData = async () => {
     try {
       setLoading(true);
 
       // Get canteen ID from authenticated user
-      if (!isAuthenticated || !UserDetails || user?.role !== 'canteen') {
+      if (!isAuthenticated || !user || user?.role !== 'canteen') {
         toast({
           title: 'Error',
           description: 'You must be logged in as a canteen user',
@@ -198,7 +192,7 @@ export default function CampusDashboard() {
       }
 
       // Use the specific canteen ID provided
-      const canteenId = UserDetails.canteenId;
+      const canteenId = user.id;
       console.log('Using canteen ID:', canteenId);
 
       const token = localStorage.getItem('token') || '';
@@ -254,7 +248,7 @@ export default function CampusDashboard() {
     e.preventDefault();
     try {
       // Temporarily allow any authenticated user for testing
-      if (!isAuthenticated || !UserDetails) {
+      if (!isAuthenticated || !user) {
         console.log('Authentication check failed');
         toast({
           title: 'Error',
@@ -269,7 +263,7 @@ export default function CampusDashboard() {
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
-        canteen: UserDetails.canteenId,
+        canteen: user.id,
         isVeg: formData.isVeg,
         image: imagePreview || formData.image,
       };
@@ -473,12 +467,12 @@ export default function CampusDashboard() {
       {/* Sidebar */}
       <div className='w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-y-auto shadow-lg px-0 py-0'>
         {/* Brand */}
-        <div className='px-8 py-8 border-b border-gray-100'>
-          <span className='text-2xl font-bold text-blue-900 tracking-tight'>Campus Bites</span>
-        </div>
+        <div className='px-8 py-8 border-b border-gray-100'></div>
         {/* Overview Section */}
         <div className='px-8 mt-6 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>OVERVIEW</span>
+          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
+            OVERVIEW
+          </span>
         </div>
         <nav className='flex flex-col gap-1 px-4'>
           <button
@@ -495,7 +489,9 @@ export default function CampusDashboard() {
         <Separator className='my-4' />
         {/* Management Section */}
         <div className='px-8 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>MANAGEMENT</span>
+          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
+            MANAGEMENT
+          </span>
         </div>
         <nav className='flex flex-col gap-1 px-4'>
           <button
@@ -532,7 +528,9 @@ export default function CampusDashboard() {
         <Separator className='my-4' />
         {/* Profile Section */}
         <div className='px-8 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>PROFILE</span>
+          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
+            PROFILE
+          </span>
         </div>
         <nav className='flex flex-col gap-1 px-4 mb-6'>
           <button
@@ -555,7 +553,18 @@ export default function CampusDashboard() {
               window.location.href = '/login';
             }}
             title='Logout'>
-            <svg className='w-5 h-5' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'><path strokeLinecap='round' strokeLinejoin='round' d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1' /></svg>
+            <svg
+              className='w-5 h-5'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              viewBox='0 0 24 24'>
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1'
+              />
+            </svg>
             <span>Logout</span>
           </button>
         </nav>
@@ -563,15 +572,22 @@ export default function CampusDashboard() {
 
       {/* Main Content */}
       <div className='flex-1 overflow-auto'>
+        {/* Header with profile and notifications */}
         <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className='space-y-10'>
               <div className='mb-6'>
-                <h2 className='text-3xl font-bold text-blue-900 mb-2'>Campus Vendor Partner</h2>
+                <h2 className='text-3xl font-bold text-blue-900 mb-2'>
+                  Campus Vendor Partner
+                </h2>
                 <Separator className='mb-4' />
-                <h1 className='text-2xl font-bold text-gray-800 mb-1'>Dashboard Overview</h1>
-                <p className='text-gray-600'>Welcome back! Here's what's happening with your canteen today.</p>
+                <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+                  Dashboard Overview
+                </h1>
+                <p className='text-gray-600'>
+                  Welcome back! Here's what's happening with your canteen today.
+                </p>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
                 <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
@@ -652,8 +668,12 @@ export default function CampusDashboard() {
             <div className='space-y-10'>
               <div className='flex justify-between items-end mb-6'>
                 <div>
-                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>Menu Items</h1>
-                  <p className='text-gray-600'>Manage your menu items and categories</p>
+                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+                    Menu Items
+                  </h1>
+                  <p className='text-gray-600'>
+                    Manage your menu items and categories
+                  </p>
                 </div>
                 <div className='flex items-center space-x-2'>
                   <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
@@ -943,8 +963,12 @@ export default function CampusDashboard() {
             <div className='space-y-10'>
               <div className='flex justify-between items-end mb-6'>
                 <div>
-                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>Orders</h1>
-                  <p className='text-gray-600'>Manage and track all orders in real-time</p>
+                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+                    Orders
+                  </h1>
+                  <p className='text-gray-600'>
+                    Manage and track all orders in real-time
+                  </p>
                 </div>
                 <Button
                   variant='outline'
@@ -1078,7 +1102,9 @@ export default function CampusDashboard() {
               </div>
               <Separator className='my-10' />
               <div className='mt-10'>
-                <span className='text-xs font-semibold text-gray-400 tracking-widest'>RECENT ORDERS</span>
+                <span className='text-xs font-semibold text-gray-400 tracking-widest'>
+                  RECENT ORDERS
+                </span>
                 <div className='mt-3 flex flex-col gap-2'>
                   {orders && orders.length > 0 ? (
                     orders
@@ -1136,8 +1162,12 @@ export default function CampusDashboard() {
           {activeTab === 'analytics' && (
             <div className='space-y-10'>
               <div className='mb-6'>
-                <h1 className='text-2xl font-bold text-gray-800 mb-1'>Analytics</h1>
-                <p className='text-gray-600'>Detailed insights about your business performance</p>
+                <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+                  Analytics
+                </h1>
+                <p className='text-gray-600'>
+                  Detailed insights about your business performance
+                </p>
               </div>
               <Separator className='mb-6' />
               {/* Calculate real analytics data */}
@@ -1314,19 +1344,25 @@ export default function CampusDashboard() {
           {/* Profile Tab */}
           {activeTab === 'profile' && (
             <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-12 border border-gray-100'>
-              <h2 className='text-2xl font-bold text-gray-800 mb-2'>Vendor Profile</h2>
+              <h2 className='text-2xl font-bold text-gray-800 mb-2'>
+                Vendor Profile
+              </h2>
               <Separator className='mb-8' />
               {/* Personal Details Section */}
               <div className='mb-10'>
-                <h3 className='text-xl font-semibold text-gray-700 mb-4'>Personal Details</h3>
-                <form className='space-y-6' onSubmit={async (e) => {
-                  e.preventDefault();
-                  setPersonalSubmitting(true);
-                  await new Promise((res) => setTimeout(res, 1200));
-                  setPersonalSuccess(true);
-                  setTimeout(() => setPersonalSuccess(false), 2000);
-                  setPersonalSubmitting(false);
-                }}>
+                <h3 className='text-xl font-semibold text-gray-700 mb-4'>
+                  Personal Details
+                </h3>
+                <form
+                  className='space-y-6'
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setPersonalSubmitting(true);
+                    await new Promise((res) => setTimeout(res, 1200));
+                    setPersonalSuccess(true);
+                    setTimeout(() => setPersonalSuccess(false), 2000);
+                    setPersonalSubmitting(false);
+                  }}>
                   <div className='flex items-center gap-8'>
                     <div className='relative'>
                       <img
@@ -1450,18 +1486,23 @@ export default function CampusDashboard() {
               <Separator className='mb-8' />
               {/* Bank/Payout Details Section */}
               <div>
-                <h3 className='text-xl font-semibold text-gray-700 mb-4'>Bank / Payout Details</h3>
-                <form className='space-y-6' onSubmit={async (e) => {
-                  e.preventDefault();
-                  setProfileSubmitting(true);
-                  await new Promise((res) => setTimeout(res, 1200));
-                  setProfileSuccess(true);
-                  setTimeout(() => setProfileSuccess(false), 2000);
-                  setProfileSubmitting(false);
-                }}>
+                <h3 className='text-xl font-semibold text-gray-700 mb-4'>
+                  Bank / Payout Details
+                </h3>
+                <form
+                  className='space-y-6'
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    setProfileSubmitting(true);
+                    await new Promise((res) => setTimeout(res, 1200));
+                    setProfileSuccess(true);
+                    setTimeout(() => setProfileSuccess(false), 2000);
+                    setProfileSubmitting(false);
+                  }}>
                   <div>
                     <label className='block font-medium mb-1'>
-                      PAN Card or GST No. <span className='text-red-500'>*</span>
+                      PAN Card or GST No.{' '}
+                      <span className='text-red-500'>*</span>
                     </label>
                     <input
                       type='text'

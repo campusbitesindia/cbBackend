@@ -242,7 +242,7 @@ export default function VendorOnboardingForm() {
   };
 
   return (
-    <div className='min-h-screen bg-white flex items-center justify-center py-8 px-2 md:px-8'>
+    <div className='min-h-screen bg-gray-100 flex items-center justify-center py-8 px-2 md:px-8 text-gray-700'>
       {/* Success Modal */}
       <Dialog
         open={showSuccessModal}
@@ -287,16 +287,16 @@ export default function VendorOnboardingForm() {
           </p>
         </div>
         {/* Basic Information */}
-        <Card className='bg-orange-50/90 shadow-sm border border-orange-100'>
+        <Card className='bg-gray-50 shadow-sm border border-orange-100'>
           <CardHeader className='pb-2'>
-            <CardTitle className='flex items-center'>
+            <CardTitle className='flex items-center text-black'>
               <User className='h-5 w-5 mr-2' /> Basic Information
             </CardTitle>
             <CardDescription>
               Please provide your basic contact details
             </CardDescription>
           </CardHeader>
-          <CardContent className='space-y-4 pt-0'>
+          <CardContent className='space-y-4 pt-0 text-gray-700'>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
                 <Label htmlFor='vendorName'>Vendor Name / Canteen Name *</Label>
@@ -446,24 +446,28 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Business & College Details */}
-        <Card className='bg-white/90 shadow-sm border border-orange-200'>
+        <Card className='bg-gray-50 shadow-sm border border-orange-200'>
           <CardHeader className='pb-2'>
-            <CardTitle className='flex items-center'>
+            <CardTitle className='flex items-center text-black'>
               <Store className='h-5 w-5 mr-2' /> Business & College Details
             </CardTitle>
             <CardDescription>
               Select the college where you'll be operating
             </CardDescription>
           </CardHeader>
-          <CardContent className='pt-0'>
+          <CardContent className='pt-0 text-gray-700'>
             <div>
               <Label htmlFor='collegeName'>Name of College *</Label>
               <Select onValueChange={(value) => setValue('collegeName', value)}>
                 <SelectTrigger
-                  className={errors.collegeName ? 'border-red-500' : ''}>
+                  className={
+                    errors.collegeName
+                      ? 'border-red-500 bg-white text-gray-700'
+                      : 'bg-white text-gray-700'
+                  }>
                   <SelectValue placeholder='Select college' />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className='bg-white'>
                   {colleges.map((college) => (
                     <SelectItem key={college} value={college}>
                       {college}
@@ -481,24 +485,28 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Operations Detail */}
-        <Card className='bg-orange-100/90 shadow-sm border border-orange-200'>
+        <Card className='bg-gray-50 shadow-sm border border-orange-200'>
           <CardHeader className='pb-2'>
-            <CardTitle className='flex items-center'>
+            <CardTitle className='flex items-center text-black'>
               <Clock className='h-5 w-5 mr-2' /> Operations Details
             </CardTitle>
             <CardDescription>Set your operating hours and days</CardDescription>
           </CardHeader>
-          <CardContent className='space-y-4 pt-0'>
+          <CardContent className='space-y-4 pt-0 text-gray-700'>
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>
                 <Label htmlFor='openingHours'>Opening Hours *</Label>
                 <Select
                   onValueChange={(value) => setValue('openingHours', value)}>
                   <SelectTrigger
-                    className={errors.openingHours ? 'border-red-500' : ''}>
+                    className={
+                      errors.openingHours
+                        ? 'border-red-500 bg-white text-gray-700'
+                        : 'bg-white text-gray-700'
+                    }>
                     <SelectValue placeholder='Select opening time' />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className='bg-white'>
                     {timeSlots.map((time) => (
                       <SelectItem key={time} value={time}>
                         {time}
@@ -517,10 +525,14 @@ export default function VendorOnboardingForm() {
                 <Select
                   onValueChange={(value) => setValue('closingHours', value)}>
                   <SelectTrigger
-                    className={errors.closingHours ? 'border-red-500' : ''}>
+                    className={
+                      errors.closingHours
+                        ? 'border-red-500 bg-white text-gray-700'
+                        : 'bg-white text-gray-700'
+                    }>
                     <SelectValue placeholder='Select closing time' />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className='bg-white'>
                     {timeSlots.map((time) => (
                       <SelectItem key={time} value={time}>
                         {time}
@@ -564,14 +576,14 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Documentation Upload */}
-        <Card className='bg-white/90 shadow-sm border border-orange-100'>
+        <Card className='bg-gray-50 shadow-sm border border-orange-100'>
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center'>
               <FileText className='h-5 w-5 mr-2' /> Documentation Upload
             </CardTitle>
             <CardDescription>Upload required documents</CardDescription>
           </CardHeader>
-          <CardContent className='space-y-4 pt-0'>
+          <CardContent className='space-y-4 pt-0 text-gray-700'>
             <div>
               <Label htmlFor='adhaarCard'>Adhaar Card *</Label>
               <div className='border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors'>
@@ -639,8 +651,8 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Terms & Conditions */}
-        <Card className='bg-orange-50/90 shadow-sm border border-orange-100'>
-          <CardContent className='pt-6'>
+        <Card className='bg-gray-50 shadow-sm border border-orange-100'>
+          <CardContent className='pt-6 text-gray-700'>
             <div className='flex items-start space-x-3'>
               <Controller
                 name='termsAccepted'
@@ -677,7 +689,7 @@ export default function VendorOnboardingForm() {
           <Button
             type='button'
             size='lg'
-            className='w-full md:w-auto px-8 py-3 bg-orange-600 hover:bg-orange-700'
+            className='w-full md:w-auto px-8 py-3 bg-red-600 hover:bg-red-700'
             // disabled={isSubmitting}
             onClick={handleSubmit(onSubmit)}>
             {isSubmitting ? (

@@ -50,7 +50,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loginWithToken } = useAuth();
+  const { loginWithToken, login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -64,6 +64,37 @@ export default function LoginPage() {
   });
 
   const selectedRole = form.watch('role');
+
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    try {
+      setIsLoading(true);
+      await login(values.email, values.password);
+
+      // Redirect based on role
+      if (values.role === 'student') {
+        router.push('/student/dashboard');
+      } else if (values.role === 'campus') {
+        router.push('/campus/dashboard');
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Successfully logged in!',
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to login. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle OAuth token from URL and show session expiration message
   useEffect(() => {
@@ -89,53 +120,6 @@ export default function LoginPage() {
       }
     }
   }, [searchParams, loginWithToken, router, toast]);
-
-  async function onSubmit(values: z.infer<typeof loginSchema>) {
-    setIsLoading(true);
-    try {
-      const response = await fetch('http://localhost:8080/api/v1/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-      const { token, user1 } = await response.json();
-      localStorage.setItem('userDetails', JSON.stringify(user1));
-      loginWithToken(token);
-
-      toast({
-        title: 'Welcome back! 🎉',
-        description: `Successfully logged in as ${values.role}`,
-      });
-
-      // Role-based routing
-      switch (values.role) {
-        case 'student':
-          router.push('/student/dashboard');
-          break;
-        case 'campus':
-          router.push('/campus/dashboard');
-          break;
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Login failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Please check your credentials and try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   const getRoleIcon = (role: UserRole) => {
     switch (role) {
@@ -462,9 +446,7 @@ export default function LoginPage() {
                       asChild
                       variant='outline'
                       className='border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 transition-all duration-300 bg-transparent'>
-                      <Link href='/campus/register'>
-                        Register Your Vendor
-                      </Link>
+                      <Link href='/campus/register'>Register Your Vendor</Link>
                     </Button>
                   </div>
                 </div>
