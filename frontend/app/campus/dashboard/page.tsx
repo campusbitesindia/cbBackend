@@ -83,8 +83,8 @@ import { Order } from '@/types';
 import { uploadImage, validateImage } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
-import { useNotificationToast } from "@/hooks/use-notification"
-import NotificationList from "@/components/notification-list"
+import { useNotificationToast } from '@/hooks/use-notification';
+import NotificationList from '@/components/notification-list';
 // Real data will be calculated from orders and menu items
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -103,7 +103,9 @@ export default function CampusDashboard() {
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   console.log(user, 'userDetails');
-  const UserDetails: any = JSON.parse(localStorage.getItem('userDetails') || '{}');
+  const UserDetails: any = JSON.parse(
+    localStorage.getItem('userDetails') || '{}'
+  );
 
   // Form state for new/edit item
   const [formData, setFormData] = useState({
@@ -121,7 +123,7 @@ export default function CampusDashboard() {
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   // State for order details modal
-  const [orderDetails, setOrderDetails] = useState<Order | null>(null);
+  const [orderDetails, setOrderDetails] = useState<any | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -306,42 +308,6 @@ export default function CampusDashboard() {
     setImagePreview('');
   };
 
-  const handleOrderStatusUpdate = async (
-    orderId: string,
-    status: Order['status']
-  ) => {
-    try {
-      if (!user?.canteenId) {
-        toast({
-          title: 'Error',
-          description: 'Canteen ID not found',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Show message about backend limitation
-      toast({
-        title: 'Feature Not Available',
-        description:
-          'Order status updates require backend API support. This feature is currently disabled.',
-        variant: 'destructive',
-      });
-
-      // Note: In a real implementation, you would call the API here
-      // await updateCanteenOrderStatus(orderId, status, localStorage.getItem('token') || '');
-
-      // For now, just refresh the data
-      fetchData();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update order status',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'placed':
@@ -457,7 +423,7 @@ export default function CampusDashboard() {
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
 
-  useNotificationToast()
+  useNotificationToast();
 
   return (
     <div className='flex h-screen bg-white'>
@@ -938,7 +904,7 @@ export default function CampusDashboard() {
               </div>
 
               <div className='space-y-6'>
-                {orders.map((order) => (
+                {orders.map((order: any) => (
                   <div
                     key={order._id}
                     className='bg-white rounded-xl shadow p-6 flex flex-col space-y-4'
@@ -976,7 +942,7 @@ export default function CampusDashboard() {
                     {/* Order Items */}
                     <div>
                       <div className='font-semibold mt-4'>Order Items</div>
-                      {order.items.map((item, idx) => (
+                      {order.items.map((item: any, idx: any) => (
                         <div
                           key={idx}
                           className='flex justify-between text-sm mt-1'>
@@ -1497,7 +1463,7 @@ export default function CampusDashboard() {
               <div>Address: {orderDetails.customerAddress || 'N/A'}</div>
               <div className='font-semibold mt-2'>Order Items</div>
               <div className='space-y-1'>
-                {orderDetails.items.map((item, idx) => (
+                {orderDetails.items.map((item: any, idx: any) => (
                   <div key={idx} className='flex justify-between'>
                     <span>
                       {item.item.name} x {item.quantity}
