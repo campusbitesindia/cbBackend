@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -35,20 +35,49 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useRouter } from 'next/navigation';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 // Validation schema
 const vendorSchema = z
   .object({
-    vendorName: z.string().min(2, 'Vendor name must be at least 2 characters'),
+    vendorName: z
+      .string()
+      .min(2, 'Vendor name must be at least 2 characters')
+      .regex(
+        /^[A-Za-z .]+$/,
+        'Vendor name must only contain letters, spaces, and dots'
+      ),
     contactPerson: z
       .string()
-      .min(2, 'Contact person name must be at least 2 characters'),
+      .min(2, 'Contact person name must be at least 2 characters')
+      .regex(
+        /^[A-Za-z .]+$/,
+        'Contact person name must only contain letters, spaces, and dots'
+      ),
     mobileNumber: z
       .string()
-      .regex(/^[0-9]{10}$/, 'Mobile number must be 10 digits'),
+      .regex(
+        /^[1-9][0-9]{9}$/,
+        'Mobile number must be 10 digits and not start with 0'
+      ),
     email: z.string().email('Invalid email address'),
     address: z.string().min(5, 'Address must be at least 5 characters'),
-    password: z.string().min(8, 'Password must be at least 8 characters'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/,
+        'Password must contain uppercase, lowercase, number, and special character'
+      ),
     confirmPassword: z.string(),
     collegeName: z.string().min(1, 'Please select a college'),
     openingHours: z.string().min(1, 'Please select opening hours'),
@@ -56,9 +85,25 @@ const vendorSchema = z
     daysOfOperation: z
       .array(z.string())
       .min(1, 'Please select at least one day'),
-    adhaarCard: z
-      .any()
-      .refine((file) => file?.length > 0, 'Adhaar card is required'),
+    adhaarCard: z.any().refine((file) => {
+      if (!file || (file instanceof File && file.size === 0)) return false;
+      // Accept only images and pdf, max 5MB
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/jpg',
+        'application/pdf',
+      ];
+      if (file instanceof File) {
+        return allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024;
+      }
+      // If file is array (from input), check first file
+      if (Array.isArray(file) && file.length > 0) {
+        const f = file[0];
+        return allowedTypes.includes(f.type) && f.size <= 5 * 1024 * 1024;
+      }
+      return false;
+    }, 'Adhaar card is required and must be an image (jpg, jpeg, png) or PDF, max 5MB.'),
     fssaiLicense: z.any().optional(),
     termsAccepted: z
       .boolean()
@@ -139,6 +184,7 @@ export default function VendorOnboardingForm() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   // Section refs for scrolling
   const basicInfoRef = useRef<HTMLDivElement>(null);
   const businessRef = useRef<HTMLDivElement>(null);
@@ -146,14 +192,7 @@ export default function VendorOnboardingForm() {
   const docsRef = useRef<HTMLDivElement>(null);
   const termsRef = useRef<HTMLDivElement>(null);
 
-  // Sidebar stages
-  const stages = [
-    { label: 'Basic Info', ref: basicInfoRef },
-    { label: 'Business & College', ref: businessRef },
-    { label: 'Operations', ref: operationsRef },
-    { label: 'Documents', ref: docsRef },
-    { label: 'Terms', ref: termsRef },
-  ];
+  const router = useRouter();
 
   const {
     register,
@@ -162,6 +201,7 @@ export default function VendorOnboardingForm() {
     setValue,
     watch,
     reset,
+    control, // <-- add this
   } = useForm({
     resolver: zodResolver(vendorSchema),
     defaultValues: {
@@ -189,6 +229,7 @@ export default function VendorOnboardingForm() {
   };
 
   const onSubmit = async (data: any) => {
+    console.log(data);
     setIsSubmitting(true);
 
     // Simulate API call
@@ -197,40 +238,43 @@ export default function VendorOnboardingForm() {
     console.log('Form submitted:', data);
     setSubmitSuccess(true);
     setIsSubmitting(false);
-
-    // Reset form after success
-    setTimeout(() => {
-      setSubmitSuccess(false);
-      reset();
-      setSelectedDays([]);
-      setAdhaarFile(null);
-      setFssaiFile(null);
-    }, 3000);
+    setShowSuccessModal(true); // Show modal
   };
-
-  if (submitSuccess) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4'>
-        <Card className='w-full max-w-md text-center'>
-          <CardContent className='pt-6'>
-            <div className='mb-4'>
-              <CheckCircle className='h-16 w-16 text-green-500 mx-auto mb-4' />
-              <h2 className='text-2xl font-bold text-green-700 mb-2'>
-                Success!
-              </h2>
-              <p className='text-gray-600'>
-                Your vendor application has been submitted successfully. We'll
-                review your application and get back to you within 24-48 hours.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className='min-h-screen bg-white flex items-center justify-center py-8 px-2 md:px-8'>
+      {/* Success Modal */}
+      <Dialog
+        open={showSuccessModal}
+        onOpenChange={(open) => {
+          setShowSuccessModal(open);
+          if (!open && submitSuccess) {
+            router.push('/campus/dashboard');
+          }
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registration Complete!</DialogTitle>
+            <DialogDescription>
+              Your registration has been received.
+              <br />
+              You can now view your details in the dashboard.
+              <br />
+              Once approved, you’ll be able to manage your shop and receive
+              orders.
+              <br />
+              Thank you for joining CampusBites!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button className='w-full bg-orange-600 hover:bg-orange-700'>
+                Go to Dashboard
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className='w-full max-w-4xl mx-auto flex flex-col gap-8'>
         {/* Greeting Header */}
         <div className='text-center mb-2'>
@@ -292,6 +336,15 @@ export default function VendorOnboardingForm() {
                   {...register('mobileNumber')}
                   placeholder='Enter 10-digit mobile number'
                   className={errors.mobileNumber ? 'border-red-500' : ''}
+                  maxLength={10}
+                  inputMode='numeric'
+                  pattern='\d*'
+                  onInput={(e) => {
+                    // @ts-ignore
+                    e.target.value = e.target.value
+                      .replace(/[^0-9]/g, '')
+                      .slice(0, 10);
+                  }}
                 />
                 {errors.mobileNumber && (
                   <p className='text-sm text-red-500 mt-1'>
@@ -543,6 +596,9 @@ export default function VendorOnboardingForm() {
                   }>
                   Choose File
                 </Button>
+                <p className='text-xs text-gray-500 mt-2'>
+                  Allowed: PDF, JPG, JPEG, PNG. Max size: 5MB.
+                </p>
               </div>
               {errors.adhaarCard && (
                 <p className='text-sm text-red-500 mt-1'>
@@ -586,10 +642,17 @@ export default function VendorOnboardingForm() {
         <Card className='bg-orange-50/90 shadow-sm border border-orange-100'>
           <CardContent className='pt-6'>
             <div className='flex items-start space-x-3'>
-              <Checkbox
-                id='termsAccepted'
-                {...register('termsAccepted')}
-                className={errors.termsAccepted ? 'border-red-500' : ''}
+              <Controller
+                name='termsAccepted'
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id='termsAccepted'
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    className={errors.termsAccepted ? 'border-red-500' : ''}
+                  />
+                )}
               />
               <div className='flex-1'>
                 <Label htmlFor='termsAccepted' className='text-sm'>
@@ -615,7 +678,7 @@ export default function VendorOnboardingForm() {
             type='button'
             size='lg'
             className='w-full md:w-auto px-8 py-3 bg-orange-600 hover:bg-orange-700'
-            disabled={isSubmitting}
+            // disabled={isSubmitting}
             onClick={handleSubmit(onSubmit)}>
             {isSubmitting ? (
               <>

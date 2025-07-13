@@ -95,7 +95,8 @@ function Navbar() {
     { name: 'Orders', href: '/orders', icon: Package },
   ];
 
-  const hideNavbar = pathname === '/campus/register';
+  const hideNavbar =
+    pathname === '/campus/register' || pathname === '/campus/dashboard';
 
   if (hideNavbar) {
     return (
