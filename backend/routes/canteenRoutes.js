@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middlewares/uploadMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 const { createCanteen, getAllCanteens, deleteCanteen, getCanteenById, updateCanteen } = require("../controllers/canteenController");
 const { isAuthenticated, isVendor } = require("../middleware/auth")
 
