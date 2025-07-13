@@ -37,6 +37,8 @@ import {
 import Image from 'next/image';
 import { getAllCampuses, Campus } from '@/services/campusService';
 import { useAuth } from '@/context/auth-context';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import api from '@/lib/axios';
 
 const registerSchema = z
   .object({
@@ -65,6 +67,10 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [campuses, setCampuses] = useState<Campus[]>([]);
   const [isLoadingCampuses, setIsLoadingCampuses] = useState(true);
+  const [campusInput, setCampusInput] = useState('');
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestForm, setRequestForm] = useState({ name: '', email: '', mobile: '', collegeName: '', city: '', message: '' });
+  const [requestLoading, setRequestLoading] = useState(false);
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -132,6 +138,25 @@ export default function RegisterPage() {
       });
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  // Autocomplete filter
+  const filteredCampuses = campusInput
+    ? campuses.filter((c) => c.name.toLowerCase().includes(campusInput.toLowerCase()))
+    : campuses;
+
+  async function handleRequestCampus() {
+    setRequestLoading(true);
+    try {
+      await api.post('/api/v1/admin/campus-request', requestForm);
+      toast({ title: 'Campus request submitted!', description: 'Our team will review it.' });
+      setShowRequestDialog(false);
+      setRequestForm({ name: '', email: '', mobile: '', collegeName: '', city: '', message: '' });
+    } catch (err: any) {
+      toast({ title: 'Failed to submit campus request', description: err.message, variant: 'destructive' });
+    } finally {
+      setRequestLoading(false);
     }
   }
 
@@ -363,48 +388,49 @@ export default function RegisterPage() {
                     )}
                   />
 
+                  {/* College Field for Vendor Registration */}
                   <FormField
                     control={form.control}
                     name='campus'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className='text-gray-300 text-lg font-semibold'>
-                          Select Campus
-                        </FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          disabled={isLoadingCampuses}>
-                          <FormControl>
-                            <SelectTrigger className='bg-gray-700/50 border-gray-600 text-white rounded-xl h-12 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'>
-                              <SelectValue
-                                placeholder={
-                                  isLoadingCampuses
-                                    ? 'Loading campuses...'
-                                    : 'Select your campus'
-                                }
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className='bg-gray-800 border-gray-600 max-h-60'>
-                            {campuses.map((campus) => (
-                              <SelectItem
-                                key={campus._id}
-                                value={campus._id}
-                                className='text-white hover:bg-gray-700'>
-                                <div className='flex items-center gap-2'>
-                                  <MapPin className='w-4 h-4' />
-                                  <span>{campus.name}</span>
-                                  {campus.city && (
-                                    <span className='text-gray-400 text-sm'>
-                                      ({campus.city})
-                                    </span>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormLabel className='text-gray-300 text-lg font-semibold'>College Name</FormLabel>
+                        <FormControl>
+                          <div className='relative'>
+                            <Input
+                              placeholder='Type your college name'
+                              value={campusInput}
+                              onChange={e => {
+                                setCampusInput(e.target.value);
+                                field.onChange(''); // Clear selected campus if typing
+                              }}
+                              className='pl-12 bg-gray-700/50 border-gray-600 text-white placeholder-gray-400 rounded-xl h-12 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all'
+                            />
+                            {/* Autocomplete dropdown */}
+                            {campusInput && filteredCampuses.length > 0 && (
+                              <div className='absolute z-10 bg-white border border-gray-200 rounded shadow w-full mt-1 max-h-48 overflow-y-auto'>
+                                {filteredCampuses.map((campus) => (
+                                  <div
+                                    key={campus._id}
+                                    className='px-4 py-2 hover:bg-blue-100 cursor-pointer text-black'
+                                    onClick={() => {
+                                      setCampusInput(campus.name);
+                                      field.onChange(campus._id);
+                                    }}
+                                  >
+                                    {campus.name} {campus.city ? <span className='text-gray-400 text-sm'>({campus.city})</span> : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {/* Request Campus link */}
+                            {campusInput && filteredCampuses.length === 0 && (
+                              <div className='mt-2 text-blue-400 cursor-pointer underline' onClick={() => setShowRequestDialog(true)}>
+                                Can’t find your college? <span className='font-semibold'>Request to add it</span>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
                         <FormMessage className='text-red-400' />
                       </FormItem>
                     )}
@@ -504,6 +530,28 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* Request Campus Dialog */}
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className='max-w-md'>
+          <DialogHeader>
+            <DialogTitle>Request New Campus</DialogTitle>
+          </DialogHeader>
+          <div className='space-y-4'>
+            <Input placeholder='Your Name' value={requestForm.name} onChange={e => setRequestForm(f => ({ ...f, name: e.target.value }))} />
+            <Input placeholder='Email' value={requestForm.email} onChange={e => setRequestForm(f => ({ ...f, email: e.target.value }))} />
+            <Input placeholder='Mobile' value={requestForm.mobile} onChange={e => setRequestForm(f => ({ ...f, mobile: e.target.value }))} />
+            <Input placeholder='College Name' value={requestForm.collegeName} onChange={e => setRequestForm(f => ({ ...f, collegeName: e.target.value }))} />
+            <Input placeholder='City' value={requestForm.city} onChange={e => setRequestForm(f => ({ ...f, city: e.target.value }))} />
+            <Input placeholder='Message (optional)' value={requestForm.message} onChange={e => setRequestForm(f => ({ ...f, message: e.target.value }))} />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleRequestCampus} disabled={requestLoading} className='bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full'>
+              {requestLoading ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
