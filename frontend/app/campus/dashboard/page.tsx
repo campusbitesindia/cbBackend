@@ -125,6 +125,49 @@ export default function CampusDashboard() {
   // State for order details modal
   const [orderDetails, setOrderDetails] = useState<any | null>(null);
 
+  // Add state for profile form
+  const [profileData, setProfileData] = useState({
+    panOrGst: '',
+    accountNo: '',
+    bankName: '',
+    ifsc: '',
+    branch: '',
+    upiId: '',
+  });
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
+  // Personal details state
+  const [personalData, setPersonalData] = useState({
+    vendorName: '',
+    contactPerson: '',
+    mobileNumber: '',
+    email: '',
+    address: '',
+    profilePic: '',
+  });
+  const [personalSubmitting, setPersonalSubmitting] = useState(false);
+  const [personalSuccess, setPersonalSuccess] = useState(false);
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  const [profilePicPreview, setProfilePicPreview] = useState('');
+
+  // Handle profile picture upload
+  const handleProfilePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePicFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePicPreview(reader.result as string);
+        setPersonalData((prev) => ({
+          ...prev,
+          profilePic: reader.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   useEffect(() => {
     fetchData();
 
@@ -426,20 +469,18 @@ export default function CampusDashboard() {
   useNotificationToast();
 
   return (
-    <div className='flex h-screen bg-white'>
+    <div className='flex h-screen bg-gray-50'>
       {/* Sidebar */}
-      <div className='w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full scrollbar-track-rounded-full'>
+      <div className='w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-y-auto shadow-lg px-0 py-0'>
         {/* Brand */}
-        <div className='px-6 py-6'>
-          <span className='text-2xl font-bold text-gray-900'>Campus Bites</span>
+        <div className='px-8 py-8 border-b border-gray-100'>
+          <span className='text-2xl font-bold text-blue-900 tracking-tight'>Campus Bites</span>
         </div>
         {/* Overview Section */}
-        <div className='px-6 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-            OVERVIEW
-          </span>
+        <div className='px-8 mt-6 mb-2'>
+          <span className='text-xs font-semibold text-gray-400 tracking-widest'>OVERVIEW</span>
         </div>
-        <nav className='flex flex-col gap-1 px-2'>
+        <nav className='flex flex-col gap-1 px-4'>
           <button
             className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
               activeTab === 'overview'
@@ -451,13 +492,12 @@ export default function CampusDashboard() {
             <span>Dashboard</span>
           </button>
         </nav>
+        <Separator className='my-4' />
         {/* Management Section */}
-        <div className='px-6 mt-6 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-            MANAGEMENT
-          </span>
+        <div className='px-8 mb-2'>
+          <span className='text-xs font-semibold text-gray-400 tracking-widest'>MANAGEMENT</span>
         </div>
-        <nav className='flex flex-col gap-1 px-2'>
+        <nav className='flex flex-col gap-1 px-4'>
           <button
             className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
               activeTab === 'orders'
@@ -489,31 +529,51 @@ export default function CampusDashboard() {
             <span>Analytics</span>
           </button>
         </nav>
+        <Separator className='my-4' />
+        {/* Profile Section */}
+        <div className='px-8 mb-2'>
+          <span className='text-xs font-semibold text-gray-400 tracking-widest'>PROFILE</span>
+        </div>
+        <nav className='flex flex-col gap-1 px-4 mb-6'>
+          <button
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+              activeTab === 'profile'
+                ? 'bg-blue-50 text-blue-600 font-semibold'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
+            }`}
+            onClick={() => setActiveTab('profile')}>
+            <Users className='w-5 h-5' />
+            <span>Profile</span>
+          </button>
+          <button
+            className='flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition mt-2'
+            onClick={() => {
+              localStorage.clear();
+              if (typeof (useAuth as any).logout === 'function') {
+                (useAuth as any).logout();
+              }
+              window.location.href = '/login';
+            }}
+            title='Logout'>
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'><path strokeLinecap='round' strokeLinejoin='round' d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1' /></svg>
+            <span>Logout</span>
+          </button>
+        </nav>
       </div>
 
       {/* Main Content */}
       <div className='flex-1 overflow-auto'>
-        <div className='p-6'>
+        <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className='space-y-6'>
-              {/* Add heading at the top of the overview */}
-              <div>
-                <h2 className='text-3xl font-bold text-blue-900 mb-4'>
-                  Campus Vendor Partner
-                </h2>
+            <div className='space-y-10'>
+              <div className='mb-6'>
+                <h2 className='text-3xl font-bold text-blue-900 mb-2'>Campus Vendor Partner</h2>
+                <Separator className='mb-4' />
+                <h1 className='text-2xl font-bold text-gray-800 mb-1'>Dashboard Overview</h1>
+                <p className='text-gray-600'>Welcome back! Here's what's happening with your canteen today.</p>
               </div>
-              <div>
-                <h1 className='text-2xl font-bold text-gray-800 mb-2'>
-                  Dashboard Overview
-                </h1>
-                <p className='text-gray-600'>
-                  Welcome back! Here's what's happening with your canteen today.
-                </p>
-              </div>
-
-              {/* Stats Cards with hover effect */}
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 '>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
                 <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
@@ -589,15 +649,11 @@ export default function CampusDashboard() {
 
           {/* Menu Items Tab */}
           {activeTab === 'menu' && (
-            <div className='space-y-6'>
-              <div className='flex justify-between items-center'>
+            <div className='space-y-10'>
+              <div className='flex justify-between items-end mb-6'>
                 <div>
-                  <h1 className='text-2xl font-bold text-gray-800 mb-2'>
-                    Menu Items
-                  </h1>
-                  <p className='text-gray-600'>
-                    Manage your menu items and categories
-                  </p>
+                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>Menu Items</h1>
+                  <p className='text-gray-600'>Manage your menu items and categories</p>
                 </div>
                 <div className='flex items-center space-x-2'>
                   <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
@@ -745,9 +801,9 @@ export default function CampusDashboard() {
                   </Button>
                 </div>
               </div>
-
+              <Separator className='mb-6' />
               {/* Search bar above menu items */}
-              <div className='flex flex-col md:flex-row md:items-center md:space-x-4 mb-6'>
+              <div className='flex flex-col md:flex-row md:items-center md:space-x-4 mb-8 gap-4'>
                 {/* Search */}
                 <div className='relative w-full md:w-1/3 mb-2 md:mb-0'>
                   <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'>
@@ -817,7 +873,7 @@ export default function CampusDashboard() {
                 </select>
               </div>
 
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
                 {filteredItems.map((item) => (
                   <Card
                     key={item._id}
@@ -884,15 +940,11 @@ export default function CampusDashboard() {
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <div className='space-y-6'>
-              <div className='flex justify-between items-center'>
+            <div className='space-y-10'>
+              <div className='flex justify-between items-end mb-6'>
                 <div>
-                  <h1 className='text-2xl font-bold text-gray-800 mb-2'>
-                    Orders
-                  </h1>
-                  <p className='text-gray-600'>
-                    Manage and track all orders in real-time
-                  </p>
+                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>Orders</h1>
+                  <p className='text-gray-600'>Manage and track all orders in real-time</p>
                 </div>
                 <Button
                   variant='outline'
@@ -902,8 +954,8 @@ export default function CampusDashboard() {
                   <span>Refresh</span>
                 </Button>
               </div>
-
-              <div className='space-y-6'>
+              <Separator className='mb-6' />
+              <div className='space-y-8'>
                 {orders.map((order: any) => (
                   <div
                     key={order._id}
@@ -1024,12 +1076,9 @@ export default function CampusDashboard() {
                   </div>
                 ))}
               </div>
-
-              {/* Recent Orders Section (now at the bottom) */}
+              <Separator className='my-10' />
               <div className='mt-10'>
-                <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-                  RECENT ORDERS
-                </span>
+                <span className='text-xs font-semibold text-gray-400 tracking-widest'>RECENT ORDERS</span>
                 <div className='mt-3 flex flex-col gap-2'>
                   {orders && orders.length > 0 ? (
                     orders
@@ -1085,16 +1134,12 @@ export default function CampusDashboard() {
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
-            <div className='space-y-6'>
-              <div>
-                <h1 className='text-2xl font-bold text-gray-800 mb-2'>
-                  Analytics
-                </h1>
-                <p className='text-gray-600'>
-                  Detailed insights about your business performance
-                </p>
+            <div className='space-y-10'>
+              <div className='mb-6'>
+                <h1 className='text-2xl font-bold text-gray-800 mb-1'>Analytics</h1>
+                <p className='text-gray-600'>Detailed insights about your business performance</p>
               </div>
-
+              <Separator className='mb-6' />
               {/* Calculate real analytics data */}
               {(() => {
                 // Calculate order status distribution
@@ -1263,6 +1308,276 @@ export default function CampusDashboard() {
                   </>
                 );
               })()}
+            </div>
+          )}
+
+          {/* Profile Tab */}
+          {activeTab === 'profile' && (
+            <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-12 border border-gray-100'>
+              <h2 className='text-2xl font-bold text-gray-800 mb-2'>Vendor Profile</h2>
+              <Separator className='mb-8' />
+              {/* Personal Details Section */}
+              <div className='mb-10'>
+                <h3 className='text-xl font-semibold text-gray-700 mb-4'>Personal Details</h3>
+                <form className='space-y-6' onSubmit={async (e) => {
+                  e.preventDefault();
+                  setPersonalSubmitting(true);
+                  await new Promise((res) => setTimeout(res, 1200));
+                  setPersonalSuccess(true);
+                  setTimeout(() => setPersonalSuccess(false), 2000);
+                  setPersonalSubmitting(false);
+                }}>
+                  <div className='flex items-center gap-8'>
+                    <div className='relative'>
+                      <img
+                        src={
+                          profilePicPreview ||
+                          personalData.profilePic ||
+                          '/placeholder-user.jpg'
+                        }
+                        alt='Profile'
+                        className='w-24 h-24 rounded-full object-cover border border-gray-300'
+                      />
+                      <label className='absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700'>
+                        <input
+                          type='file'
+                          accept='image/*'
+                          className='hidden'
+                          onChange={handleProfilePicUpload}
+                        />
+                        <Upload className='w-4 h-4' />
+                      </label>
+                    </div>
+                    <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-4'>
+                      <div>
+                        <label className='block font-medium mb-1'>
+                          Vendor Name
+                        </label>
+                        <input
+                          type='text'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          placeholder='Enter vendor/canteen name'
+                          value={personalData.vendorName}
+                          onChange={(e) =>
+                            setPersonalData({
+                              ...personalData,
+                              vendorName: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className='block font-medium mb-1'>
+                          Contact Person
+                        </label>
+                        <input
+                          type='text'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          placeholder='Enter contact person name'
+                          value={personalData.contactPerson}
+                          onChange={(e) =>
+                            setPersonalData({
+                              ...personalData,
+                              contactPerson: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className='block font-medium mb-1'>
+                          Mobile Number
+                        </label>
+                        <input
+                          type='text'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          placeholder='Enter mobile number'
+                          value={personalData.mobileNumber}
+                          onChange={(e) =>
+                            setPersonalData({
+                              ...personalData,
+                              mobileNumber: e.target.value
+                                .replace(/[^0-9]/g, '')
+                                .slice(0, 10),
+                            })
+                          }
+                          maxLength={10}
+                        />
+                      </div>
+                      <div>
+                        <label className='block font-medium mb-1'>Email</label>
+                        <input
+                          type='email'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          placeholder='Enter email address'
+                          value={personalData.email}
+                          onChange={(e) =>
+                            setPersonalData({
+                              ...personalData,
+                              email: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className='block font-medium mb-1'>Address</label>
+                    <textarea
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      placeholder='Enter address'
+                      value={personalData.address}
+                      onChange={(e) =>
+                        setPersonalData({
+                          ...personalData,
+                          address: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <button
+                    type='submit'
+                    className='w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed mt-2'
+                    disabled={personalSubmitting}>
+                    {personalSubmitting ? 'Saving...' : 'Save Personal Details'}
+                  </button>
+                  {personalSuccess && (
+                    <div className='text-green-600 text-center mt-2'>
+                      Personal details updated successfully!
+                    </div>
+                  )}
+                </form>
+              </div>
+              <Separator className='mb-8' />
+              {/* Bank/Payout Details Section */}
+              <div>
+                <h3 className='text-xl font-semibold text-gray-700 mb-4'>Bank / Payout Details</h3>
+                <form className='space-y-6' onSubmit={async (e) => {
+                  e.preventDefault();
+                  setProfileSubmitting(true);
+                  await new Promise((res) => setTimeout(res, 1200));
+                  setProfileSuccess(true);
+                  setTimeout(() => setProfileSuccess(false), 2000);
+                  setProfileSubmitting(false);
+                }}>
+                  <div>
+                    <label className='block font-medium mb-1'>
+                      PAN Card or GST No. <span className='text-red-500'>*</span>
+                    </label>
+                    <input
+                      type='text'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      placeholder='Enter PAN or GST number'
+                      value={profileData.panOrGst}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          panOrGst: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div>
+                      <label className='block font-medium mb-1'>
+                        Account Number
+                      </label>
+                      <input
+                        type='text'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        placeholder='Enter account number'
+                        value={profileData.accountNo}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            accountNo: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className='block font-medium mb-1'>
+                        Bank Name
+                      </label>
+                      <input
+                        type='text'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        placeholder='Enter bank name'
+                        value={profileData.bankName}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            bankName: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div>
+                      <label className='block font-medium mb-1'>
+                        IFSC Code
+                      </label>
+                      <input
+                        type='text'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        placeholder='Enter IFSC code'
+                        value={profileData.ifsc}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            ifsc: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <label className='block font-medium mb-1'>Branch</label>
+                      <input
+                        type='text'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        placeholder='Enter branch name'
+                        value={profileData.branch}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            branch: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className='flex items-center my-2'>
+                    <span className='text-gray-500 mx-2'>OR</span>
+                  </div>
+                  <div>
+                    <label className='block font-medium mb-1'>UPI ID</label>
+                    <input
+                      type='text'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      placeholder='Enter UPI ID (if applicable)'
+                      value={profileData.upiId}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          upiId: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <button
+                    type='submit'
+                    className='w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed mt-2'
+                    disabled={profileSubmitting}>
+                    {profileSubmitting ? 'Saving...' : 'Save Bank Details'}
+                  </button>
+                  {profileSuccess && (
+                    <div className='text-green-600 text-center mt-2'>
+                      Bank details updated successfully!
+                    </div>
+                  )}
+                </form>
+              </div>
             </div>
           )}
         </div>
