@@ -19,6 +19,10 @@ const UserSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpire: Date,
 
+  subscription:{
+    type:String,
+    default:null
+  },
   // 🔐 Smart Security Features
   devices: [{
     deviceId: { type: String, required: true },
