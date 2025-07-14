@@ -82,7 +82,7 @@ app.use('/api/v1/reviews', reviewRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/security", securityRoutes); // 🔐 Smart Security API
 app.use("/api/v1/adv", advancedRoutes);
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 
 // Health check  
 app.get("/", (req, res) => {

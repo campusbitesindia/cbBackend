@@ -47,3 +47,19 @@ exports.getUserNotifications = async (req, res) => {
   }
 };
 // works
+
+
+exports.sendPublicKey=async(req,res)=>{
+  try{
+      return res.status(200).json({
+        success:true,
+        publicKey:process.env.publicKey
+      })
+  }
+  catch(err){
+    return res.status(500).json({
+      success:false,
+      message:"internal server error"
+    })
+  }
+}
