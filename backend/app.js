@@ -4,7 +4,7 @@ const helmet = require("helmet")
 const rateLimit = require("express-rate-limit")
 const dotenv = require("dotenv");
 const passport = require("passport");
-
+const fileUplaod=require("express-fileupload");
 // Import passport configuration
 require("./config/passport");
 
@@ -45,6 +45,10 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// app.use(fileUplaod({
+//   useTempFiles : true,
+//   tempFileDir : '/tmp/'
+// }))
 // 🔐 Smart Security: Device tracking and monitoring (applied globally)
 app.use(smartLoginMonitoring);
 
