@@ -122,7 +122,7 @@ exports.deleteItem = async (req, res) => {
             })
         }
 
-        const item=await Item.findByIdAndDelete(ItemId);
+        const item=await Item.findByIdAndUpdate(ItemId,{isDeleted:true},{new:true});
         return res.status(200).json({
             success:true,
             messaege:"Item deleted SuccessFully",
