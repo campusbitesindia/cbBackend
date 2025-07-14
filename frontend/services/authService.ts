@@ -24,3 +24,8 @@ export const register = async (payload: RegisterPayload) => {
   const response = await api.post('/api/v1/users/register', payload);
   return response.data;
 };
+
+export const adminLogin = async (payload: { username: string; password: string }) => {
+  const response = await api.post('/api/v1/admin/login', payload);
+  return response.data;
+};
