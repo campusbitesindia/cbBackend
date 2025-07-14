@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login as adminLogin } from "@/services/authService";
+import { adminLogin } from "@/services/authService";
 import { useAdminAuth } from "@/context/admin-auth-context";
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,9 +17,9 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await adminLogin({ email, password, role: "admin" });
-      if (data && data.token && data.user1?.role === "admin") {
-        localStorage.setItem("token", data.token);
+      const data = await adminLogin({ username, password });
+      if (data && data.token) {
+        localStorage.setItem("isAdmin", "true");
         setAdminAuth();
         router.push("/admin/dashboard");
       } else {
@@ -36,10 +36,10 @@ export default function AdminLoginPage() {
       <form onSubmit={handleLogin} className="bg-white/10 p-8 rounded-xl shadow-xl w-full max-w-md flex flex-col gap-6">
         <h1 className="text-3xl font-bold text-white text-center">Admin Login</h1>
         <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
           className="p-3 rounded bg-white/20 text-white placeholder:text-slate-300 focus:outline-none"
           required
         />
@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
           {loading ? "Logging in..." : "Login"}
         </button>
         <div className="mt-2 text-center">
-          <span className="text-gray-300">Contact system administrator for access</span>
+          <span className="text-gray-300">username: admin, password: admin123</span>
         </div>
       </form>
     </div>

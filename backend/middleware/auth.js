@@ -89,3 +89,20 @@ exports.isAuthenticated = async (req, res, next) => {
       })
    }
  }
+
+exports.isAdminEnv = (req, res, next) => {
+  try {
+    const token = req.cookies.admin_token || req.header("Authorization")?.replace("Bearer ", "");
+    if (!token) {
+      return res.status(401).json({ success: false, message: "Not logged in as admin" });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ success: false, message: "Forbidden: Not admin" });
+    }
+    req.admin = { username: decoded.username };
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid or expired admin token" });
+  }
+};
