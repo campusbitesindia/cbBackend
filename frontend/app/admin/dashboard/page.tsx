@@ -268,7 +268,11 @@ export default function AdminDashboard() {
         orderStatusData.forEach((item: any) => { orderStatusObj[item._id] = item.count })
         setOrderStatus(orderStatusObj)
         setTopCanteens(topCanteensData)
-        setRevenueDaily(revenueDailyData)
+        // Filter revenueDaily to only today's date
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+        const todayRevenue = revenueDailyData.filter((r: any) => (r._id || r.date) === todayStr);
+        setRevenueDaily(todayRevenue);
       } catch (err: any) {
         setError(err.message)
       } finally {
