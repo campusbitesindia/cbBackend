@@ -213,7 +213,7 @@ export default function CampusDetailsPage() {
                       {canteen.isOpen ? 'Open' : 'Closed'}
                     </Badge>
                   </div>
-                  {canteen.owner && (
+                  {canteen.owner && canteen.owner.name && (
                     <p className="text-slate-300 text-sm">Owner: {canteen.owner.name}</p>
                   )}
                   {canteen.cuisine && (

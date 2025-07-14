@@ -779,3 +779,25 @@ exports.createAdminAccount = async (req, res) => {
     });
   }
 };
+
+const jwt = require('jsonwebtoken');
+
+exports.adminLogin = (req, res) => {
+  const { username, password } = req.body;
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+  if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, message: 'Invalid admin credentials' });
+  }
+
+  // Issue a JWT token for admin
+  const token = jwt.sign({ role: 'admin', username: ADMIN_USERNAME }, process.env.JWT_SECRET, { expiresIn: '24h' });
+  res.cookie('admin_token', token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000
+  });
+  return res.status(200).json({ success: true, token });
+};
