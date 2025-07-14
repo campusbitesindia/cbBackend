@@ -11,8 +11,11 @@ export const usePushSubscription = (userId?:string) => {
     if(!userId) return;
     const subscribeUser = async () => {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return;
 
-      const registration = await navigator.serviceWorker.register("../public/sw.js");
+      
+      const registration = await navigator.serviceWorker.register("/sw.js");
       let subscription = await registration.pushManager.getSubscription();
     
       if (!subscription) {
@@ -29,7 +32,7 @@ export const usePushSubscription = (userId?:string) => {
         subscription: subscription.toJSON(),
       };
 
-      await fetch("/api/notification/save-subscription", {
+      await fetch("", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

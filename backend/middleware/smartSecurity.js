@@ -35,7 +35,6 @@ const smartLoginMonitoring = async (req, res, next) => {
   try {
     const deviceInfo = extractDeviceInfo(req);
     req.deviceInfo = deviceInfo;
-    console.log(req.deviceInfo)
     // If this is a login attempt, track it
     if (req.path.includes('/login') && req.method === 'POST') {
       const { email } = req.body;

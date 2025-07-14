@@ -16,6 +16,11 @@ const penaltySchema=new mongoose.Schema({
         ref:"Order",
         required:true
     },
+    canteen:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Canteen",
+        required:true
+    },
     Amount:{
         type:Number,
         required:true

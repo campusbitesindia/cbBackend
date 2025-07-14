@@ -90,7 +90,7 @@ exports.CreateOrder=async(req,res)=>{
         const customid=await Counter.findByIdAndUpdate("order#",{$inc:{seq:1}},{new:true,upsert:true});
         const OrderNumber= customid._id+customid.seq;
         //create the order with penalty amount if applicable
-        const penalty=await Penalty.find({deviceId,isPaid:false});
+        const penalty=await Penalty.find({deviceId,canteen:canteen._id,isPaid:false});
         for(const data of penalty){
             Total+=data.Amount;
         }
@@ -174,7 +174,7 @@ exports.UpdateOrderStatus = async (req, res) => {
         const deviceId = req.deviceInfo?.deviceId;
 
         await Penalty.create({
-          deviceId,
+          deviceId,canteen:order.canteen,
           user: order.student,
           Order: order._id,
           Amount: penaltyAmount,
@@ -206,7 +206,7 @@ exports.UpdateOrderStatus = async (req, res) => {
     if(status==="completed"){
        // update the penalty and transaction status for cod as user had paid  them
         const deviceId = req.deviceInfo?.deviceId;
-        await Penalty.updateMany({deviceId,isPaid:false},{isPaid:true});
+        await Penalty.updateMany({deviceId,canteen:order.canteen,isPaid:false},{isPaid:true});
         await Transaction.findOneAndUpdate({orderId:OrderId},{status:"paid",paidAt:new Date(Date.now())});
     }
 
