@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
-
+  
   // Import security context function dynamically to avoid circular dependency
   const [handleSecurityPrompt, setHandleSecurityPrompt] = useState<((prompt: any) => void) | null>(null)
 
