@@ -258,6 +258,12 @@ export default function Dashboard() {
         return;
       }
 
+      let imageUrl = formData.image;
+      if (selectedImage) {
+        const uploadedImage = await uploadImage(selectedImage);
+        imageUrl = uploadedImage.url;
+      }
+
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
@@ -265,7 +271,7 @@ export default function Dashboard() {
         category: formData.category,
         canteen: user.id,
         isVeg: formData.isVeg,
-        image: imagePreview || formData.image,
+        image: imageUrl,
       };
 
       console.log('Item data to submit:', itemData);
@@ -469,7 +475,7 @@ export default function Dashboard() {
         {/* Brand */}
         <div className='px-8 py-8 border-b border-gray-100'></div>
         {/* Overview Section */}
-        <div className='px-8 mt-6 mb-2'>
+        <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
             OVERVIEW
           </span>
@@ -572,7 +578,7 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className='flex-1 overflow-auto'>
-        {/* Header with profile and notifications */}
+        
         <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
