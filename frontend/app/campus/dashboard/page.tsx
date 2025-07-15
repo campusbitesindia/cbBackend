@@ -473,7 +473,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <div className='w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-y-auto shadow-lg px-0 py-0'>
         {/* Brand */}
-        <div className='px-8 py-8 border-b border-gray-100'></div>
+        <div className='px-8 py-3 '></div>
         {/* Overview Section */}
         <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
@@ -492,7 +492,7 @@ export default function Dashboard() {
             <span>Dashboard</span>
           </button>
         </nav>
-        <Separator className='my-4' />
+        <Separator className='my-4 bg-gray-200' />
         {/* Management Section */}
         <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
@@ -531,7 +531,7 @@ export default function Dashboard() {
             <span>Analytics</span>
           </button>
         </nav>
-        <Separator className='my-4' />
+        <Separator className='my-4 bg-gray-200' />
         {/* Profile Section */}
         <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
@@ -578,7 +578,6 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className='flex-1 overflow-auto'>
-        
         <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
@@ -587,7 +586,7 @@ export default function Dashboard() {
                 <h2 className='text-3xl font-bold text-blue-900 mb-2'>
                   Campus Vendor Partner
                 </h2>
-                <Separator className='mb-4' />
+                <Separator className='mb-4 bg-gray-200' />
                 <h1 className='text-2xl font-bold text-gray-800 mb-1'>
                   Dashboard Overview
                 </h1>
@@ -596,7 +595,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Total Orders
@@ -611,7 +610,7 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Revenue
@@ -631,7 +630,7 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Menu Items
@@ -646,7 +645,7 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Pending Orders
@@ -827,7 +826,7 @@ export default function Dashboard() {
                   </Button>
                 </div>
               </div>
-              <Separator className='mb-6' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Search bar above menu items */}
               <div className='flex flex-col md:flex-row md:items-center md:space-x-4 mb-8 gap-4'>
                 {/* Search */}
@@ -984,7 +983,7 @@ export default function Dashboard() {
                   <span>Refresh</span>
                 </Button>
               </div>
-              <Separator className='mb-6' />
+              <Separator className='mb-6 bg-gray-200' />
               <div className='space-y-8'>
                 {orders.map((order: any) => (
                   <div
@@ -1106,7 +1105,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <Separator className='my-10' />
+              {/* <Separator className='my-10' /> */}
               <div className='mt-10'>
                 <span className='text-xs font-semibold text-gray-400 tracking-widest'>
                   RECENT ORDERS
@@ -1175,7 +1174,7 @@ export default function Dashboard() {
                   Detailed insights about your business performance
                 </p>
               </div>
-              <Separator className='mb-6' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Calculate real analytics data */}
               {(() => {
                 // Calculate order status distribution
@@ -1236,7 +1235,7 @@ export default function Dashboard() {
                 return (
                   <>
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-                      <Card className='bg-blue-50'>
+                      <Card className='bg-blue-50 border border-gray-200 transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                         <CardHeader>
                           <CardTitle className='text-gray-800'>
                             Revenue Trend (Last 7 Days)
@@ -1257,7 +1256,7 @@ export default function Dashboard() {
                         </CardContent>
                       </Card>
 
-                      <Card className='bg-blue-50'>
+                      <Card className='bg-blue-50 border border-gray-200 transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                         <CardHeader>
                           <CardTitle className='text-gray-800'>
                             Order Status Distribution
@@ -1291,7 +1290,7 @@ export default function Dashboard() {
                       </Card>
                     </div>
 
-                    <Card className='bg-blue-50'>
+                    <Card className='bg-blue-50 border border-gray-200 transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                       <CardHeader>
                         <CardTitle className='text-gray-800'>
                           Top Performing Items
@@ -1349,18 +1348,18 @@ export default function Dashboard() {
 
           {/* Profile Tab */}
           {activeTab === 'profile' && (
-            <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-12 border border-gray-100'>
+            <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-6 border border-gray-100'>
               <h2 className='text-2xl font-bold text-gray-800 mb-2'>
                 Vendor Profile
               </h2>
-              <Separator className='mb-8' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Personal Details Section */}
-              <div className='mb-10'>
+              <div className='mb-6'>
                 <h3 className='text-xl font-semibold text-gray-700 mb-4'>
                   Personal Details
                 </h3>
                 <form
-                  className='space-y-6'
+                  className='space-y-4'
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setPersonalSubmitting(true);
@@ -1392,12 +1391,12 @@ export default function Dashboard() {
                     </div>
                     <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-4'>
                       <div>
-                        <label className='block font-medium mb-1'>
+                        <label className='block font-medium mb-1 text-black'>
                           Vendor Name
                         </label>
                         <input
                           type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter vendor/canteen name'
                           value={personalData.vendorName}
                           onChange={(e) =>
@@ -1409,12 +1408,12 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className='block font-medium mb-1'>
+                        <label className='block font-medium mb-1 text-black'>
                           Contact Person
                         </label>
                         <input
                           type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter contact person name'
                           value={personalData.contactPerson}
                           onChange={(e) =>
@@ -1426,12 +1425,12 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className='block font-medium mb-1'>
+                        <label className='block font-medium mb-1 text-black'>
                           Mobile Number
                         </label>
                         <input
                           type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter mobile number'
                           value={personalData.mobileNumber}
                           onChange={(e) =>
@@ -1446,10 +1445,12 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className='block font-medium mb-1'>Email</label>
+                        <label className='block font-medium mb-1 text-black'>
+                          Email
+                        </label>
                         <input
                           type='email'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter email address'
                           value={personalData.email}
                           onChange={(e) =>
@@ -1463,9 +1464,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div>
-                    <label className='block font-medium mb-1'>Address</label>
+                    <label className='block font-medium mb-1 text-black'>
+                      Address
+                    </label>
                     <textarea
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                       placeholder='Enter address'
                       value={personalData.address}
                       onChange={(e) =>
@@ -1489,14 +1492,14 @@ export default function Dashboard() {
                   )}
                 </form>
               </div>
-              <Separator className='mb-8' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Bank/Payout Details Section */}
               <div>
                 <h3 className='text-xl font-semibold text-gray-700 mb-4'>
                   Bank / Payout Details
                 </h3>
                 <form
-                  className='space-y-6'
+                  className='space-y-4'
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setProfileSubmitting(true);
@@ -1506,13 +1509,13 @@ export default function Dashboard() {
                     setProfileSubmitting(false);
                   }}>
                   <div>
-                    <label className='block font-medium mb-1'>
+                    <label className='block font-medium mb-1 text-black'>
                       PAN Card or GST No.{' '}
                       <span className='text-red-500'>*</span>
                     </label>
                     <input
                       type='text'
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                       placeholder='Enter PAN or GST number'
                       value={profileData.panOrGst}
                       onChange={(e) =>
@@ -1531,7 +1534,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter account number'
                         value={profileData.accountNo}
                         onChange={(e) =>
@@ -1548,7 +1551,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter bank name'
                         value={profileData.bankName}
                         onChange={(e) =>
@@ -1567,7 +1570,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter IFSC code'
                         value={profileData.ifsc}
                         onChange={(e) =>
@@ -1582,7 +1585,7 @@ export default function Dashboard() {
                       <label className='block font-medium mb-1'>Branch</label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter branch name'
                         value={profileData.branch}
                         onChange={(e) =>
@@ -1598,10 +1601,12 @@ export default function Dashboard() {
                     <span className='text-gray-500 mx-2'>OR</span>
                   </div>
                   <div>
-                    <label className='block font-medium mb-1'>UPI ID</label>
+                    <label className='block font-medium mb-1 text-black'>
+                      UPI ID
+                    </label>
                     <input
                       type='text'
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                       placeholder='Enter UPI ID (if applicable)'
                       value={profileData.upiId}
                       onChange={(e) =>

@@ -302,9 +302,9 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='vendorName'>Vendor Name / Canteen Name *</Label>
                 <Input
                   id='vendorName'
+                  placeholder=''
                   {...register('vendorName')}
-                  placeholder='Enter vendor/canteen name'
-                  className={errors.vendorName ? 'border-red-500' : ''}
+                  className='bg-white'
                 />
                 {errors.vendorName && (
                   <p className='text-sm text-red-500 mt-1'>
@@ -316,9 +316,9 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='contactPerson'>Contact Person Name *</Label>
                 <Input
                   id='contactPerson'
+                  placeholder=''
                   {...register('contactPerson')}
-                  placeholder='Enter contact person name'
-                  className={errors.contactPerson ? 'border-red-500' : ''}
+                  className='bg-white'
                 />
                 {errors.contactPerson && (
                   <p className='text-sm text-red-500 mt-1'>
@@ -333,9 +333,9 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='mobileNumber'>Mobile Number *</Label>
                 <Input
                   id='mobileNumber'
+                  placeholder=''
                   {...register('mobileNumber')}
-                  placeholder='Enter 10-digit mobile number'
-                  className={errors.mobileNumber ? 'border-red-500' : ''}
+                  className='bg-white'
                   maxLength={10}
                   inputMode='numeric'
                   pattern='\d*'
@@ -356,10 +356,9 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='email'>Email Address *</Label>
                 <Input
                   id='email'
-                  type='email'
+                  placeholder=''
                   {...register('email')}
-                  placeholder='Enter email address'
-                  className={errors.email ? 'border-red-500' : ''}
+                  className='bg-white'
                 />
                 {errors.email && (
                   <p className='text-sm text-red-500 mt-1'>
@@ -373,9 +372,9 @@ export default function VendorOnboardingForm() {
               <Label htmlFor='address'>Address (Block / Building) *</Label>
               <Textarea
                 id='address'
+                placeholder=''
                 {...register('address')}
-                placeholder='Enter complete address'
-                className={errors.address ? 'border-red-500' : ''}
+                className='bg-white'
               />
               {errors.address && (
                 <p className='text-sm text-red-500 mt-1'>
@@ -391,9 +390,9 @@ export default function VendorOnboardingForm() {
                   <Input
                     id='password'
                     type={showPassword ? 'text' : 'password'}
+                    placeholder=''
                     {...register('password')}
-                    placeholder='Enter password'
-                    className={errors.password ? 'border-red-500' : ''}
+                    className='bg-white'
                   />
                   <button
                     type='button'
@@ -419,9 +418,9 @@ export default function VendorOnboardingForm() {
                   <Input
                     id='confirmPassword'
                     type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder=''
                     {...register('confirmPassword')}
-                    placeholder='Confirm password'
-                    className={errors.confirmPassword ? 'border-red-500' : ''}
+                    className='bg-white'
                   />
                   <button
                     type='button'
@@ -446,7 +445,7 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Business & College Details */}
-        <Card className='bg-gray-50 shadow-sm border border-orange-200'>
+        <Card className='bg-gray-50 shadow-sm border border-gray-200'>
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center text-black'>
               <Store className='h-5 w-5 mr-2' /> Business & College Details
@@ -462,12 +461,12 @@ export default function VendorOnboardingForm() {
                 <SelectTrigger
                   className={
                     errors.collegeName
-                      ? 'border-red-500 bg-white text-gray-700'
-                      : 'bg-white text-gray-700'
+                      ? 'border-red-500 bg-white text-black'
+                      : 'bg-white text-black'
                   }>
                   <SelectValue placeholder='Select college' />
                 </SelectTrigger>
-                <SelectContent className='bg-white'>
+                <SelectContent className='bg-white  text-black'>
                   {colleges.map((college) => (
                     <SelectItem key={college} value={college}>
                       {college}
@@ -485,7 +484,7 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Operations Detail */}
-        <Card className='bg-gray-50 shadow-sm border border-orange-200'>
+        <Card className='bg-gray-50 shadow-sm border border-gray-200'>
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center text-black'>
               <Clock className='h-5 w-5 mr-2' /> Operations Details
@@ -506,7 +505,7 @@ export default function VendorOnboardingForm() {
                     }>
                     <SelectValue placeholder='Select opening time' />
                   </SelectTrigger>
-                  <SelectContent className='bg-white'>
+                  <SelectContent className='bg-white  text-black'>
                     {timeSlots.map((time) => (
                       <SelectItem key={time} value={time}>
                         {time}
@@ -532,7 +531,7 @@ export default function VendorOnboardingForm() {
                     }>
                     <SelectValue placeholder='Select closing time' />
                   </SelectTrigger>
-                  <SelectContent className='bg-white'>
+                  <SelectContent className='bg-white text-black'>
                     {timeSlots.map((time) => (
                       <SelectItem key={time} value={time}>
                         {time}
@@ -554,8 +553,9 @@ export default function VendorOnboardingForm() {
               </Label>
               <div className='grid grid-cols-2 md:grid-cols-4 gap-2 mt-2'>
                 {daysOfWeek.map((day) => (
-                  <div key={day} className='flex items-center space-x-2'>
+                  <div key={day} className='flex items-center space-x-2 '>
                     <Checkbox
+                      className='bg-gray-200'
                       id={day}
                       checked={selectedDays.includes(day)}
                       onCheckedChange={() => handleDayToggle(day)}
@@ -576,7 +576,7 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Documentation Upload */}
-        <Card className='bg-gray-50 shadow-sm border border-orange-100'>
+        <Card className='bg-gray-50 shadow-sm border border-gray-100'>
           <CardHeader className='pb-2'>
             <CardTitle className='flex items-center'>
               <FileText className='h-5 w-5 mr-2' /> Documentation Upload
@@ -598,7 +598,7 @@ export default function VendorOnboardingForm() {
                   onChange={(e: any) =>
                     handleFileUpload(e.target.files?.[0] as File, 'adhaar')
                   }
-                  className='hidden'
+                  className='hidden bg-white'
                 />
                 <Button
                   type='button'
@@ -635,7 +635,7 @@ export default function VendorOnboardingForm() {
                   onChange={(e: any) =>
                     handleFileUpload(e.target.files?.[0] as File, 'fssai')
                   }
-                  className='hidden'
+                  className='hidden bg-white'
                 />
                 <Button
                   type='button'
@@ -651,7 +651,7 @@ export default function VendorOnboardingForm() {
         </Card>
 
         {/* Terms & Conditions */}
-        <Card className='bg-gray-50 shadow-sm border border-orange-100'>
+        <Card className='bg-gray-50 shadow-sm border border-gray-100'>
           <CardContent className='pt-6 text-gray-700'>
             <div className='flex items-start space-x-3'>
               <Controller
@@ -707,7 +707,7 @@ export default function VendorOnboardingForm() {
         <div className='text-center mt-8 text-sm text-gray-500'>
           <p>
             Already have an account?{' '}
-            <a href='#' className='text-orange-600 hover:underline'>
+            <a href='/login' className='text-orange-600 hover:underline'>
               Sign In
             </a>
           </p>
