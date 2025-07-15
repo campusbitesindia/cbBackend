@@ -79,6 +79,7 @@ import {
   getCanteenStats,
   updateCanteenOrderStatus,
   CanteenStats,
+  getCanteenByOwner,
 } from '@/services/canteenOrderService';
 import { Order } from '@/types';
 import { uploadImage, validateImage } from '@/services/imageService';
@@ -101,6 +102,7 @@ export default function Dashboard() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const [canteenId, setCanteenId] = useState<string | null>(null);
 
   // Form state for new/edit item
   const [formData, setFormData] = useState({
@@ -164,25 +166,27 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchData();
+    const fetchCanteen = async () => {
+      if (user?.role === 'canteen') {
+        const canteen = await getCanteenByOwner(user.id);
+        setCanteenId(canteen?._id || null);
+      }
+    };
+    fetchCanteen();
+  }, [user]);
 
-    // Set up real-time order refresh every 30 seconds
-    const interval = setInterval(() => {
-      if (activeTab === 'orders' || activeTab === 'overview') {
+  useEffect(() => {
+    if (canteenId) {
         fetchData();
       }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [activeTab]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canteenId]);
 
   console.log(user, 'UserDetails');
   const fetchData = async () => {
     try {
       setLoading(true);
-
-      // Get canteen ID from authenticated user
-      if (!isAuthenticated || !user || user?.role !== 'canteen') {
+      if (!isAuthenticated || !user || user?.role !== 'canteen' || !canteenId) {
         toast({
           title: 'Error',
           description: 'You must be logged in as a canteen user',
@@ -190,22 +194,12 @@ export default function Dashboard() {
         });
         return;
       }
-
-      // Use the specific canteen ID provided
-      const canteenId = user.id;
-      console.log('Using canteen ID:', canteenId);
-
       const token = localStorage.getItem('token') || '';
       const [menuData, ordersData, statsData] = await Promise.all([
         getMenuByCanteenId(canteenId),
         getCanteenOrders(canteenId, token),
         getCanteenStats(canteenId, token),
       ]);
-
-      console.log('Menu data:', menuData);
-      console.log('Orders data:', ordersData);
-      console.log('Stats data:', statsData);
-
       setMenuItems(menuData || []);
       setOrders(ordersData.data || []);
       setCanteenStats(statsData.data || null);
@@ -247,9 +241,7 @@ export default function Dashboard() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Temporarily allow any authenticated user for testing
-      if (!isAuthenticated || !user) {
-        console.log('Authentication check failed');
+      if (!isAuthenticated || !user || !canteenId) {
         toast({
           title: 'Error',
           description: 'You must be logged in to access this feature',
@@ -257,33 +249,22 @@ export default function Dashboard() {
         });
         return;
       }
-
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
-        canteen: user.id,
+        canteen: canteenId,
         isVeg: formData.isVeg,
         image: imagePreview || formData.image,
       };
-
-      console.log('Item data to submit:', itemData);
-
       if (editingItem) {
         await updateMenuItem(editingItem._id, itemData);
-        toast({
-          title: 'Success',
-          description: 'Menu item updated successfully',
-        });
+        toast({ title: 'Success', description: 'Menu item updated successfully' });
       } else {
         await createMenuItem(itemData);
-        toast({
-          title: 'Success',
-          description: 'Menu item added successfully',
-        });
+        toast({ title: 'Success', description: 'Menu item added successfully' });
       }
-
       setIsAddItemOpen(false);
       setIsEditItemOpen(false);
       setEditingItem(null);
@@ -291,11 +272,7 @@ export default function Dashboard() {
       fetchData();
     } catch (error) {
       console.error('Error saving menu item:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save menu item',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to save menu item', variant: 'destructive' });
     }
   };
 

@@ -1,6 +1,7 @@
 const sendNotification = require('../utils/notify');
 const Notification = require('../models/Notification');
-const User=require("../models/User")
+const PushSubscription = require('../models/PushSubscription');
+
 // POST /api/notifications/user
 exports.sendNotificationToUser = async (req, res) => {
   try {
@@ -64,44 +65,19 @@ exports.sendPublicKey=async(req,res)=>{
   }
 }
 
-exports.saveSubscription = async (req, res) => {
+// POST /api/v1/notifications/subscribe
+exports.savePushSubscription = async (req, res) => {
   try {
-    
-    const { data} = req.body;
-    const {userId,subscription}=data;
-   console.log(userId,subscription);
-    const user = await User.findById(userId);
-    console.log(user);
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "User not found", 
-      });
+    const { userId, role, subscription } = req.body;
+    if (!userId || !role || !subscription) {
+      return res.status(400).json({ success: false, message: 'Missing userId, role, or subscription' });
     }
-
-    if (user.subscription === subscription) {
-      return res.status(200).json({
-        success: true,
-        message: "Subscription already up-to-date",
-      });
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { subscription },
-      { new: true }
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Data saved successfully",
-      
-    });
+    const filter = { user: userId, role };
+    const update = { subscription, updatedAt: new Date() };
+    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+    const saved = await PushSubscription.findOneAndUpdate(filter, update, options);
+    return res.status(200).json({ success: true, data: saved });
   } catch (err) {
-    console.error("Error saving subscription:", err.message);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

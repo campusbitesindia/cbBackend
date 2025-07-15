@@ -4,11 +4,11 @@ const {
   sendNotificationToUser,
   getUserNotifications,
   sendPublicKey,
-  saveSubscription
+  savePushSubscription
 } = require("../controllers/notificationController");
 
 router.post("/user", sendNotificationToUser);
 router.get("/user/:id", getUserNotifications);
 router.get("/publicKey",sendPublicKey);
-router.post("/saveSubscription",saveSubscription)
+router.post("/subscribe", savePushSubscription);
 module.exports = router;
