@@ -28,10 +28,12 @@ import {
   Heart,
   X,
   Bell,
+  Search,
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import axios from '@/lib/axios';
+import GlobalSearchDropdown from './global-search-dropdown';
 
 interface UserProfile {
   name: string;
@@ -47,6 +49,8 @@ function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [notificationCount, setNotificationCount] = useState(3); // Example notification count
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -269,6 +273,16 @@ function Navbar() {
               </div>
             </div>
           </Link>
+
+          {/* Global Search Bar (Desktop) - now left of nav */}
+          <div className='hidden md:block relative w-72 mr-6'>
+            <GlobalSearchDropdown
+              query={searchQuery}
+              setQuery={setSearchQuery}
+              open={searchDropdownOpen}
+              setOpen={setSearchDropdownOpen}
+            />
+          </div>
 
           {/* Desktop Navigation */}
           <nav className='hidden md:flex'>
