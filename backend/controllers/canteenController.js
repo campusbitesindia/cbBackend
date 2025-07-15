@@ -78,22 +78,41 @@ exports.createCanteen = async (req, res) => {
 
 exports.getAllCanteens = async (req, res) => {
   try {
-    const { campus } = req.query
+    const { campus, includeUnapproved = false } = req.query
 
     // Filter: if campus is passed, filter by campus ID
     const filter = { isDeleted: false }
+
+    // Only show approved canteens by default (unless admin requests otherwise)
+    if (includeUnapproved !== "true") {
+      filter.isApproved = true
+      filter.approvalStatus = "approved"
+    }
+
     if (campus) {
       filter.campus = campus // campus should be ObjectId
     }
 
     const canteens = await Canteen.find(filter)
-      .populate("campus", "name code city") // optional: include campus info
+      .populate("campus", "name code city")
+      .populate("owner", "name email")
       .select("-__v")
+      .sort({ createdAt: -1 })
 
-    res.status(200).json({ canteens })
+    res.status(200).json({
+      success: true,
+      canteens,
+      count: canteens.length,
+      message:
+        includeUnapproved === "true" ? "All canteens fetched (including unapproved)" : "Approved canteens fetched",
+    })
   } catch (err) {
     console.error("Error fetching canteens:", err)
-    res.status(500).json({ message: "Internal server error" })
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    })
   }
 }
 
@@ -206,5 +225,48 @@ exports.getCanteenById = async (req, res) => {
   } catch (error) {
     console.error("Fetch Canteen Error:", error)
     res.status(500).json({ message: "Internal server error", error: error.message })
+  }
+}
+
+exports.getMyCanteen = async (req, res) => {
+  try {
+    const userId = req.user._id
+
+    const canteen = await Canteen.findOne({
+      owner: userId,
+      isDeleted: false,
+    })
+      .populate("campus", "name code city")
+      .populate("owner", "name email")
+
+    if (!canteen) {
+      return res.status(404).json({
+        success: false,
+        message: "No canteen found for this user",
+      })
+    }
+
+    res.status(200).json({
+      success: true,
+      canteen,
+      approvalStatus: {
+        isApproved: canteen.isApproved,
+        status: canteen.approvalStatus,
+        canOperate: canteen.isApproved && canteen.isOpen,
+        message:
+          canteen.approvalStatus === "pending"
+            ? "Your canteen is pending admin approval"
+            : canteen.approvalStatus === "rejected"
+              ? `Your canteen was rejected: ${canteen.rejectionReason}`
+              : "Your canteen is approved and operational",
+      },
+    })
+  } catch (error) {
+    console.error("Error fetching my canteen:", error)
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    })
   }
 }
