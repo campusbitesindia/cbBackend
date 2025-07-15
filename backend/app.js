@@ -45,10 +45,6 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// app.use(fileUplaod({
-//   useTempFiles : true,
-//   tempFileDir : '/tmp/'
-// }))
 // 🔐 Smart Security: Device tracking and monitoring (applied globally)
 app.use(smartLoginMonitoring);
 
@@ -62,7 +58,7 @@ app.use(limiter)
 // Payment specific rate limiting
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 10 payment requests per windowMs
+  max: 10, // limit each IP to 10 payment requests per windowMs
 })
 
 // Body parsing middleware
