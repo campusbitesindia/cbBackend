@@ -30,7 +30,7 @@ const CanteenSchema = new mongoose.Schema(
     rejectionReason: { type: String },
 
     // Business details for approval
-    businessLicense: { type: String },
+    
     contactPhone: { type: String },
     description: { type: String },
     operatingHours: {
