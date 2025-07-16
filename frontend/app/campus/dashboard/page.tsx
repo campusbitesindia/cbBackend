@@ -5,12 +5,10 @@ import {
   Menu,
   ShoppingCart,
   BarChart3,
-  Settings,
   Plus,
   Edit,
   Trash2,
   Upload,
-  Eye,
   Clock,
   CheckCircle,
   XCircle,
@@ -68,7 +66,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
-  getMenuByCanteenId,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
@@ -77,12 +74,15 @@ import {
 import {
   getCanteenOrders,
   getCanteenStats,
-  updateCanteenOrderStatus,
   CanteenStats,
   getCanteenByOwner,
 } from '@/services/canteenOrderService';
 import { Order } from '@/types';
-import { uploadImage, validateImage } from '@/services/imageService';
+import {
+  uploadImage,
+  validateImage,
+  createImagePreview,
+} from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
 import { useNotificationToast } from '@/hooks/use-notification';
@@ -96,6 +96,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [canteenStats, setCanteenStats] = useState<CanteenStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [menuLoading, setMenuLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -167,13 +168,75 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    console.log('useEffect triggered:', {
+      isAuthenticated,
+      user: user?.id,
+      activeTab,
+    });
+    if (isAuthenticated && user) {
+      fetchCanteenData();
+    }
+  }, [activeTab, isAuthenticated, user]);
 
-  const fetchData = async () => {
+  // Additional useEffect to refetch data when canteenId changes
+  useEffect(() => {
+    console.log('canteenId changed:', canteenId);
+    if (canteenId && isAuthenticated && user) {
+      console.log('Fetching data due to canteenId change...');
+      fetchData(canteenId);
+    }
+  }, [canteenId]);
+
+  // Fetch canteen data associated with the current user
+  const fetchCanteenData = async () => {
+    try {
+      console.log('fetchCanteenData called for user:', user?.id);
+
+      if (!user?.id) {
+        console.error('No user ID available');
+        toast({
+          title: 'Error',
+          description: 'User session invalid. Please login again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Fetching canteen data for user:', user.id);
+      const canteenData = await getCanteenByOwner(user.id);
+      console.log('Canteen data received:', canteenData);
+
+      if (canteenData && canteenData._id) {
+        const dynamicCanteenId = canteenData._id;
+        console.log('Setting canteenId to:', dynamicCanteenId);
+        setCanteenId(dynamicCanteenId);
+
+        // Don't call fetchData here since the useEffect will handle it
+        console.log('Canteen ID set, useEffect will trigger data fetch');
+      } else {
+        console.error('No canteen data received:', canteenData);
+        toast({
+          title: 'Error',
+          description:
+            'No canteen associated with your account. Please contact support.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching canteen data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch canteen information',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
+  const fetchData = async (currentCanteenId?: string) => {
     try {
       setLoading(true);
-      if (!isAuthenticated || !user || user?.role !== 'canteen' || !canteenId) {
+      if (!isAuthenticated || !user || user?.role !== 'canteen') {
         toast({
           title: 'Error',
           description: 'You must be logged in as a canteen user',
@@ -182,56 +245,101 @@ export default function Dashboard() {
         return;
       }
 
-      // Use the specific canteen ID provided
-      const canteenId = user.id;
-      console.log(canteenId, 'canteenId');
+      // Use the passed canteenId parameter or fallback to state canteenId
+      const canteenIdToUse = currentCanteenId || canteenId;
 
-      // Validate canteen ID
-      if (!canteenId) {
-        console.error('No canteen ID found in user object');
+      console.log('fetchData called with:', {
+        currentCanteenId,
+        stateCanteenId: canteenId,
+        canteenIdToUse,
+        userRole: user?.role,
+        userId: user?.id,
+      });
+
+      if (!canteenIdToUse) {
+        console.error('No canteen ID available for fetching data');
         toast({
           title: 'Error',
-          description: 'Canteen ID not found. Please logout and login again.',
+          description: 'Canteen ID not found. Please refresh the page.',
           variant: 'destructive',
         });
         return;
       }
 
       const token = localStorage.getItem('token') || '';
-      console.log(token, 'token');
 
-      // Call each API independently and set data individually
+      // Fetch menu items using dynamic canteenId
       try {
-        const menuData = await axios.get(`/api/v1/menu/${canteenId}`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        console.log(menuData, 'menuData');
-        const menuItemsToSet = Array.isArray(menuData.data)
-          ? menuData.data
-          : [];
-        setMenuItems(menuItemsToSet);
+        setMenuLoading(true);
+        console.log(`Fetching menu items for canteen: ${canteenIdToUse}`);
+        const menuData = await axios.get(
+          `http://localhost:8080/api/v1/menu/${canteenIdToUse}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log('Menu API response:', menuData.data);
+
+        // Handle different response structures
+        let menuItemsArray = [];
+        if (Array.isArray(menuData.data)) {
+          menuItemsArray = menuData.data;
+        } else if (menuData.data && Array.isArray(menuData.data.data)) {
+          menuItemsArray = menuData.data.data;
+        } else if (menuData.data && Array.isArray(menuData.data.items)) {
+          menuItemsArray = menuData.data.items;
+        } else {
+          console.warn('Unexpected menu data structure:', menuData.data);
+          menuItemsArray = [];
+        }
+
+        console.log(
+          `Setting ${menuItemsArray.length} menu items:`,
+          menuItemsArray
+        );
+        setMenuItems(menuItemsArray);
       } catch (error) {
         console.error('Error fetching menu data:', error);
+        setMenuItems([]); // Clear menu items on error
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch menu items',
+          variant: 'destructive',
+        });
+      } finally {
+        setMenuLoading(false);
       }
 
+      // Fetch orders using dynamic canteenId
       try {
-        const ordersData = await getCanteenOrders(canteenId, token);
+        const ordersData = await getCanteenOrders(canteenIdToUse, token);
         const ordersToSet = Array.isArray(ordersData?.data)
           ? ordersData.data
           : [];
         setOrders(ordersToSet);
       } catch (error) {
         console.error('Error fetching orders data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch orders',
+          variant: 'destructive',
+        });
       }
 
+      // Fetch statistics using dynamic canteenId
       try {
-        const statsData = await getCanteenStats(canteenId, token);
+        const statsData = await getCanteenStats(canteenIdToUse, token);
         const statsToSet = statsData?.data || null;
         setCanteenStats(statsToSet);
       } catch (error) {
         console.error('Error fetching stats data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch statistics',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -245,33 +353,96 @@ export default function Dashboard() {
     }
   };
 
+  const [imageUploading, setImageUploading] = useState(false);
+
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
+        setImageUploading(true);
+
+        // Validate the image first
         validateImage(file);
         setSelectedImage(file);
-        // Use a placeholder image URL instead of uploading
-        const placeholderUrl = '/placeholder.svg';
-        setImagePreview(placeholderUrl);
-        setFormData({ ...formData, image: placeholderUrl });
-      } catch (error) {
+
+        // Create a preview URL for immediate display
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
+
+        try {
+          // Attempt to upload the image to the server
+          const uploadResult = await uploadImage(file);
+
+          // Update form data with the uploaded image URL
+          setFormData({ ...formData, image: uploadResult.url });
+
+          toast({
+            title: 'Success',
+            description: 'Image uploaded successfully!',
+          });
+        } catch (uploadError) {
+          console.warn('Image upload failed, using fallback:', uploadError);
+
+          // If upload fails, create a data URL as fallback
+          try {
+            const dataUrl = await createImagePreview(file);
+            setFormData({ ...formData, image: dataUrl });
+
+            toast({
+              title: 'Upload Failed',
+              description:
+                'Using local image preview. Image may not be saved permanently.',
+              variant: 'destructive',
+            });
+          } catch (previewError) {
+            // If both upload and preview fail, use placeholder
+            setFormData({ ...formData, image: '/placeholder.svg' });
+
+            toast({
+              title: 'Error',
+              description:
+                'Failed to process image. Using placeholder instead.',
+              variant: 'destructive',
+            });
+          }
+        }
+      } catch (validationError) {
+        console.error('Image validation error:', validationError);
+        setSelectedImage(null);
+        setImagePreview('');
+        setFormData({ ...formData, image: '' });
+
         toast({
-          title: 'Error',
+          title: 'Invalid Image',
           description:
-            error instanceof Error ? error.message : 'Failed to upload image',
+            validationError instanceof Error
+              ? validationError.message
+              : 'Please select a valid image file',
           variant: 'destructive',
         });
+      } finally {
+        setImageUploading(false);
       }
     }
   };
 
+  // Handle form submission for creating/updating menu items using dynamic canteenId
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission while image is uploading
+    if (imageUploading) {
+      toast({
+        title: 'Please wait',
+        description: 'Image is still uploading. Please wait a moment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      // Temporarily allow any authenticated user for testing
       if (!isAuthenticated || !user) {
         toast({
           title: 'Error',
@@ -281,66 +452,77 @@ export default function Dashboard() {
         return;
       }
 
-      let imageUrl = formData.image;
-      if (selectedImage) {
-        const uploadedImage = await uploadImage(selectedImage);
-        imageUrl = uploadedImage.url;
-      }
-
-      // Validate that we have a valid canteen ID
-      if (!user.id) {
+      // Ensure canteenId is available before proceeding
+      if (!canteenId) {
+        console.error('No canteenId available for form submission');
         toast({
           title: 'Error',
-          description: 'User ID not found. Please logout and login again.',
+          description: 'Canteen ID not found. Please refresh the page.',
           variant: 'destructive',
         });
         return;
       }
 
+      console.log('Submitting menu item with canteenId:', canteenId);
+
+      // Use the image URL from formData.image (could be uploaded URL, data URL, or placeholder)
+      const imageUrl = formData.image || '/placeholder.svg';
+
+      // Log image source type for debugging
+      if (imageUrl.startsWith('data:')) {
+        console.log('Using local image data URL (upload may have failed)');
+      } else if (imageUrl.startsWith('http')) {
+        console.log('Using uploaded image URL');
+      } else {
+        console.log('Using placeholder image');
+      }
+
+      // Create menu item data with dynamic canteenId
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
-        canteen: canteenId,
+        canteen: canteenId, // Using dynamic canteenId
         isVeg: formData.isVeg,
         image: imageUrl,
       };
 
+      console.log('Submitting item data:', itemData);
+
       if (editingItem) {
         await updateMenuItem(editingItem._id, itemData);
-        toast({
-          title: 'Success',
-          description: 'Menu item updated successfully',
-        });
-        await updateMenuItem(editingItem._id, {
-          name: itemData.name,
-          price: itemData.price,
-          description: itemData.description,
-          category: itemData.category,
-          isVeg: itemData.isVeg,
-        });
+        console.log('Menu item updated successfully');
         toast({
           title: 'Success',
           description: 'Menu item updated successfully',
         });
       } else {
-        await createMenuItem(itemData);
+        const newItem = await createMenuItem(itemData);
+        console.log('New menu item created:', newItem);
         toast({
           title: 'Success',
           description: 'Menu item added successfully',
         });
       }
+
       setIsAddItemOpen(false);
       setIsEditItemOpen(false);
       setEditingItem(null);
       resetForm();
-      fetchData();
+
+      // Force refresh with the current canteenId
+      console.log('Refreshing menu data after form submission...');
+      if (canteenId) {
+        await fetchData(canteenId);
+      }
     } catch (error) {
       console.error('Error saving menu item:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save menu item',
+        description: `Failed to save menu item: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
         variant: 'destructive',
       });
     }
@@ -380,6 +562,11 @@ export default function Dashboard() {
   };
 
   const resetForm = () => {
+    // Clear any object URLs to prevent memory leaks
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
     setFormData({
       name: '',
       price: '',
@@ -390,6 +577,7 @@ export default function Dashboard() {
     });
     setSelectedImage(null);
     setImagePreview('');
+    setImageUploading(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -482,6 +670,13 @@ export default function Dashboard() {
   // }
 
   // Filter items by search term (case-insensitive)
+  console.log('Current menuItems before filtering:', menuItems);
+  console.log('Current search filters:', {
+    searchTerm,
+    statusFilter,
+    categoryFilter,
+  });
+
   const filteredItems = menuItems.filter((item: MenuItem) => {
     // Search filter
     const matchesSearch = item.name
@@ -502,6 +697,8 @@ export default function Dashboard() {
 
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  console.log('Filtered items for rendering:', filteredItems);
 
   const categories = Array.from(
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
@@ -644,6 +841,14 @@ export default function Dashboard() {
                 <p className='text-gray-600'>
                   Welcome back! Here's what's happening with your canteen today.
                 </p>
+                {/* Debug information */}
+                <div className='mt-4 p-3 bg-gray-100 rounded-lg text-sm text-gray-700'>
+                  <p>
+                    <strong>Debug Info:</strong> Canteen ID:{' '}
+                    {canteenId || 'Not set'} | Menu Items: {menuItems.length} |
+                    User ID: {user?.id || 'Not set'}
+                  </p>
+                </div>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
                 <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
@@ -822,17 +1027,32 @@ export default function Dashboard() {
                           <Input
                             id='image'
                             type='file'
-                            accept='image/*'
+                            accept='image/jpeg,image/jpg,image/png,image/webp'
                             onChange={handleImageUpload}
                             className='bg-white text-black placeholder:text-black'
+                            disabled={imageUploading}
                           />
-                          {imagePreview && (
+                          <p className='text-xs text-gray-500 mt-1'>
+                            Supported formats: JPEG, PNG, WebP (max 5MB)
+                          </p>
+                          {imageUploading && (
+                            <div className='mt-2 flex items-center space-x-2 text-blue-600'>
+                              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
+                              <span className='text-sm'>
+                                Processing image...
+                              </span>
+                            </div>
+                          )}
+                          {imagePreview && !imageUploading && (
                             <div className='mt-2'>
                               <img
                                 src={imagePreview}
                                 alt='Preview'
-                                className='w-20 h-20 object-cover rounded'
+                                className='w-20 h-20 object-cover rounded border border-gray-200'
                               />
+                              <p className='text-xs text-green-600 mt-1'>
+                                Image ready for upload!
+                              </p>
                             </div>
                           )}
                         </div>
@@ -852,16 +1072,20 @@ export default function Dashboard() {
                           />
                           <Label htmlFor='isVeg'>Vegetarian</Label>
                         </div> */}
-                        <Button type='submit' className='w-full'>
-                          Add Item
+                        <Button
+                          type='submit'
+                          className='w-full'
+                          disabled={imageUploading}>
+                          {imageUploading ? 'Uploading Image...' : 'Add Item'}
                         </Button>
                       </form>
                     </DialogContent>
                   </Dialog>
                   <Button
-                    onClick={fetchData}
+                    onClick={() => canteenId && fetchData(canteenId)}
                     className='bg-white text-black border border-gray-200 hover:border-gray-400 transition-colors flex items-center h-10'
-                    title='Refresh menu items'>
+                    title='Refresh menu items'
+                    disabled={!canteenId}>
                     <RefreshCw className='w-4 h-4 mr-1' />
                     Refresh
                   </Button>
@@ -940,66 +1164,163 @@ export default function Dashboard() {
               </div>
 
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
-                {filteredItems.map((item) => (
-                  <Card
-                    key={item._id}
-                    className='flex flex-col h-full bg-white border-2 border-white shadow-md rounded-xl transition-all duration-200 hover:shadow-xl hover:outline hover:outline-2 hover:outline-white'>
-                    <div className='relative bg-white rounded-t-xl'>
-                      <img
-                        src={item.image || '/placeholder.svg'}
-                        alt={item.name}
-                        className='w-full h-40 object-cover rounded-t-xl bg-white'
-                      />
-                      <span className='absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
-                        Active
-                      </span>
-                      {item.isVeg ? (
-                        <span className='absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center'>
-                          <Leaf className='w-3 h-3 mr-1' /> VEG
-                        </span>
-                      ) : (
-                        <span className='absolute top-2 right-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full flex items-center'>
-                          <Leaf className='w-3 h-3 mr-1 rotate-180' /> NON-VEG
-                        </span>
-                      )}
-                    </div>
-                    <CardContent className='flex-1 flex flex-col p-4 bg-white'>
-                      <h3 className='font-semibold text-gray-800'>
-                        {item.name}
+                {menuLoading ? (
+                  <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
+                    <div className='text-center'>
+                      <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
+                      <h3 className='text-lg font-semibold text-gray-700 mb-2'>
+                        Loading Menu Items...
                       </h3>
-                      <p className='text-xs text-gray-500 mb-2'>
-                        {item.description || 'No description available'}
+                      <p className='text-gray-500'>
+                        Please wait while we fetch your menu items.
                       </p>
-                      <div className='mb-2'>
-                        <span className='text-lg font-bold text-gray-800'>
-                          ₹{item.price}
+                    </div>
+                  </div>
+                ) : menuItems &&
+                  menuItems.length > 0 &&
+                  filteredItems.length > 0 ? (
+                  filteredItems.map((item) => (
+                    <Card
+                      key={item._id}
+                      className='flex flex-col h-full bg-white border-2 border-white shadow-md rounded-xl transition-all duration-200 hover:shadow-xl hover:outline hover:outline-2 hover:outline-white'>
+                      <div className='relative bg-white rounded-t-xl'>
+                        <img
+                          src={item.image || '/placeholder.svg'}
+                          alt={item.name}
+                          className='w-full h-40 object-cover rounded-t-xl bg-white'
+                        />
+                        <span className='absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
+                          Active
                         </span>
-                        {/* If you want to show a strikethrough price, add here: */}
-                        {/* <span className='text-sm text-gray-400 line-through ml-2'>₹{item.originalPrice}</span> */}
+                        {item.isVeg ? (
+                          <span className='absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center'>
+                            <Leaf className='w-3 h-3 mr-1' /> VEG
+                          </span>
+                        ) : (
+                          <span className='absolute top-2 right-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full flex items-center'>
+                            <Leaf className='w-3 h-3 mr-1 rotate-180' /> NON-VEG
+                          </span>
+                        )}
                       </div>
-                      <p className='text-xs text-gray-500 capitalize'>
-                        {item.category}
+                      <CardContent className='flex-1 flex flex-col p-4 bg-white'>
+                        <h3 className='font-semibold text-gray-800'>
+                          {item.name}
+                        </h3>
+                        <p className='text-xs text-gray-500 mb-2'>
+                          {item.description || 'No description available'}
+                        </p>
+                        <div className='mb-2'>
+                          <span className='text-lg font-bold text-gray-800'>
+                            ₹{item.price}
+                          </span>
+                          {/* If you want to show a strikethrough price, add here: */}
+                          {/* <span className='text-sm text-gray-400 line-through ml-2'>₹{item.originalPrice}</span> */}
+                        </div>
+                        <p className='text-xs text-gray-500 capitalize'>
+                          {item.category}
+                        </p>
+                        <div className='flex space-x-4 mt-auto'>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            className='bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 flex items-center px-4'
+                            onClick={() => handleEdit(item)}>
+                            <Edit className='w-4 h-4 mr-1' /> Edit
+                          </Button>
+                          <Button
+                            size='sm'
+                            variant='ghost'
+                            className='bg-red-50 text-red-700 border-none hover:bg-red-100 flex items-center px-4'
+                            onClick={() => handleDelete(item._id)}>
+                            <span className='w-2 h-2 bg-red-500 rounded-full mr-2 inline-block'></span>
+                            Deactivate
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
+                    <div className='text-center max-w-md'>
+                      <Menu className='w-16 h-16 mx-auto mb-6 text-gray-300' />
+                      <h3 className='text-xl font-semibold text-gray-700 mb-2'>
+                        No Menu Items Found
+                      </h3>
+                      <p className='text-gray-500 mb-6'>
+                        {!menuItems || menuItems.length === 0
+                          ? "You haven't added any menu items yet. Start by adding your first menu item."
+                          : searchTerm ||
+                            statusFilter !== 'all' ||
+                            categoryFilter !== 'all'
+                          ? 'No items match your current filters. Try adjusting your search or filter criteria.'
+                          : 'No menu items available.'}
                       </p>
-                      <div className='flex space-x-4 mt-auto'>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 flex items-center px-4'
-                          onClick={() => handleEdit(item)}>
-                          <Edit className='w-4 h-4 mr-1' /> Edit
-                        </Button>
-                        <Button
-                          size='sm'
-                          variant='ghost'
-                          className='bg-red-50 text-red-700 border-none hover:bg-red-100 flex items-center px-4'
-                          onClick={() => handleDelete(item._id)}>
-                          <span className='w-2 h-2 bg-red-500 rounded-full mr-2 inline-block'></span>
-                          Deactivate
-                        </Button>
+
+                      {/* Debug information */}
+                      <div className='mb-4 p-3 bg-gray-100 rounded-lg text-sm text-gray-700'>
+                        <p>
+                          <strong>Debug:</strong>
+                        </p>
+                        <p>
+                          Menu Items:{' '}
+                          {menuItems ? menuItems.length : 'null/undefined'}
+                        </p>
+                        <p>
+                          Filtered Items:{' '}
+                          {filteredItems
+                            ? filteredItems.length
+                            : 'null/undefined'}
+                        </p>
+                        <p>Canteen ID: {canteenId || 'Not set'}</p>
+                        <p>Loading: {menuLoading ? 'Yes' : 'No'}</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+
+                      <div className='flex flex-col sm:flex-row gap-3 justify-center'>
+                        {!menuItems || menuItems.length === 0 ? (
+                          <>
+                            <Button
+                              onClick={() => {
+                                resetForm();
+                                setIsAddItemOpen(true);
+                              }}
+                              className='bg-blue-600 hover:bg-blue-700 text-white'>
+                              <Plus className='w-4 h-4 mr-2' />
+                              Add Your First Item
+                            </Button>
+                            <Button
+                              onClick={() => canteenId && fetchData(canteenId)}
+                              className='bg-green-600 hover:bg-green-700 text-white'
+                              disabled={!canteenId}>
+                              <RefreshCw className='w-4 h-4 mr-2' />
+                              Refresh Data
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant='outline'
+                              onClick={() => {
+                                setSearchTerm('');
+                                setStatusFilter('all');
+                                setCategoryFilter('all');
+                              }}
+                              className='border-gray-300 text-gray-700 hover:bg-gray-50'>
+                              <XCircle className='w-4 h-4 mr-2' />
+                              Clear Filters
+                            </Button>
+                            <Button
+                              onClick={() => canteenId && fetchData(canteenId)}
+                              className='bg-blue-600 hover:bg-blue-700 text-white'
+                              disabled={!canteenId}>
+                              <RefreshCw className='w-4 h-4 mr-2' />
+                              Refresh
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1018,8 +1339,9 @@ export default function Dashboard() {
                 </div>
                 <Button
                   variant='outline'
-                  onClick={fetchData}
-                  className='bg-white text-black border border-gray-200 hover:border-gray-400 flex items-center space-x-2'>
+                  onClick={() => canteenId && fetchData(canteenId)}
+                  className='bg-white text-black border border-gray-200 hover:border-gray-400 flex items-center space-x-2'
+                  disabled={!canteenId}>
                   <RefreshCw className='w-4 h-4' />
                   <span>Refresh</span>
                 </Button>
@@ -1741,7 +2063,9 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   variant='outline'
-                  className='border-gray-300 text-gray-700 hover:bg-gray-50'>
+                  onClick={() => canteenId && fetchData(canteenId)}
+                  className='border-gray-300 text-gray-700 hover:bg-gray-50'
+                  disabled={!canteenId}>
                   <RefreshCw className='w-4 h-4 mr-2' />
                   Refresh Balance
                 </Button>
@@ -1982,17 +2306,30 @@ export default function Dashboard() {
               <Input
                 id='edit-image'
                 type='file'
-                accept='image/*'
+                accept='image/jpeg,image/jpg,image/png,image/webp'
                 onChange={handleImageUpload}
                 className='bg-white text-black placeholder:text-black'
+                disabled={imageUploading}
               />
-              {imagePreview && (
+              <p className='text-xs text-gray-500 mt-1'>
+                Supported formats: JPEG, PNG, WebP (max 5MB)
+              </p>
+              {imageUploading && (
+                <div className='mt-2 flex items-center space-x-2 text-blue-600'>
+                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
+                  <span className='text-sm'>Processing image...</span>
+                </div>
+              )}
+              {imagePreview && !imageUploading && (
                 <div className='mt-2'>
                   <img
                     src={imagePreview}
                     alt='Preview'
-                    className='w-20 h-20 object-cover rounded'
+                    className='w-20 h-20 object-cover rounded border border-gray-200'
                   />
+                  <p className='text-xs text-green-600 mt-1'>
+                    Image ready for upload!
+                  </p>
                 </div>
               )}
             </div>
@@ -2026,8 +2363,8 @@ export default function Dashboard() {
                 </Label>
               </div>
             </div>
-            <Button type='submit' className='w-full'>
-              Update Item
+            <Button type='submit' className='w-full' disabled={imageUploading}>
+              {imageUploading ? 'Uploading Image...' : 'Update Item'}
             </Button>
           </form>
         </DialogContent>

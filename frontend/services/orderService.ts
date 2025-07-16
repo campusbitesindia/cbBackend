@@ -36,27 +36,8 @@ const handleAuthError = (error: any) => {
 };
 
 export interface CreateOrderPayload {
-  canteen: string;
-  items: Array<{
-    item: string;
-    quantity: number;
-  }>;
-  total: number;
-  payment: {
-    method: 'cod' | 'upi' | 'card';
-    status: 'pending' | 'completed' | 'failed' | 'refunded';
-    transactionId?: string;
-    upiDetails?: {
-      upiId: string;
-      paymentApp: string;
-    };
-    cardDetails?: {
-      lastFourDigits: string;
-      cardType: string;
-      holderName: string;
-    };
-    paidAt?: string;
-  };
+  items: string; // Stringified JSON array as expected by backend
+  pickUpTime: string; // Required by backend
 }
 
 export interface OrdersResponse {
@@ -95,7 +76,7 @@ export const createOrder = async (
 ): Promise<CreateOrderResponse> => {
   try {
     const response = await api.post<CreateOrderResponse>(
-      '/api/orders',
+      '/api/v1/order/CreateOrder',
       orderData,
       {
         headers: {
@@ -117,7 +98,7 @@ export const getOrderById = async (
 ): Promise<{ success: boolean; data: Order }> => {
   try {
     const response = await api.get<{ success: boolean; data: Order }>(
-      `/api/orders/${orderId}`,
+      `/api/v1/order/getOrderDetails/${orderId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -138,8 +119,8 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.patch<{ success: boolean; data: Order }>(
-      `/api/orders/${orderId}/status`,
+    const response = await api.post<{ success: boolean; data: Order }>(
+      `/api/v1/order/ChangeStatus/${orderId}`,
       { status },
       {
         headers: {
@@ -160,7 +141,7 @@ export const deleteOrder = async (
   token: string
 ): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await api.delete(`/api/deleteOrder/${orderId}`, {
+    const response = await api.delete(`/api/v1/order/deleteOrder/${orderId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -177,7 +158,7 @@ export const getDeletedOrders = async (
   token: string
 ): Promise<OrdersResponse> => {
   try {
-    const response = await api.get('/api/getDeletedOrders', {
+    const response = await api.get('/api/v1/order/getDeletedOrders', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -194,7 +175,7 @@ export const getAllOrdersByCanteen = async (
   token: string
 ): Promise<OrdersResponse> => {
   try {
-    const response = await api.get('/api/getCanteenAllOrders', {
+    const response = await api.get('/api/v1/order/getCanteenAllOrders', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
