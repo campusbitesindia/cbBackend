@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 type User = {
   id: string;
@@ -270,6 +271,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
   }, [handleSecurityPrompt]);
+
+  // Add this after user state is set
+  usePushSubscription(user?.id, user?.role);
 
   return (
     <AuthContext.Provider

@@ -78,43 +78,19 @@ exports.createCanteen = async (req, res) => {
 
 exports.getAllCanteens = async (req, res) => {
   try {
-    const { campus, includeUnapproved = false } = req.query
-
-    // Filter: if campus is passed, filter by campus ID
-    const filter = { isDeleted: false }
-
-    // Only show approved canteens by default (unless admin requests otherwise)
-    if (includeUnapproved !== "true") {
-      filter.isApproved = true
-      filter.approvalStatus = "approved"
-    }
-
-    if (campus) {
-      filter.campus = campus // campus should be ObjectId
-    }
-
+    const { campus, owner } = req.query;
+    const filter = { isDeleted: false };
+    if (campus) filter.campus = campus;
+    if (owner) filter.owner = owner;
     const canteens = await Canteen.find(filter)
       .populate("campus", "name code city")
-      .populate("owner", "name email")
-      .select("-__v")
-      .sort({ createdAt: -1 })
-
-    res.status(200).json({
-      success: true,
-      canteens,
-      count: canteens.length,
-      message:
-        includeUnapproved === "true" ? "All canteens fetched (including unapproved)" : "Approved canteens fetched",
-    })
+      .select("-__v");
+    res.status(200).json({ canteens });
   } catch (err) {
-    console.error("Error fetching canteens:", err)
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: err.message,
-    })
+    console.error("Error fetching canteens:", err);
+    res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
 exports.deleteCanteen = async (req, res) => {
   try {
@@ -214,6 +190,7 @@ exports.updateCanteen = async (req, res) => {
 exports.getCanteenById = async (req, res) => {
   try {
     const { id } = req.params
+    console.log(`Received canteen ID: ${id}`);
 
     const canteen = await Canteen.findOne({ _id: id, isDeleted: false }).populate("campus")
 
@@ -230,43 +207,13 @@ exports.getCanteenById = async (req, res) => {
 
 exports.getMyCanteen = async (req, res) => {
   try {
-    const userId = req.user._id
-
-    const canteen = await Canteen.findOne({
-      owner: userId,
-      isDeleted: false,
-    })
-      .populate("campus", "name code city")
-      .populate("owner", "name email")
-
+    const canteen = await Canteen.findOne({ owner: req.user._id, isDeleted: false }).populate("campus");
     if (!canteen) {
-      return res.status(404).json({
-        success: false,
-        message: "No canteen found for this user",
-      })
+      return res.status(404).json({ message: "No canteen found for this user" });
     }
-
-    res.status(200).json({
-      success: true,
-      canteen,
-      approvalStatus: {
-        isApproved: canteen.isApproved,
-        status: canteen.approvalStatus,
-        canOperate: canteen.isApproved && canteen.isOpen,
-        message:
-          canteen.approvalStatus === "pending"
-            ? "Your canteen is pending admin approval"
-            : canteen.approvalStatus === "rejected"
-              ? `Your canteen was rejected: ${canteen.rejectionReason}`
-              : "Your canteen is approved and operational",
-      },
-    })
+    res.status(200).json({ canteen });
   } catch (error) {
-    console.error("Error fetching my canteen:", error)
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    })
+    console.error("getMyCanteen error:", error);
+    res.status(500).json({ message: "Internal server error", error: error.message });
   }
-}
+};
