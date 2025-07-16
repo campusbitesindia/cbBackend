@@ -1,8 +1,11 @@
 const{webPush}=require("../config/webPush")
 const Notification=require("../models/Notification");
+const PushSubscription = require("../models/PushSubscription");
 const SendNotification=async(user,title,message,type)=>{
     try{
-        let subscription=user?.subscription;
+
+
+        let subscription=await PushSubscription.findOne({user:user._id});
         if(!subscription){
             return;
         }
@@ -13,7 +16,7 @@ const SendNotification=async(user,title,message,type)=>{
             body:message
         })
         const notification=await Notification.create({user:user._id,message,type:type?type:"order"});
-        const sentMessage=await webPush.sendNotification(subscription,payload);
+        const sentMessage=await webPush.sendNotification(subscription.subscription,payload);
        
     }
     catch(err){

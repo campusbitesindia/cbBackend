@@ -3,33 +3,23 @@ const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
-const sendNotification = require("../utils/notify")
+const SendNotification=require("../utils/sendNotification")
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
 const Counter=require("../models/CounterSchema")
 const webPush = require("../config/webPush").webPush;
 const PushSubscription = require("../models/PushSubscription");
 
-// Helper to send push notification
-async function sendPushNotification(userId, role, payload) {
-  const sub = await PushSubscription.findOne({ user: userId, role });
-  if (sub && sub.subscription) {
-    try {
-      await webPush.sendNotification(sub.subscription, JSON.stringify(payload));
-    } catch (err) {
-      console.error("Push notification error:", err.message);
-    }
-  }
-}
+
 
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:Items,pickUpTime}=req.body; 
+        const {items:_items,pickUpTime}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        // const Items=JSON.parse(_items); //converting _items to an Json array;
+        const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
@@ -119,19 +109,7 @@ exports.CreateOrder=async(req,res)=>{
             pickupTime:pickUpTime
         });
 
-       // Notify Vendor (socket room: vendor_<vendorId>)
-        sendNotification(`vendor_${canteen._id}`, {
-            title: "New Order",
-            message: `Hey! ${student.name} just placed an order.`,
-            type: "new_order",
-            timestamp: new Date()
-        });
-
-        // Send push notification to canteen
-        await sendPushNotification(canteen._id, "canteen", {
-          title: "New Order",
-          body: `You have a new order from ${student.name}.`,
-        });
+       // Notify Vendor (socket room: vendor_<vendorId>
 
         return res.status(200).json({
             success:true,
@@ -204,6 +182,10 @@ exports.UpdateOrderStatus = async (req, res) => {
         });
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
         order.status = "cancelled";
+
+         await SendNotification(order.student,"Order Status Updated","Your order has been cancelled and penaly applied for next order")
+
+
         await order.save();
 
         return res.status(200).json({
@@ -215,7 +197,8 @@ exports.UpdateOrderStatus = async (req, res) => {
         order.status = "cancelled";
         await order.save();
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
-
+        
+         await SendNotification(order.student,"Order Status Updated","Your order has been cancelled")
         return res.status(200).json({
           success: true,
           message: "Order cancelled with no penalty",
@@ -240,21 +223,9 @@ exports.UpdateOrderStatus = async (req, res) => {
       .populate({ path: "student", select: "name" })
       .populate({ path: "canteen", select: "name" });
 
-    // Notify user (socket room: user_<userId>)
-    sendNotification(`user_${order.student}`, {
-        title: "Order Update",
-        message: `Your order is now marked as "${status}"`,
-        type: "order_status_update",
-        timestamp: new Date()
-    });
 
     // After updating order status, notify student
-    if (["preparing", "ready", "completed", "cancelled"].includes(status)) {
-      await sendPushNotification(order.student, "student", {
-        title: "Order Status Updated",
-        body: `Your order is now marked as '${status}'.`,
-      });
-    }
+    await SendNotification(order.student,"Order Status Changes",`Your Order is ${status}`)
 
     return res.status(200).json({
       success: true,
