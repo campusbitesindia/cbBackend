@@ -142,18 +142,15 @@ export const updateCanteenOrderStatus = async (
   token: string
 ): Promise<CanteenOrderResponse> => {
   try {
-    // Since there's no specific canteen order update endpoint,
-    // we'll use a generic approach - this would need backend support
-    // For now, we'll simulate the update by refetching the order
-    const response = await api.get(`/api/v1/order/ChangeStatus/:id${orderId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    // Note: This is a simulation since the backend doesn't have order status update
-    // In a real implementation, you would need a PATCH endpoint
-    console.log('Order status update requested:', { orderId, status });
+    const response = await api.post(
+      `/api/v1/order/ChangeStatus/${orderId}`,
+      { status },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
     return response.data;
   } catch (error) {
@@ -168,7 +165,7 @@ export const getCanteenOrderById = async (
   token: string
 ): Promise<CanteenOrderResponse> => {
   try {
-    const response = await api.get(`/api/v1/order/getOrderDetails/:id${orderId}`, {
+    const response = await api.get(`/api/v1/order/getOrderDetails/${orderId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -187,7 +184,9 @@ export const getCanteenOrdersByStatus = async (
   token: string
 ): Promise<CanteenOrdersResponse> => {
   try {
-    const response = await api.get('/api/v1/order/ChangeStatus/:id', {
+    // Note: A dedicated backend endpoint for filtering by status would be more efficient
+    // for larger datasets. For now, we fetch all orders and filter on the frontend.
+    const response = await api.get('/api/v1/order/getCanteenAllOrders', {
       headers: {
         Authorization: `Bearer ${token}`,
       },

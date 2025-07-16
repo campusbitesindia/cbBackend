@@ -85,6 +85,7 @@ import { uploadImage, validateImage } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
 import { useNotificationToast } from '@/hooks/use-notification';
+import axios from 'axios';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -165,22 +166,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-
-    // Set up real-time order refresh every 30 seconds
-    const interval = setInterval(() => {
-      if (activeTab === 'orders' || activeTab === 'overview') {
-        fetchData();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, [activeTab]);
 
-  console.log(user, 'UserDetails');
   const fetchData = async () => {
     try {
       setLoading(true);
 
+      console.log(user, 'user');
       // Get canteen ID from authenticated user
       if (!isAuthenticated || !user || user?.role !== 'canteen') {
         toast({
@@ -193,22 +185,55 @@ export default function Dashboard() {
 
       // Use the specific canteen ID provided
       const canteenId = user.id;
-      console.log('Using canteen ID:', canteenId);
+      console.log(canteenId, 'canteenId');
+
+      // Validate canteen ID
+      if (!canteenId) {
+        console.error('No canteen ID found in user object');
+        toast({
+          title: 'Error',
+          description: 'Canteen ID not found. Please logout and login again.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       const token = localStorage.getItem('token') || '';
-      const [menuData, ordersData, statsData] = await Promise.all([
-        getMenuByCanteenId(canteenId),
-        getCanteenOrders(canteenId, token),
-        getCanteenStats(canteenId, token),
-      ]);
+      console.log(token, 'token');
 
-      console.log('Menu data:', menuData);
-      console.log('Orders data:', ordersData);
-      console.log('Stats data:', statsData);
+      // Call each API independently and set data individually
+      try {
+        const menuData = await axios.get(`/api/v1/menu/${canteenId}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+        console.log(menuData, 'menuData');
+        const menuItemsToSet = Array.isArray(menuData.data)
+          ? menuData.data
+          : [];
+        setMenuItems(menuItemsToSet);
+      } catch (error) {
+        console.error('Error fetching menu data:', error);
+      }
 
-      setMenuItems(menuData || []);
-      setOrders(ordersData.data || []);
-      setCanteenStats(statsData.data || null);
+      try {
+        const ordersData = await getCanteenOrders(canteenId, token);
+        const ordersToSet = Array.isArray(ordersData?.data)
+          ? ordersData.data
+          : [];
+        setOrders(ordersToSet);
+      } catch (error) {
+        console.error('Error fetching orders data:', error);
+      }
+
+      try {
+        const statsData = await getCanteenStats(canteenId, token);
+        const statsToSet = statsData?.data || null;
+        setCanteenStats(statsToSet);
+      } catch (error) {
+        console.error('Error fetching stats data:', error);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -249,7 +274,6 @@ export default function Dashboard() {
     try {
       // Temporarily allow any authenticated user for testing
       if (!isAuthenticated || !user) {
-        console.log('Authentication check failed');
         toast({
           title: 'Error',
           description: 'You must be logged in to access this feature',
@@ -264,6 +288,16 @@ export default function Dashboard() {
         imageUrl = uploadedImage.url;
       }
 
+      // Validate that we have a valid canteen ID
+      if (!user.id) {
+        toast({
+          title: 'Error',
+          description: 'User ID not found. Please logout and login again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
@@ -274,10 +308,14 @@ export default function Dashboard() {
         image: imageUrl,
       };
 
-      console.log('Item data to submit:', itemData);
-
       if (editingItem) {
-        await updateMenuItem(editingItem._id, itemData);
+        await updateMenuItem(editingItem._id, {
+          name: itemData.name,
+          price: itemData.price,
+          description: itemData.description,
+          category: itemData.category,
+          isVeg: itemData.isVeg,
+        });
         toast({
           title: 'Success',
           description: 'Menu item updated successfully',
@@ -550,6 +588,16 @@ export default function Dashboard() {
             <span>Profile</span>
           </button>
           <button
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+              activeTab === 'payouts'
+                ? 'bg-blue-50 text-blue-600 font-semibold'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
+            }`}
+            onClick={() => setActiveTab('payouts')}>
+            <DollarSign className='w-5 h-5' />
+            <span>Payouts</span>
+          </button>
+          <button
             className='flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition mt-2'
             onClick={() => {
               localStorage.clear();
@@ -604,7 +652,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className='text-2xl font-bold text-gray-800'>
-                      {canteenStats?.totalOrders || orders.length}
+                      {canteenStats?.totalOrders ?? 0}
                     </div>
                     <p className='text-xs text-gray-600'>All time orders</p>
                   </CardContent>
@@ -619,12 +667,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className='text-2xl font-bold text-gray-800'>
-                      ₹
-                      {canteenStats?.totalRevenue ||
-                        orders.reduce(
-                          (sum: number, order: Order) => sum + order.total,
-                          0
-                        )}
+                      ₹{canteenStats?.totalRevenue ?? 0}
                     </div>
                     <p className='text-xs text-gray-600'>Total revenue</p>
                   </CardContent>
@@ -654,12 +697,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className='text-2xl font-bold text-gray-800'>
-                      {canteenStats?.pendingOrders ||
-                        orders.filter(
-                          (order: Order) =>
-                            order.status === 'placed' ||
-                            order.status === 'preparing'
-                        ).length}
+                      {canteenStats?.pendingOrders ?? 0}
                     </div>
                     <p className='text-xs text-gray-600'>Need attention</p>
                   </CardContent>
@@ -1630,6 +1668,203 @@ export default function Dashboard() {
                   )}
                 </form>
               </div>
+            </div>
+          )}
+
+          {/* Payouts Tab */}
+          {activeTab === 'payouts' && (
+            <div className='space-y-10'>
+              <div className='mb-6'>
+                <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+                  Payouts & Earnings
+                </h1>
+                <p className='text-gray-600'>
+                  Track your earnings and manage payout requests
+                </p>
+              </div>
+              <Separator className='mb-6 bg-gray-200' />
+
+              {/* Payout Summary Cards */}
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                <Card className='bg-gradient-to-r from-green-50 to-green-100 border border-green-200 shadow-md'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium text-green-700'>
+                      Total Earnings
+                    </CardTitle>
+                    <TrendingUp className='h-4 w-4 text-green-600' />
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-bold text-green-800'>
+                      ₹{canteenStats?.totalRevenue || 0}
+                    </div>
+                    <p className='text-xs text-green-600'>All time earnings</p>
+                  </CardContent>
+                </Card>
+
+                <Card className='bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-md'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium text-blue-700'>
+                      Available Balance
+                    </CardTitle>
+                    <DollarSign className='h-4 w-4 text-blue-600' />
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-bold text-blue-800'>
+                      ₹{((canteenStats?.totalRevenue || 0) * 0.85).toFixed(0)}
+                    </div>
+                    <p className='text-xs text-blue-600'>Ready for payout</p>
+                  </CardContent>
+                </Card>
+
+                <Card className='bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 shadow-md'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium text-orange-700'>
+                      Pending Payouts
+                    </CardTitle>
+                    <Clock className='h-4 w-4 text-orange-600' />
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-bold text-orange-800'>₹0</div>
+                    <p className='text-xs text-orange-600'>Processing</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Actions */}
+              <div className='flex flex-col sm:flex-row gap-4'>
+                <Button className='bg-green-600 hover:bg-green-700 text-white flex items-center'>
+                  <DollarSign className='w-4 h-4 mr-2' />
+                  Request Payout
+                </Button>
+                <Button
+                  variant='outline'
+                  className='border-gray-300 text-gray-700 hover:bg-gray-50'>
+                  <RefreshCw className='w-4 h-4 mr-2' />
+                  Refresh Balance
+                </Button>
+              </div>
+
+              {/* Payout History */}
+              <Card className='bg-white border border-gray-200 shadow-md'>
+                <CardHeader>
+                  <CardTitle className='text-gray-800'>
+                    Payout History
+                  </CardTitle>
+                  <CardDescription className='text-gray-600'>
+                    Your recent payout transactions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-4'>
+                    {/* Sample payout entries */}
+                    <div className='flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50'>
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center'>
+                          <CheckCircle className='w-5 h-5 text-green-600' />
+                        </div>
+                        <div>
+                          <h4 className='font-semibold text-gray-800'>
+                            Payout #1234
+                          </h4>
+                          <p className='text-sm text-gray-600'>
+                            Completed on Dec 15, 2024
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-semibold text-gray-800'>₹0</p>
+                        <p className='text-sm text-green-600'>Completed</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50'>
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                          <Clock className='w-5 h-5 text-orange-600' />
+                        </div>
+                        <div>
+                          <h4 className='font-semibold text-gray-800'>
+                            Payout #1235
+                          </h4>
+                          <p className='text-sm text-gray-600'>
+                            Requested on Dec 18, 2024
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-semibold text-gray-800'>₹0</p>
+                        <p className='text-sm text-orange-600'>Processing</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50'>
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center'>
+                          <CheckCircle className='w-5 h-5 text-green-600' />
+                        </div>
+                        <div>
+                          <h4 className='font-semibold text-gray-800'>
+                            Payout #1233
+                          </h4>
+                          <p className='text-sm text-gray-600'>
+                            Completed on Dec 10, 2024
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-semibold text-gray-800'>₹0</p>
+                        <p className='text-sm text-green-600'>Completed</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Empty state fallback */}
+                  {orders.length === 0 && (
+                    <div className='text-center py-8 text-gray-500'>
+                      <DollarSign className='w-12 h-12 mx-auto mb-4 text-gray-300' />
+                      <p className='text-lg font-medium'>No payouts yet</p>
+                      <p className='text-sm'>
+                        Your payout history will appear here once you start
+                        receiving payments
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Payout Information */}
+              <Card className='bg-blue-50 border border-blue-200 shadow-md'>
+                <CardHeader>
+                  <CardTitle className='text-blue-800 flex items-center'>
+                    <Bell className='w-5 h-5 mr-2' />
+                    Payout Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-3 text-blue-700'>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>
+                      Payouts are processed every Monday and Thursday
+                    </p>
+                  </div>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>Minimum payout amount is ₹500</p>
+                  </div>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>
+                      Platform fee of 15% is deducted from earnings
+                    </p>
+                  </div>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>
+                      Payments are made to your registered bank account
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>

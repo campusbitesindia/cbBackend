@@ -73,7 +73,7 @@ export interface CreateOrderResponse {
 // Get user's orders
 export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
   try {
-    const response = await api.get('/api/orders', {
+    const response = await api.get('/api/getStudentAllOrders', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -91,7 +91,7 @@ export const createOrder = async (
   token: string
 ): Promise<CreateOrderResponse> => {
   try {
-    const response = await api.post('/api/orders', orderData, {
+    const response = await api.post('/api/CreateOrder', orderData, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -109,7 +109,7 @@ export const getOrderById = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.get(`/api/orders/${orderId}`, {
+    const response = await api.get(`/api/getOrderDetails/${orderId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -128,8 +128,8 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.patch(
-      `/api/orders/${orderId}/status`,
+    const response = await api.post(
+      `/api/ChangeStatus/${orderId}`,
       { status },
       {
         headers: {
@@ -137,6 +137,58 @@ export const updateOrderStatus = async (
         },
       }
     );
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Delete an order
+export const deleteOrder = async (
+  orderId: string,
+  token: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await api.delete(`/api/deleteOrder/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Get all deleted orders
+export const getDeletedOrders = async (
+  token: string
+): Promise<OrdersResponse> => {
+  try {
+    const response = await api.get('/api/getDeletedOrders', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Get all orders for a canteen
+export const getAllOrdersByCanteen = async (
+  token: string
+): Promise<OrdersResponse> => {
+  try {
+    const response = await api.get('/api/getCanteenAllOrders', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     handleAuthError(error);
