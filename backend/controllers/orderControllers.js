@@ -3,19 +3,23 @@ const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
-// const sendNotification = require("../utils/notify")
 const SendNotification=require("../utils/sendNotification")
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
 const Counter=require("../models/CounterSchema")
+const webPush = require("../config/webPush").webPush;
+const PushSubscription = require("../models/PushSubscription");
+
+
+
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:Items,pickUpTime}=req.body; 
+        const {items:_items,pickUpTime}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        // const Items=JSON.parse(_items); //converting _items to an Json array;
+        const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
@@ -105,13 +109,7 @@ exports.CreateOrder=async(req,res)=>{
             pickupTime:pickUpTime
         });
 
-    //    // Notify Vendor (socket room: vendor_<vendorId>)
-    //     sendNotification(`vendor_${canteen._id}`, {
-    //         title: "New Order",
-    //         message: `Hey! ${student.name} just placed an order.`,
-    //         type: "new_order",
-    //         timestamp: new Date()
-    //     });
+       // Notify Vendor (socket room: vendor_<vendorId>
 
         return res.status(200).json({
             success:true,
@@ -151,7 +149,7 @@ exports.UpdateOrderStatus = async (req, res) => {
     }
 
     // Fetch order
-    const order = await Order.findById(OrderId).populate("student");
+    const order = await Order.findById(OrderId);
     if (!order) {
       return res.status(404).json({
         success: false,
@@ -159,10 +157,10 @@ exports.UpdateOrderStatus = async (req, res) => {
       });
     }
 
-    if(order.status==="cancelled" || order.status==="completed"){
+    if(order.status==="cancelled"){
         return res.status(400).json({
             success:false,
-            message:`Cant Update Order Status As it is ${order.status}`
+            message:"Cant Update Order Status As it is cancelled"
         })
     }
 
@@ -184,8 +182,12 @@ exports.UpdateOrderStatus = async (req, res) => {
         });
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
         order.status = "cancelled";
+
+         await SendNotification(order.student,"Order Status Updated","Your order has been cancelled and penaly applied for next order")
+
+
         await order.save();
-       await SendNotification(order.student,"Order Status Updated","Your order has been cancelled and penaly applied for next order")
+
         return res.status(200).json({
           success: true,
           message: "Order cancelled and penalty applied",
@@ -195,9 +197,8 @@ exports.UpdateOrderStatus = async (req, res) => {
         order.status = "cancelled";
         await order.save();
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
-
         
-        await SendNotification(order.student,"Order Status Updated","Your order has been cancelled ")
+         await SendNotification(order.student,"Order Status Updated","Your order has been cancelled")
         return res.status(200).json({
           success: true,
           message: "Order cancelled with no penalty",
@@ -222,8 +223,10 @@ exports.UpdateOrderStatus = async (req, res) => {
       .populate({ path: "student", select: "name" })
       .populate({ path: "canteen", select: "name" });
 
-    // Notify user (socket room: user_<userId>)
+
+    // After updating order status, notify student
     await SendNotification(order.student,"Order Status Changes",`Your Order is ${status}`)
+
     return res.status(200).json({
       success: true,
       message: "Order status updated successfully",

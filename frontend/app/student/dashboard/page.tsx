@@ -26,12 +26,13 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchCanteens = async () => {
       try {
-        const response = await fetch("/api/v1/canteens")
+        const response = await fetch("http://localhost:8080/api/v1/canteens")
         if (!response.ok) {
           throw new Error("Failed to fetch canteens")
         }
         const data = await response.json()
-        setRestaurants(data.data)
+        console.log(data);
+        setRestaurants(data.canteens)
       } catch (error) {
         console.error("Error fetching canteens:", error)
       }
@@ -49,10 +50,10 @@ export default function StudentDashboard() {
     { id: "chinese", name: "Chinese", icon: "🥡" },
   ]
 
-  const filteredRestaurants = restaurants.filter((restaurant) => {
+  const filteredRestaurants = restaurants?.filter((restaurant) => {
     const matchesSearch =
-      restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
+      restaurant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      restaurant?.cuisine?.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesCategory = selectedCategory === "all" || restaurant.cuisine.toLowerCase() === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -143,9 +144,7 @@ export default function StudentDashboard() {
               Featured Restaurants
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRestaurants
-                .filter((restaurant) => restaurant.featured)
-                .map((restaurant) => (
+              {filteredRestaurants?.filter((restaurant) => restaurant.featured)?.map((restaurant) => (
                   <Card
                     key={restaurant._id}
                     className="bg-gray-800/30 border-gray-700/30 backdrop-blur-xl hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden"
@@ -219,7 +218,7 @@ export default function StudentDashboard() {
           <div>
             <h2 className="text-2xl font-bold text-white mb-6">All Restaurants</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredRestaurants.map((restaurant) => (
+              {filteredRestaurants?.map((restaurant) => (
                 <Card
                   key={restaurant._id}
                   className="bg-gray-800/30 border-gray-700/30 backdrop-blur-xl hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden"
@@ -294,7 +293,7 @@ export default function StudentDashboard() {
             </div>
           </div>
 
-          {filteredRestaurants.length === 0 && (
+          {filteredRestaurants?.length === 0 && (
             <div className="text-center py-12">
               <div className="w-24 h-24 bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Search className="w-12 h-12 text-gray-400" />

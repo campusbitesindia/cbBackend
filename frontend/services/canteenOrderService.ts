@@ -215,3 +215,8 @@ export const getCanteenOrdersByStatus = async (
     return Promise.reject(error);
   }
 };
+
+export const getCanteenByOwner = async (ownerId: string) => {
+  const res = await api.get(`/api/v1/canteens?owner=${ownerId}`);
+  return res.data.canteens?.[0] || null;
+};

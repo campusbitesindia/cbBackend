@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken")
 const user = require("../models/User.js")
+const Canteen = require("../models/Canteen")
 
 exports.isAuthenticated = async (req, res, next) => {
   try {
@@ -66,7 +67,7 @@ exports.isStudent = async (req, res, next) => {
 exports.isVendor = async (req, res, next) => {
   try {
     const role = req.user.role
-    if (role !== "canteen") {
+    if (role === "student") {
       return res.status(403).json({
         success: false,
         message: "Access denied. This resource is only for vendors/canteen owners.",
@@ -74,7 +75,6 @@ exports.isVendor = async (req, res, next) => {
     }
 
     // Check if vendor's canteen is approved
-    const Canteen = require("../models/Canteen")
     const canteen = await Canteen.findOne({
       owner: req.user._id,
       isDeleted: false,
