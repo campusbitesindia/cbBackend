@@ -1,6 +1,6 @@
 const Canteen = require("../models/Canteen")
 const cloudinary = require("../utils/cloudinary")
- const Campus = require("../models/Campus")
+
 // Create Canteen with image support
 exports.createCanteen = async (req, res) => {
   try {
@@ -23,7 +23,7 @@ exports.createCanteen = async (req, res) => {
     }
 
     // Verify that the campus exists and is not deleted
-   
+    const Campus = require("../models/Campus")
     const campusDoc = await Campus.findOne({ _id: campus, isDeleted: false })
     if (!campusDoc) {
       return res.status(400).json({
@@ -136,19 +136,43 @@ exports.createCanteen = async (req, res) => {
 
 exports.getAllCanteens = async (req, res) => {
   try {
-    const { campus, owner } = req.query;
-    const filter = { isDeleted: false };
-    if (campus) filter.campus = campus;
-    if (owner) filter.owner = owner;
+    const { campus, includeUnapproved = false } = req.query
+
+    // Filter: if campus is passed, filter by campus ID
+    const filter = { isDeleted: false }
+
+    // Only show approved canteens by default (unless admin requests otherwise)
+    if (includeUnapproved !== "true") {
+      filter.isApproved = true
+      filter.approvalStatus = "approved"
+    }
+
+    if (campus) {
+      filter.campus = campus // campus should be ObjectId
+    }
+
     const canteens = await Canteen.find(filter)
       .populate("campus", "name code city")
-      .select("-__v");
-    res.status(200).json({ canteens });
+      .populate("owner", "name email")
+      .select("-__v")
+      .sort({ createdAt: -1 })
+
+    res.status(200).json({
+      success: true,
+      canteens,
+      count: canteens.length,
+      message:
+        includeUnapproved === "true" ? "All canteens fetched (including unapproved)" : "Approved canteens fetched",
+    })
   } catch (err) {
-    console.error("Error fetching canteens:", err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching canteens:", err)
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    })
   }
-};
+}
 
 exports.deleteCanteen = async (req, res) => {
   try {
@@ -322,7 +346,6 @@ exports.updateCanteen = async (req, res) => {
 exports.getCanteenById = async (req, res) => {
   try {
     const { id } = req.params
-    console.log(`Received canteen ID: ${id}`);
 
     const canteen = await Canteen.findOne({ _id: id, isDeleted: false })
       .populate("campus")
@@ -359,9 +382,20 @@ exports.getCanteenById = async (req, res) => {
 
 exports.getMyCanteen = async (req, res) => {
   try {
-    const canteen = await Canteen.findOne({ owner: req.user._id, isDeleted: false }).populate("campus");
+    const userId = req.user._id
+
+    const canteen = await Canteen.findOne({
+      owner: userId,
+      isDeleted: false,
+    })
+      .populate("campus", "name code city")
+      .populate("owner", "name email")
+
     if (!canteen) {
-      return res.status(404).json({ message: "No canteen found for this user" });
+      return res.status(404).json({
+        success: false,
+        message: "No canteen found for this user",
+      })
     }
 
     res.status(200).json({
@@ -388,7 +422,11 @@ exports.getMyCanteen = async (req, res) => {
       },
     })
   } catch (error) {
-    console.error("getMyCanteen error:", error);
-    res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error("Error fetching my canteen:", error)
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    })
   }
-};
+}
