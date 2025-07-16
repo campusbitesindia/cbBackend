@@ -2,6 +2,7 @@ const Order = require("../models/Order");
 const Item = require("../models/Item");
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const Canteen = require('../models/Canteen');
 
 exports.getRecommendations = async (req, res) => {
     try {
@@ -182,5 +183,46 @@ exports.peopleAlsoOrdered = async (req, res) => {
       message: "Server error",
       error: error.message,
     });
+  }
+};
+
+exports.searchAll = async (req, res) => {
+  try {
+    const q = req.query.q?.trim();
+    if (!q) return res.json({ results: {} });
+
+    // Search canteens
+    const canteens = await Canteen.find({
+      isDeleted: false,
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { cuisine: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+      ],
+    })
+      .select('name location _id')
+      .limit(5);
+
+    // Search items
+    const items = await Item.find({
+      isDeleted: false,
+      available: true,
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+      ],
+    })
+      .select('name price _id')
+      .limit(8);
+
+    res.json({
+      results: {
+        canteen: canteens.map(c => ({ ...c.toObject(), type: 'canteen' })),
+        item: items.map(i => ({ ...i.toObject(), type: 'item' })),
+      },
+    });
+  } catch (err) {
+    console.error('Search error:', err);
+    res.status(500).json({ error: 'Search failed' });
   }
 };

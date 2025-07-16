@@ -79,6 +79,7 @@ import {
   getCanteenStats,
   updateCanteenOrderStatus,
   CanteenStats,
+  getCanteenByOwner,
 } from '@/services/canteenOrderService';
 import { Order } from '@/types';
 import { uploadImage, validateImage } from '@/services/imageService';
@@ -102,6 +103,7 @@ export default function Dashboard() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const [canteenId, setCanteenId] = useState<string | null>(null);
 
   // Form state for new/edit item
   const [formData, setFormData] = useState({
@@ -171,10 +173,7 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-
-      console.log(user, 'user');
-      // Get canteen ID from authenticated user
-      if (!isAuthenticated || !user || user?.role !== 'canteen') {
+      if (!isAuthenticated || !user || user?.role !== 'canteen' || !canteenId) {
         toast({
           title: 'Error',
           description: 'You must be logged in as a canteen user',
@@ -303,12 +302,17 @@ export default function Dashboard() {
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
-        canteen: user.id,
+        canteen: canteenId,
         isVeg: formData.isVeg,
         image: imageUrl,
       };
 
       if (editingItem) {
+        await updateMenuItem(editingItem._id, itemData);
+        toast({
+          title: 'Success',
+          description: 'Menu item updated successfully',
+        });
         await updateMenuItem(editingItem._id, {
           name: itemData.name,
           price: itemData.price,
@@ -327,7 +331,6 @@ export default function Dashboard() {
           description: 'Menu item added successfully',
         });
       }
-
       setIsAddItemOpen(false);
       setIsEditItemOpen(false);
       setEditingItem(null);

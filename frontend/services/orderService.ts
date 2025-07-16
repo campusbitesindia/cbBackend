@@ -73,11 +73,14 @@ export interface CreateOrderResponse {
 // Get user's orders
 export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
   try {
-    const response = await api.get('/api/getStudentAllOrders', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get<OrdersResponse>(
+      '/api/v1/order/getStudentAllOrders',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -91,11 +94,15 @@ export const createOrder = async (
   token: string
 ): Promise<CreateOrderResponse> => {
   try {
-    const response = await api.post('/api/CreateOrder', orderData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.post<CreateOrderResponse>(
+      '/api/orders',
+      orderData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -109,11 +116,14 @@ export const getOrderById = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.get(`/api/getOrderDetails/${orderId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get<{ success: boolean; data: Order }>(
+      `/api/orders/${orderId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -128,8 +138,8 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.post(
-      `/api/ChangeStatus/${orderId}`,
+    const response = await api.patch<{ success: boolean; data: Order }>(
+      `/api/orders/${orderId}/status`,
       { status },
       {
         headers: {
