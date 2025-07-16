@@ -101,14 +101,14 @@ export default function RegisterPage() {
     fetchCampuses()
   }, [toast])
 
+  useEffect(() => {
+    form.setValue('role', 'student');
+  }, [form]);
+
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true)
     try {
-      // Find campus name from ID
-      const selectedCampus = campuses.find(c => c._id === values.campus)
-      const campusName = selectedCampus?.name || 'Main Campus'
-      
-      await register(values.name, values.email, values.password, values.role, campusName)
+      await register(values.name, values.email, values.password, values.role, values.campus); // <-- pass campus _id
       toast({
         title: "Welcome to Campus Bites! 🎉",
         description: "Your account has been created successfully",
@@ -274,28 +274,19 @@ export default function RegisterPage() {
                     )}
                   />
 
+                  {/* Remove the role dropdown and display only 'Student' */}
                   <FormField
                     control={form.control}
                     name="role"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem>
                         <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">I am a</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500">
-                              <SelectValue placeholder="Select your role" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                            <SelectItem value="student" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                              Student
-                            </SelectItem>
-                            <SelectItem value="canteen" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                              Canteen Owner
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
+                        <FormControl>
+                          <div className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-xl h-12 flex items-center font-semibold">
+                            Student
+                          </div>
+                        </FormControl>
+                        <input type="hidden" value="student" name="role" />
                       </FormItem>
                     )}
                   />
@@ -303,71 +294,81 @@ export default function RegisterPage() {
                   <FormField
                     control={form.control}
                     name="campus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Campus</FormLabel>
-                        <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 pointer-events-none flex items-center justify-center">
-                              <MapPin className="w-5 h-5" />
-                            </span>
-                            <Input
-                              placeholder="Type your campus name"
-                              value={campusInput}
-                              readOnly={campusSelected}
-                              onChange={e => {
-                                setCampusInput(e.target.value);
-                                setCampusSelected(false);
-                                field.onChange('');
-                              }}
-                              className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
-                              style={{ lineHeight: '1.5', height: '48px' }}
-                            />
-                            {/* Clear button */}
-                            {campusSelected && (
-                              <button
-                                type="button"
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
-                                onClick={() => {
-                                  setCampusInput('');
+                    render={({ field }) => {
+                      const selectedCampusObj = campuses.find(c => c._id === field.value);
+                      return (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Campus</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 pointer-events-none flex items-center justify-center">
+                                <MapPin className="w-5 h-5" />
+                              </span>
+                              {/* Hidden input for form value (campus _id) */}
+                              <input type="hidden" value={field.value} name="campus" />
+                              {/* Display input for user (campus name/city) */}
+                              <Input
+                                placeholder="Type your campus name"
+                                value={campusSelected && selectedCampusObj ? (selectedCampusObj.name + (selectedCampusObj.city ? ` (${selectedCampusObj.city})` : '')) : campusInput}
+                                readOnly={campusSelected}
+                                onChange={e => {
+                                  setCampusInput(e.target.value);
                                   setCampusSelected(false);
                                   field.onChange('');
                                 }}
-                                tabIndex={-1}
-                                aria-label="Clear campus selection"
-                              >
-                                ×
-                              </button>
-                            )}
-                            {/* Autocomplete dropdown */}
-                            {!campusSelected && campusInput && filteredCampuses.length > 0 && (
-                              <div className="absolute z-10 bg-white border border-gray-200 rounded shadow w-full mt-1 max-h-48 overflow-y-auto">
-                                {filteredCampuses.map((campus) => (
-                                  <div
-                                    key={campus._id}
-                                    className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-black"
-                                    onClick={() => {
-                                      setCampusInput(campus.name + (campus.city ? ` (${campus.city})` : ''));
-                                      field.onChange(campus._id);
-                                      setCampusSelected(true);
-                                    }}
-                                  >
-                                    {campus.name} {campus.city ? <span className="text-gray-400 text-sm">({campus.city})</span> : null}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {/* Request Campus link */}
-                            {!campusSelected && campusInput && filteredCampuses.length === 0 && (
-                              <div className="mt-2 text-blue-400 cursor-pointer underline" onClick={() => setShowRequestDialog(true)}>
-                                Can’t find your campus? <span className="font-semibold">Request to add it</span>
-                              </div>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
-                      </FormItem>
-                    )}
+                                className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
+                                style={{ lineHeight: '1.5', height: '48px' }}
+                              />
+                              {/* Clear button */}
+                              {campusSelected && (
+                                <button
+                                  type="button"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                  onClick={() => {
+                                    setCampusInput('');
+                                    setCampusSelected(false);
+                                    field.onChange('');
+                                  }}
+                                  tabIndex={-1}
+                                  aria-label="Clear campus selection"
+                                >
+                                  ×
+                                </button>
+                              )}
+                              {/* Autocomplete dropdown */}
+                              {!campusSelected && campusInput && filteredCampuses.length > 0 && (
+                                <div className="absolute z-10 bg-white border border-gray-200 rounded shadow w-full mt-1 max-h-48 overflow-y-auto">
+                                  {filteredCampuses.map((campus) => (
+                                    <div
+                                      key={campus._id}
+                                      className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-black"
+                                      onClick={() => {
+                                        setCampusInput(campus.name + (campus.city ? ` (${campus.city})` : ''));
+                                        field.onChange(campus._id); // <-- always set to _id
+                                        setCampusSelected(true);
+                                      }}
+                                    >
+                                      {campus.name} {campus.city ? <span className="text-gray-400 text-sm">({campus.city})</span> : null}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Request Campus link */}
+                              {!campusSelected && campusInput && filteredCampuses.length === 0 && (
+                                <div className="mt-2 text-blue-400 cursor-pointer underline" onClick={() => setShowRequestDialog(true)}>
+                                  Can’t find your campus? <span className="font-semibold">Request to add it</span>
+                                </div>
+                              )}
+                              {/* Helper message if not selected */}
+                              {!campusSelected && campusInput && !filteredCampuses.some(c => c.name === campusInput) && (
+                                <div className="mt-2 text-red-500 text-xs">Please select a campus from the list.</div>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <FormField
@@ -432,7 +433,7 @@ export default function RegisterPage() {
 
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !campusSelected || !campuses.some(c => c._id === form.getValues('campus'))}
                     className="w-full bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25 group"
                   >
                     {isLoading ? (

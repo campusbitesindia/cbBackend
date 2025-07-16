@@ -4,7 +4,7 @@ const helmet = require("helmet")
 const rateLimit = require("express-rate-limit")
 const dotenv = require("dotenv");
 const passport = require("passport");
-const fileUplaod=require("express-fileupload");
+
 // Import passport configuration
 require("./config/passport");
 
@@ -12,7 +12,8 @@ const userRoutes = require("./routes/userRoutes");
 const canteenRoutes = require("./routes/canteenRoutes"); 
 const campusRoutes = require("./routes/campusRoutes"); 
 const adminRoutes = require("./routes/adminRoutes");
-const advancedRoutes = require("./routes/advanceRoutes");
+const advancedRoutes = require("./routes/advancedRoutes");
+const advanceRoutes = require("./routes/advanceRoutes");
 const paymentRoutes = require("./routes/paymentRoutes") 
 const webhookRoutes = require("./routes/webhookRoutes")
 const OrderRoutes =require("./routes/OrderRoutes"); 
@@ -81,8 +82,14 @@ app.use('/api/v1/menu', menuRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use("/api/v1/admin", adminRoutes);
 app.use("/api/v1/security", securityRoutes); // 🔐 Smart Security API
-app.use("/api/v1/adv", advancedRoutes);
+app.use("/api/v1/adv", advanceRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use("/api/v1/search", advancedRoutes);
+
+// Redirect for Google OAuth to allow shorter URL
+app.get('/api/auth/google', (req, res) => {
+    res.redirect('/api/v1/users/auth/google');
+});
 
 // Health check  
 app.get("/", (req, res) => {
