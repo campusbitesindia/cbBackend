@@ -841,14 +841,6 @@ export default function Dashboard() {
                 <p className='text-gray-600'>
                   Welcome back! Here's what's happening with your canteen today.
                 </p>
-                {/* Debug information */}
-                <div className='mt-4 p-3 bg-gray-100 rounded-lg text-sm text-gray-700'>
-                  <p>
-                    <strong>Debug Info:</strong> Canteen ID:{' '}
-                    {canteenId || 'Not set'} | Menu Items: {menuItems.length} |
-                    User ID: {user?.id || 'Not set'}
-                  </p>
-                </div>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
                 <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
