@@ -1,6 +1,6 @@
 const Canteen = require("../models/Canteen")
 const cloudinary = require("../utils/cloudinary")
-
+ const Campus = require("../models/Campus")
 // Create Canteen with image support
 exports.createCanteen = async (req, res) => {
   try {
@@ -19,7 +19,7 @@ exports.createCanteen = async (req, res) => {
     }
 
     // Verify that the campus exists and is not deleted
-    const Campus = require("../models/Campus")
+   
     const campusDoc = await Campus.findOne({ _id: campus, isDeleted: false })
     if (!campusDoc) {
       return res.status(400).json({
