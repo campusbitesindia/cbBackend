@@ -184,7 +184,7 @@ export default function VendorOnboardingForm() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   // Section refs for scrolling
   const basicInfoRef = useRef<HTMLDivElement>(null);
   const businessRef = useRef<HTMLDivElement>(null);
@@ -229,25 +229,23 @@ export default function VendorOnboardingForm() {
   };
 
   const onSubmit = async (data: any) => {
-    console.log(data);
+    console.log('Form submission started...');
+    console.log('Form data:', data);
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    console.log('Form submitted:', data);
-    setSubmitSuccess(true);
+    // Process form immediately
+    console.log('Form processing complete, redirecting...');
     setIsSubmitting(false);
-    setShowSuccessModal(true); // Show modal
+    setSubmitSuccess(true);
+    router.push('/campus/dashboard');
   };
 
   return (
     <div className='min-h-screen bg-gray-100 flex items-center justify-center py-8 px-2 md:px-8 text-gray-700'>
       {/* Success Modal */}
       <Dialog
-        open={showSuccessModal}
+        open={false}
         onOpenChange={(open) => {
-          setShowSuccessModal(open);
           if (!open && submitSuccess) {
             router.push('/campus/dashboard');
           }
@@ -267,15 +265,19 @@ export default function VendorOnboardingForm() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <DialogClose asChild>
-              <Button className='w-full bg-orange-600 hover:bg-orange-700'>
-                Go to Dashboard
-              </Button>
-            </DialogClose>
+            <Button
+              className='w-full bg-orange-600 hover:bg-orange-700'
+              onClick={() => {
+                router.push('/campus/dashboard');
+              }}>
+              Go to Dashboard
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className='w-full max-w-4xl mx-auto flex flex-col gap-8'>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className='w-full max-w-4xl mx-auto flex flex-col gap-8'>
         {/* Greeting Header */}
         <div className='text-center mb-2'>
           <h2 className='text-3xl font-extrabold text-orange-700 mb-1'>
@@ -687,11 +689,10 @@ export default function VendorOnboardingForm() {
         {/* Submit Button */}
         <div className='flex justify-center'>
           <Button
-            type='button'
+            type='submit'
             size='lg'
             className='w-full md:w-auto px-8 py-3 bg-red-600 hover:bg-red-700'
-            // disabled={isSubmitting}
-            onClick={handleSubmit(onSubmit)}>
+            disabled={isSubmitting}>
             {isSubmitting ? (
               <>
                 <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2'></div>
@@ -712,7 +713,7 @@ export default function VendorOnboardingForm() {
             </a>
           </p>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

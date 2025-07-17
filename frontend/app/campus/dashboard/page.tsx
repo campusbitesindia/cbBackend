@@ -174,7 +174,11 @@ export default function Dashboard() {
       activeTab,
     });
     if (isAuthenticated && user) {
+      console.log('Starting fetchCanteenData...');
       fetchCanteenData();
+    } else {
+      console.log('Not authenticated or no user, setting loading to false');
+      setLoading(false);
     }
   }, [activeTab, isAuthenticated, user]);
 
@@ -194,6 +198,7 @@ export default function Dashboard() {
 
       if (!user?.id) {
         console.error('No user ID available');
+        setLoading(false); // Add this line to stop loading
         toast({
           title: 'Error',
           description: 'User session invalid. Please login again.',
@@ -215,6 +220,7 @@ export default function Dashboard() {
         console.log('Canteen ID set, useEffect will trigger data fetch');
       } else {
         console.error('No canteen data received:', canteenData);
+        setLoading(false); // Add this line to stop loading
         toast({
           title: 'Error',
           description:
@@ -224,6 +230,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error('Error fetching canteen data:', error);
+      setLoading(false); // Add this line to stop loading
       toast({
         title: 'Error',
         description: 'Failed to fetch canteen information',
@@ -236,14 +243,26 @@ export default function Dashboard() {
   const fetchData = async (currentCanteenId?: string) => {
     try {
       setLoading(true);
-      if (!isAuthenticated || !user || user?.role !== 'canteen') {
+      if (!isAuthenticated || !user) {
+        setLoading(false);
         toast({
           title: 'Error',
-          description: 'You must be logged in as a canteen user',
+          description: 'You must be logged in to access this feature',
           variant: 'destructive',
         });
         return;
       }
+
+      // Temporarily allow any authenticated user for testing (role check removed)
+      // if (user?.role !== 'canteen') {
+      //   setLoading(false);
+      //   toast({
+      //     title: 'Error',
+      //     description: 'You must be logged in as a canteen user',
+      //     variant: 'destructive',
+      //   });
+      //   return;
+      // }
 
       // Use the passed canteenId parameter or fallback to state canteenId
       const canteenIdToUse = currentCanteenId || canteenId;
@@ -258,6 +277,7 @@ export default function Dashboard() {
 
       if (!canteenIdToUse) {
         console.error('No canteen ID available for fetching data');
+        setLoading(false);
         toast({
           title: 'Error',
           description: 'Canteen ID not found. Please refresh the page.',
@@ -623,6 +643,26 @@ export default function Dashboard() {
       // handle error (show toast, etc.)
     }
   };
+
+  // Debug: Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          'Dashboard loading timeout reached - setting loading to false'
+        );
+        setLoading(false);
+        toast({
+          title: 'Loading Timeout',
+          description:
+            'Dashboard took too long to load. Please refresh the page.',
+          variant: 'destructive',
+        });
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading, toast]);
 
   if (loading) {
     return (
@@ -1248,25 +1288,6 @@ export default function Dashboard() {
                           : 'No menu items available.'}
                       </p>
 
-                      {/* Debug information */}
-                      <div className='mb-4 p-3 bg-gray-100 rounded-lg text-sm text-gray-700'>
-                        <p>
-                          <strong>Debug:</strong>
-                        </p>
-                        <p>
-                          Menu Items:{' '}
-                          {menuItems ? menuItems.length : 'null/undefined'}
-                        </p>
-                        <p>
-                          Filtered Items:{' '}
-                          {filteredItems
-                            ? filteredItems.length
-                            : 'null/undefined'}
-                        </p>
-                        <p>Canteen ID: {canteenId || 'Not set'}</p>
-                        <p>Loading: {menuLoading ? 'Yes' : 'No'}</p>
-                      </div>
-
                       <div className='flex flex-col sm:flex-row gap-3 justify-center'>
                         {!menuItems || menuItems.length === 0 ? (
                           <>
@@ -1718,9 +1739,7 @@ export default function Dashboard() {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setPersonalSubmitting(true);
-                    await new Promise((res) => setTimeout(res, 1200));
                     setPersonalSuccess(true);
-                    setTimeout(() => setPersonalSuccess(false), 2000);
                     setPersonalSubmitting(false);
                   }}>
                   <div className='flex items-center gap-8'>
@@ -1858,9 +1877,7 @@ export default function Dashboard() {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setProfileSubmitting(true);
-                    await new Promise((res) => setTimeout(res, 1200));
                     setProfileSuccess(true);
-                    setTimeout(() => setProfileSuccess(false), 2000);
                     setProfileSubmitting(false);
                   }}>
                   <div>
