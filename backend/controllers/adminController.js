@@ -3,6 +3,7 @@ const Campus = require("../models/Campus")
 const Canteen = require("../models/Canteen")
 const Transaction = require("../models/Transaction")
 const CampusRequest = require("../models/campusRequest")
+const Payout = require("../models/Payout")
 
 exports.getTotalCounts = async (req, res) => {
   try {
@@ -560,17 +561,21 @@ exports.banUser = async (req, res) => {
 
 exports.suspendCanteen = async (req, res) => {
   try {
-    const { canteenId } = req.body
-    const canteen = await Canteen.findByIdAndUpdate(canteenId, { isSuspended: true }, { new: true })
+    const { canteenId, suspend } = req.body;
+    const canteen = await Canteen.findByIdAndUpdate(
+      canteenId,
+      { isSuspended: suspend },
+      { new: true }
+    );
     if (canteen?.owner) {
-      await User.findByIdAndUpdate(canteen.owner, { isBanned: true })
+      await User.findByIdAndUpdate(canteen.owner, { isBanned: suspend });
     }
-    res.json({ message: "Canteen suspended and owner banned." })
+    res.json({ message: suspend ? "Canteen suspended and owner banned." : "Canteen unsuspended and owner unbanned." });
   } catch (error) {
-    console.error("Error suspending canteen:", error)
-    res.status(500).json({ message: "Server error" })
+    console.error("Error suspending/unsuspending canteen:", error);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 exports.adminRateVendor = async (req, res) => {
   try {
@@ -989,3 +994,61 @@ exports.getVendorDetails = async (req, res) => {
     })
   }
 }
+
+// Create a payout record (admin to vendor)
+exports.createPayout = async (req, res) => {
+  try {
+    const { canteenId, trnId, date, amount, notes } = req.body;
+    const adminId = req.user._id;
+    if (!canteenId || !trnId || !date || !amount) {
+      return res.status(400).json({ success: false, message: "All fields except notes are required." });
+    }
+    // Backend validation for amount
+    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Amount must be a positive number." });
+    }
+    // Backend validation for date
+    const payoutDate = new Date(date);
+    const today = new Date();
+    payoutDate.setHours(0,0,0,0);
+    today.setHours(0,0,0,0);
+    if (payoutDate > today) {
+      return res.status(400).json({ success: false, message: "Date cannot be in the future." });
+    }
+    const payout = await Payout.create({
+      canteen: canteenId,
+      admin: adminId,
+      trnId,
+      date,
+      amount,
+      notes,
+    });
+    res.status(201).json({ success: true, message: "Payout recorded successfully", payout });
+  } catch (error) {
+    console.error("Error creating payout:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// Get all payouts (admin view)
+exports.getPayouts = async (req, res) => {
+  try {
+    const payouts = await Payout.find().populate("canteen", "name").populate("admin", "name email").sort({ date: -1 });
+    res.status(200).json({ success: true, payouts });
+  } catch (error) {
+    console.error("Error fetching payouts:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+// Get payouts for a specific canteen (vendor detail view)
+exports.getPayoutsByCanteen = async (req, res) => {
+  try {
+    const { canteenId } = req.params;
+    const payouts = await Payout.find({ canteen: canteenId }).populate("admin", "name email").sort({ date: -1 });
+    res.status(200).json({ success: true, payouts });
+  } catch (error) {
+    console.error("Error fetching payouts by canteen:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};

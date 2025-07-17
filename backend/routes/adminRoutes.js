@@ -37,6 +37,9 @@ const {
   getPendingVendors,
   approveVendor,
   getVendorDetails,
+  createPayout,
+  getPayouts,
+  getPayoutsByCanteen,
 } = require("../controllers/adminController")
 const { isAuthenticated, isAdmin, isAdminEnv } = require("../middleware/auth")
 
@@ -78,6 +81,11 @@ router.patch("/campus-requests/:id/review", isAuthenticated, isAdmin, reviewCamp
 router.get("/vendors/pending", isAuthenticated, isAdmin, getPendingVendors)
 router.post("/vendors/:canteenId/approve", isAuthenticated, isAdmin, approveVendor)
 router.get("/vendors/:canteenId/details", isAuthenticated, isAdmin, getVendorDetails)
+
+// Payout routes
+router.post("/payouts", isAuthenticated, isAdmin, createPayout)
+router.get("/payouts", isAuthenticated, isAdmin, getPayouts)
+router.get("/payouts/canteen/:canteenId", isAuthenticated, isAdmin, getPayoutsByCanteen)
 
 // Protect all routes below with isAdminEnv
 router.use(isAdminEnv)

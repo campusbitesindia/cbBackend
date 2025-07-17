@@ -46,8 +46,10 @@ export default function CampusDetailsPage() {
           return;
         }
 
+        // Only include users with role 'student'
+        const studentUsers = (usersRes.data.users || []).filter((u: any) => u.role === 'student');
         setCampus(campusData);
-        setUsers(usersRes.data.users || []);
+        setUsers(studentUsers);
         setCanteens(canteensRes.data.canteens || []);
       } catch (err: any) {
         setError(err.message || "Failed to load campus details");
@@ -174,10 +176,7 @@ export default function CampusDetailsPage() {
               <Card key={user._id} className="bg-white/10 border-white/20 hover:bg-white/20 transition-colors">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-white">{user.name}</h3>
-                    <Badge variant={user.role === 'student' ? 'default' : 'secondary'}>
-                      {user.role}
-                    </Badge>
+                    <h3 className="font-semibold text-white">{user.name}</h3>               
                   </div>
                   <p className="text-slate-300 text-sm">{user.email}</p>
                   {user.phone && (
@@ -205,7 +204,11 @@ export default function CampusDetailsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {canteens.map((canteen) => (
-              <Card key={canteen._id} className="bg-white/10 border-white/20 hover:bg-white/20 transition-colors">
+              <Card
+                key={canteen._id}
+                className="bg-white/10 border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
+                onClick={() => router.push(`/admin/canteens/${canteen._id}`)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-white">{canteen.name}</h3>
