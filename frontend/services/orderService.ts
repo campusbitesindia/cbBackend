@@ -36,27 +36,8 @@ const handleAuthError = (error: any) => {
 };
 
 export interface CreateOrderPayload {
-  canteen: string;
-  items: Array<{
-    item: string;
-    quantity: number;
-  }>;
-  total: number;
-  payment: {
-    method: 'cod' | 'upi' | 'card';
-    status: 'pending' | 'completed' | 'failed' | 'refunded';
-    transactionId?: string;
-    upiDetails?: {
-      upiId: string;
-      paymentApp: string;
-    };
-    cardDetails?: {
-      lastFourDigits: string;
-      cardType: string;
-      holderName: string;
-    };
-    paidAt?: string;
-  };
+  items: string; // Stringified JSON array as expected by backend
+  pickUpTime: string; // Required by backend
 }
 
 export interface OrdersResponse {
@@ -73,12 +54,14 @@ export interface CreateOrderResponse {
 // Get user's orders
 export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
   try {
-    const response = await api.get<OrdersResponse>('/api/v1/order/getStudentAllOrders', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    
+    const response = await api.get<OrdersResponse>(
+      '/api/v1/order/getStudentAllOrders',
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     console.log(error)
@@ -93,11 +76,15 @@ export const createOrder = async (
   token: string
 ): Promise<CreateOrderResponse> => {
   try {
-    const response = await api.post<CreateOrderResponse>('/api/orders', orderData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.post<CreateOrderResponse>(
+      '/api/v1/order/CreateOrder',
+      orderData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -111,11 +98,14 @@ export const getOrderById = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.get<{ success: boolean; data: Order }>(`/api/v1/order/${orderId}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    const response = await api.get<{ success: boolean; data: Order }>(
+      `/api/v1/order/getOrderDetails/${orderId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -130,8 +120,8 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.patch<{ success: boolean; data: Order }>(
-      `/api/orders/${orderId}/status`,
+    const response = await api.post<{ success: boolean; data: Order }>(
+      `/api/v1/order/ChangeStatus/${orderId}`,
       { status },
       {
         headers: {
@@ -139,6 +129,58 @@ export const updateOrderStatus = async (
         },
       }
     );
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Delete an order
+export const deleteOrder = async (
+  orderId: string,
+  token: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await api.delete(`/api/v1/order/deleteOrder/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Get all deleted orders
+export const getDeletedOrders = async (
+  token: string
+): Promise<OrdersResponse> => {
+  try {
+    const response = await api.get('/api/v1/order/getDeletedOrders', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Get all orders for a canteen
+export const getAllOrdersByCanteen = async (
+  token: string
+): Promise<OrdersResponse> => {
+  try {
+    const response = await api.get('/api/v1/order/getCanteenAllOrders', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
     handleAuthError(error);

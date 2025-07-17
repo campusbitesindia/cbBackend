@@ -1,74 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import {
-  LayoutDashboard,
-  Menu,
-  ShoppingCart,
-  BarChart3,
-  Settings,
-  Plus,
-  Edit,
-  Trash2,
-  Upload,
-  Eye,
-  Clock,
-  CheckCircle,
-  XCircle,
-  TrendingUp,
-  DollarSign,
-  Users,
-  Package,
-  RefreshCw,
-  Leaf,
-  Bell,
-} from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-} from 'recharts';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
-  getMenuByCanteenId,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
@@ -77,15 +10,44 @@ import {
 import {
   getCanteenOrders,
   getCanteenStats,
-  updateCanteenOrderStatus,
   CanteenStats,
   getCanteenByOwner,
 } from '@/services/canteenOrderService';
 import { Order } from '@/types';
-import { uploadImage, validateImage } from '@/services/imageService';
+import {
+  uploadImage,
+  validateImage,
+  createImagePreview,
+} from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
 import { useNotificationToast } from '@/hooks/use-notification';
+import axios from 'axios';
+import { DashboardSidebar } from '@/app/campus/dashboard/DashboardSidebar';
+import { OverviewTab } from '@/app/campus/dashboard/OverviewTab';
+import { MenuTab } from '@/app/campus/dashboard/MenuTab';
+import { OrdersTab } from '@/app/campus/dashboard/OrdersTab';
+import { AnalyticsTab } from '@/app/campus/dashboard/AnalyticsTab';
+import { ProfileTab } from '@/app/campus/dashboard/ProfileTab';
+import { PayoutsTab } from '@/app/campus/dashboard/PayoutsTab';
+import { OrderDetailsDialog } from '@/app/campus/dashboard/OrderDetailsDialog';
+import {
+  Card,
+  CardTitle,
+  CardHeader,
+  CardContent,
+  CardDescription,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import {
+  Bell,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  RefreshCw,
+  TrendingUp,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -95,6 +57,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [canteenStats, setCanteenStats] = useState<CanteenStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [menuLoading, setMenuLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -166,43 +129,199 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const fetchCanteen = async () => {
-      if (user?.role === 'canteen') {
-        const canteen = await getCanteenByOwner(user.id);
-        setCanteenId(canteen?._id || null);
-      }
-    };
-    fetchCanteen();
-  }, [user]);
+    console.log('useEffect triggered:', {
+      isAuthenticated,
+      user: user?.id,
+      activeTab,
+    });
+    if (isAuthenticated && user) {
+      console.log('Starting fetchCanteenData...');
+      fetchCanteenData();
+    } else {
+      console.log('Not authenticated or no user, setting loading to false');
+      setLoading(false);
+    }
+  }, [activeTab, isAuthenticated, user]);
 
+  // Additional useEffect to refetch data when canteenId changes
   useEffect(() => {
-    if (canteenId) {
-        fetchData();
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    console.log('canteenId changed:', canteenId);
+    if (canteenId && isAuthenticated && user) {
+      console.log('Fetching data due to canteenId change...');
+      fetchData(canteenId);
+    }
   }, [canteenId]);
 
-  console.log(user, 'UserDetails');
-  const fetchData = async () => {
+  // Fetch canteen data associated with the current user
+  const fetchCanteenData = async () => {
     try {
-      setLoading(true);
-      if (!isAuthenticated || !user || user?.role !== 'canteen' || !canteenId) {
+      console.log('fetchCanteenData called for user:', user?.id);
+
+      if (!user?.id) {
+        console.error('No user ID available');
+        setLoading(false); // Add this line to stop loading
         toast({
           title: 'Error',
-          description: 'You must be logged in as a canteen user',
+          description: 'User session invalid. Please login again.',
           variant: 'destructive',
         });
         return;
       }
+
+      console.log('Fetching canteen data for user:', user.id);
+      const canteenData = await getCanteenByOwner(user.id);
+      console.log('Canteen data received:', canteenData);
+
+      if (canteenData && canteenData._id) {
+        const dynamicCanteenId = canteenData._id;
+        console.log('Setting canteenId to:', dynamicCanteenId);
+        setCanteenId(dynamicCanteenId);
+
+        // Don't call fetchData here since the useEffect will handle it
+        console.log('Canteen ID set, useEffect will trigger data fetch');
+      } else {
+        console.error('No canteen data received:', canteenData);
+        setLoading(false); // Add this line to stop loading
+        toast({
+          title: 'Error',
+          description:
+            'No canteen associated with your account. Please contact support.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching canteen data:', error);
+      setLoading(false); // Add this line to stop loading
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch canteen information',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
+  const fetchData = async (currentCanteenId?: string) => {
+    try {
+      setLoading(true);
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        toast({
+          title: 'Error',
+          description: 'You must be logged in to access this feature',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Temporarily allow any authenticated user for testing (role check removed)
+      // if (user?.role !== 'canteen') {
+      //   setLoading(false);
+      //   toast({
+      //     title: 'Error',
+      //     description: 'You must be logged in as a canteen user',
+      //     variant: 'destructive',
+      //   });
+      //   return;
+      // }
+
+      // Use the passed canteenId parameter or fallback to state canteenId
+      const canteenIdToUse = currentCanteenId || canteenId;
+
+      console.log('fetchData called with:', {
+        currentCanteenId,
+        stateCanteenId: canteenId,
+        canteenIdToUse,
+        userRole: user?.role,
+        userId: user?.id,
+      });
+
+      if (!canteenIdToUse) {
+        console.error('No canteen ID available for fetching data');
+        setLoading(false);
+        toast({
+          title: 'Error',
+          description: 'Canteen ID not found. Please refresh the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const token = localStorage.getItem('token') || '';
-      const [menuData, ordersData, statsData] = await Promise.all([
-        getMenuByCanteenId(canteenId),
-        getCanteenOrders(canteenId, token),
-        getCanteenStats(canteenId, token),
-      ]);
-      setMenuItems(menuData || []);
-      setOrders(ordersData.data || []);
-      setCanteenStats(statsData.data || null);
+
+      // Fetch menu items using dynamic canteenId
+      try {
+        setMenuLoading(true);
+        console.log(`Fetching menu items for canteen: ${canteenIdToUse}`);
+        const menuData = await axios.get(
+          `http://localhost:8080/api/v1/menu/${canteenIdToUse}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log('Menu API response:', menuData.data);
+
+        // Handle different response structures
+        let menuItemsArray = [];
+        if (Array.isArray(menuData.data)) {
+          menuItemsArray = menuData.data;
+        } else if (menuData.data && Array.isArray(menuData.data.data)) {
+          menuItemsArray = menuData.data.data;
+        } else if (menuData.data && Array.isArray(menuData.data.items)) {
+          menuItemsArray = menuData.data.items;
+        } else {
+          console.warn('Unexpected menu data structure:', menuData.data);
+          menuItemsArray = [];
+        }
+
+        console.log(
+          `Setting ${menuItemsArray.length} menu items:`,
+          menuItemsArray
+        );
+        setMenuItems(menuItemsArray);
+      } catch (error) {
+        console.error('Error fetching menu data:', error);
+        setMenuItems([]); // Clear menu items on error
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch menu items',
+          variant: 'destructive',
+        });
+      } finally {
+        setMenuLoading(false);
+      }
+
+      // Fetch orders using dynamic canteenId
+      try {
+        const ordersData = await getCanteenOrders(canteenIdToUse, token);
+        const ordersToSet = Array.isArray(ordersData?.data)
+          ? ordersData.data
+          : [];
+        setOrders(ordersToSet);
+      } catch (error) {
+        console.error('Error fetching orders data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch orders',
+          variant: 'destructive',
+        });
+      }
+
+      // Fetch statistics using dynamic canteenId
+      try {
+        const statsData = await getCanteenStats(canteenIdToUse, token);
+        const statsToSet = statsData?.data || null;
+        setCanteenStats(statsToSet);
+      } catch (error) {
+        console.error('Error fetching stats data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch statistics',
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -215,33 +334,97 @@ export default function Dashboard() {
     }
   };
 
+  const [imageUploading, setImageUploading] = useState(false);
+
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
+        setImageUploading(true);
+
+        // Validate the image first
         validateImage(file);
         setSelectedImage(file);
-        // Use a placeholder image URL instead of uploading
-        const placeholderUrl = '/placeholder.svg';
-        setImagePreview(placeholderUrl);
-        setFormData({ ...formData, image: placeholderUrl });
-      } catch (error) {
+
+        // Create a preview URL for immediate display
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
+
+        try {
+          // Attempt to upload the image to the server
+          const uploadResult = await uploadImage(file);
+
+          // Update form data with the uploaded image URL
+          setFormData({ ...formData, image: uploadResult.url });
+
+          toast({
+            title: 'Success',
+            description: 'Image uploaded successfully!',
+          });
+        } catch (uploadError) {
+          console.warn('Image upload failed, using fallback:', uploadError);
+
+          // If upload fails, create a data URL as fallback
+          try {
+            const dataUrl = await createImagePreview(file);
+            setFormData({ ...formData, image: dataUrl });
+
+            toast({
+              title: 'Upload Failed',
+              description:
+                'Using local image preview. Image may not be saved permanently.',
+              variant: 'destructive',
+            });
+          } catch (previewError) {
+            // If both upload and preview fail, use placeholder
+            setFormData({ ...formData, image: '/placeholder.svg' });
+
+            toast({
+              title: 'Error',
+              description:
+                'Failed to process image. Using placeholder instead.',
+              variant: 'destructive',
+            });
+          }
+        }
+      } catch (validationError) {
+        console.error('Image validation error:', validationError);
+        setSelectedImage(null);
+        setImagePreview('');
+        setFormData({ ...formData, image: '' });
+
         toast({
-          title: 'Error',
+          title: 'Invalid Image',
           description:
-            error instanceof Error ? error.message : 'Failed to upload image',
+            validationError instanceof Error
+              ? validationError.message
+              : 'Please select a valid image file',
           variant: 'destructive',
         });
+      } finally {
+        setImageUploading(false);
       }
     }
   };
 
+  // Handle form submission for creating/updating menu items using dynamic canteenId
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission while image is uploading
+    if (imageUploading) {
+      toast({
+        title: 'Please wait',
+        description: 'Image is still uploading. Please wait a moment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      if (!isAuthenticated || !user || !canteenId) {
+      if (!isAuthenticated || !user) {
         toast({
           title: 'Error',
           description: 'You must be logged in to access this feature',
@@ -249,30 +432,80 @@ export default function Dashboard() {
         });
         return;
       }
+
+      // Ensure canteenId is available before proceeding
+      if (!canteenId) {
+        console.error('No canteenId available for form submission');
+        toast({
+          title: 'Error',
+          description: 'Canteen ID not found. Please refresh the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Submitting menu item with canteenId:', canteenId);
+
+      // Use the image URL from formData.image (could be uploaded URL, data URL, or placeholder)
+      const imageUrl = formData.image || '/placeholder.svg';
+
+      // Log image source type for debugging
+      if (imageUrl.startsWith('data:')) {
+        console.log('Using local image data URL (upload may have failed)');
+      } else if (imageUrl.startsWith('http')) {
+        console.log('Using uploaded image URL');
+      } else {
+        console.log('Using placeholder image');
+      }
+
+      // Create menu item data with dynamic canteenId
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
-        canteen: canteenId,
+        canteen: canteenId, // Using dynamic canteenId
         isVeg: formData.isVeg,
-        image: imagePreview || formData.image,
+        image: imageUrl,
       };
+
+      console.log('Submitting item data:', itemData);
+
       if (editingItem) {
         await updateMenuItem(editingItem._id, itemData);
-        toast({ title: 'Success', description: 'Menu item updated successfully' });
+        console.log('Menu item updated successfully');
+        toast({
+          title: 'Success',
+          description: 'Menu item updated successfully',
+        });
       } else {
-        await createMenuItem(itemData);
-        toast({ title: 'Success', description: 'Menu item added successfully' });
+        const newItem = await createMenuItem(itemData);
+        console.log('New menu item created:', newItem);
+        toast({
+          title: 'Success',
+          description: 'Menu item added successfully',
+        });
       }
+
       setIsAddItemOpen(false);
       setIsEditItemOpen(false);
       setEditingItem(null);
       resetForm();
-      fetchData();
+
+      // Force refresh with the current canteenId
+      console.log('Refreshing menu data after form submission...');
+      if (canteenId) {
+        await fetchData(canteenId);
+      }
     } catch (error) {
       console.error('Error saving menu item:', error);
-      toast({ title: 'Error', description: 'Failed to save menu item', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: `Failed to save menu item: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -310,6 +543,11 @@ export default function Dashboard() {
   };
 
   const resetForm = () => {
+    // Clear any object URLs to prevent memory leaks
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
     setFormData({
       name: '',
       price: '',
@@ -320,40 +558,7 @@ export default function Dashboard() {
     });
     setSelectedImage(null);
     setImagePreview('');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'placed':
-        return 'bg-blue-100 text-blue-800';
-      case 'preparing':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'ready':
-        return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'placed':
-        return <Clock className='w-4 h-4' />;
-      case 'preparing':
-        return <Package className='w-4 h-4' />;
-      case 'ready':
-        return <CheckCircle className='w-4 h-4' />;
-      case 'completed':
-        return <CheckCircle className='w-4 h-4' />;
-      case 'cancelled':
-        return <XCircle className='w-4 h-4' />;
-      default:
-        return <Clock className='w-4 h-4' />;
-    }
+    setImageUploading(false);
   };
 
   const fetchOrderDetails = async (orderId: string) => {
@@ -365,6 +570,26 @@ export default function Dashboard() {
       // handle error (show toast, etc.)
     }
   };
+
+  // Debug: Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          'Dashboard loading timeout reached - setting loading to false'
+        );
+        setLoading(false);
+        toast({
+          title: 'Loading Timeout',
+          description:
+            'Dashboard took too long to load. Please refresh the page.',
+          variant: 'destructive',
+        });
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading, toast]);
 
   if (loading) {
     return (
@@ -412,6 +637,13 @@ export default function Dashboard() {
   // }
 
   // Filter items by search term (case-insensitive)
+  console.log('Current menuItems before filtering:', menuItems);
+  console.log('Current search filters:', {
+    searchTerm,
+    statusFilter,
+    categoryFilter,
+  });
+
   const filteredItems = menuItems.filter((item: MenuItem) => {
     // Search filter
     const matchesSearch = item.name
@@ -433,6 +665,8 @@ export default function Dashboard() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  console.log('Filtered items for rendering:', filteredItems);
+
   const categories = Array.from(
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
@@ -441,1379 +675,97 @@ export default function Dashboard() {
 
   return (
     <div className='flex h-screen bg-gray-50'>
-      {/* Sidebar */}
-      <div className='w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-y-auto shadow-lg px-0 py-0'>
-        {/* Brand */}
-        <div className='px-8 py-8 border-b border-gray-100'></div>
-        {/* Overview Section */}
-        <div className='px-8 mt-6 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-            OVERVIEW
-          </span>
-        </div>
-        <nav className='flex flex-col gap-1 px-4'>
-          <button
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-              activeTab === 'overview'
-                ? 'bg-blue-50 text-blue-600 font-semibold'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
-            }`}
-            onClick={() => setActiveTab('overview')}>
-            <LayoutDashboard className='w-5 h-5 text-blue-500' />
-            <span>Dashboard</span>
-          </button>
-        </nav>
-        <Separator className='my-4' />
-        {/* Management Section */}
-        <div className='px-8 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-            MANAGEMENT
-          </span>
-        </div>
-        <nav className='flex flex-col gap-1 px-4'>
-          <button
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-              activeTab === 'orders'
-                ? 'bg-blue-50 text-blue-600 font-semibold'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
-            }`}
-            onClick={() => setActiveTab('orders')}>
-            <ShoppingCart className='w-5 h-5' />
-            <span>Orders</span>
-          </button>
-          <button
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-              activeTab === 'menu'
-                ? 'bg-blue-50 text-blue-600 font-semibold'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
-            }`}
-            onClick={() => setActiveTab('menu')}>
-            <Menu className='w-5 h-5' />
-            <span>Menu Items</span>
-          </button>
-          <button
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-              activeTab === 'analytics'
-                ? 'bg-blue-50 text-blue-600 font-semibold'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
-            }`}
-            onClick={() => setActiveTab('analytics')}>
-            <BarChart3 className='w-5 h-5' />
-            <span>Analytics</span>
-          </button>
-        </nav>
-        <Separator className='my-4' />
-        {/* Profile Section */}
-        <div className='px-8 mb-2'>
-          <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-            PROFILE
-          </span>
-        </div>
-        <nav className='flex flex-col gap-1 px-4 mb-6'>
-          <button
-            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
-              activeTab === 'profile'
-                ? 'bg-blue-50 text-blue-600 font-semibold'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
-            }`}
-            onClick={() => setActiveTab('profile')}>
-            <Users className='w-5 h-5' />
-            <span>Profile</span>
-          </button>
-          <button
-            className='flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition mt-2'
-            onClick={() => {
-              localStorage.clear();
-              if (typeof (useAuth as any).logout === 'function') {
-                (useAuth as any).logout();
-              }
-              window.location.href = '/login';
-            }}
-            title='Logout'>
-            <svg
-              className='w-5 h-5'
-              fill='none'
-              stroke='currentColor'
-              strokeWidth='2'
-              viewBox='0 0 24 24'>
-              <path
-                strokeLinecap='round'
-                strokeLinejoin='round'
-                d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1'
-              />
-            </svg>
-            <span>Logout</span>
-          </button>
-        </nav>
-      </div>
+      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Content */}
       <div className='flex-1 overflow-auto'>
-        {/* Header with profile and notifications */}
         <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className='space-y-10'>
-              <div className='mb-6'>
-                <h2 className='text-3xl font-bold text-blue-900 mb-2'>
-                  Campus Vendor Partner
-                </h2>
-                <Separator className='mb-4' />
-                <h1 className='text-2xl font-bold text-gray-800 mb-1'>
-                  Dashboard Overview
-                </h1>
-                <p className='text-gray-600'>
-                  Welcome back! Here's what's happening with your canteen today.
-                </p>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium text-gray-600'>
-                      Total Orders
-                    </CardTitle>
-                    <ShoppingCart className='h-4 w-4 text-gray-400' />
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-bold text-gray-800'>
-                      {canteenStats?.totalOrders || orders.length}
-                    </div>
-                    <p className='text-xs text-gray-600'>All time orders</p>
-                  </CardContent>
-                </Card>
-
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium text-gray-600'>
-                      Revenue
-                    </CardTitle>
-                    <DollarSign className='h-4 w-4 text-gray-400' />
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-bold text-gray-800'>
-                      ₹
-                      {canteenStats?.totalRevenue ||
-                        orders.reduce(
-                          (sum: number, order: Order) => sum + order.total,
-                          0
-                        )}
-                    </div>
-                    <p className='text-xs text-gray-600'>Total revenue</p>
-                  </CardContent>
-                </Card>
-
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium text-gray-600'>
-                      Menu Items
-                    </CardTitle>
-                    <Menu className='h-4 w-4 text-gray-400' />
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-bold text-gray-800'>
-                      {menuItems.length}
-                    </div>
-                    <p className='text-xs text-gray-600'>Active items</p>
-                  </CardContent>
-                </Card>
-
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
-                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                    <CardTitle className='text-sm font-medium text-gray-600'>
-                      Pending Orders
-                    </CardTitle>
-                    <Clock className='h-4 w-4 text-gray-400' />
-                  </CardHeader>
-                  <CardContent>
-                    <div className='text-2xl font-bold text-gray-800'>
-                      {canteenStats?.pendingOrders ||
-                        orders.filter(
-                          (order: Order) =>
-                            order.status === 'placed' ||
-                            order.status === 'preparing'
-                        ).length}
-                    </div>
-                    <p className='text-xs text-gray-600'>Need attention</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            <OverviewTab canteenStats={canteenStats} menuItems={menuItems} />
           )}
 
           {/* Menu Items Tab */}
           {activeTab === 'menu' && (
-            <div className='space-y-10'>
-              <div className='flex justify-between items-end mb-6'>
-                <div>
-                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>
-                    Menu Items
-                  </h1>
-                  <p className='text-gray-600'>
-                    Manage your menu items and categories
-                  </p>
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Dialog open={isAddItemOpen} onOpenChange={setIsAddItemOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        onClick={() => resetForm()}
-                        className='bg-white text-black border border-gray-200 hover:border-gray-400 transition-colors flex items-center h-10'>
-                        <Plus className='w-4 h-4 mr-2' />
-                        Add New Item
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className='max-w-md bg-white text-black'>
-                      <DialogHeader>
-                        <DialogTitle>Add New Menu Item</DialogTitle>
-                        <DialogDescription>
-                          Add a new item to your menu with details and image.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <form
-                        onSubmit={handleSubmit}
-                        className='space-y-4 text-black'>
-                        <div>
-                          <Label htmlFor='name'>Item Name</Label>
-                          <Input
-                            id='name'
-                            value={formData.name}
-                            onChange={(e) =>
-                              setFormData({ ...formData, name: e.target.value })
-                            }
-                            required
-                            className='bg-white text-black placeholder:text-black'
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor='price'>Price (₹)</Label>
-                          <Input
-                            id='price'
-                            type='number'
-                            step='0.01'
-                            value={formData.price}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                price: e.target.value,
-                              })
-                            }
-                            required
-                            className='bg-white text-black placeholder:text-black'
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor='description'>Description</Label>
-                          <Textarea
-                            id='description'
-                            value={formData.description}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                description: e.target.value,
-                              })
-                            }
-                            className='bg-white text-black placeholder:text-black'
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor='category'>Category</Label>
-                          <Select
-                            value={formData.category}
-                            onValueChange={(value) =>
-                              setFormData({ ...formData, category: value })
-                            }>
-                            <SelectTrigger className='bg-white text-black'>
-                              <SelectValue
-                                placeholder='Select category'
-                                className='text-black'
-                              />
-                            </SelectTrigger>
-                            <SelectContent className='bg-white text-black'>
-                              <SelectItem value='appetizers'>
-                                Appetizers
-                              </SelectItem>
-                              <SelectItem value='main-course'>
-                                Main Course
-                              </SelectItem>
-                              <SelectItem value='desserts'>Desserts</SelectItem>
-                              <SelectItem value='beverages'>
-                                Beverages
-                              </SelectItem>
-                              <SelectItem value='snacks'>Snacks</SelectItem>
-                              <SelectItem value='salads'>Salads</SelectItem>
-                              <SelectItem value='soups'>Soups</SelectItem>
-                              <SelectItem value='breads'>Breads</SelectItem>
-                              <SelectItem value='rice'>Rice</SelectItem>
-                              <SelectItem value='others'>Others</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label htmlFor='image'>Image</Label>
-                          <Input
-                            id='image'
-                            type='file'
-                            accept='image/*'
-                            onChange={handleImageUpload}
-                            className='bg-white text-black placeholder:text-black'
-                          />
-                          {imagePreview && (
-                            <div className='mt-2'>
-                              <img
-                                src={imagePreview}
-                                alt='Preview'
-                                className='w-20 h-20 object-cover rounded'
-                              />
-                            </div>
-                          )}
-                        </div>
-                        {/* Remove the Vegetarian checkbox from Add Menu Item form */}
-                        {/* <div className='flex items-center space-x-2'>
-                          <input
-                            type='checkbox'
-                            id='isVeg'
-                            checked={formData.isVeg}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                isVeg: e.target.checked,
-                              })
-                            }
-                            className='bg-white'
-                          />
-                          <Label htmlFor='isVeg'>Vegetarian</Label>
-                        </div> */}
-                        <Button type='submit' className='w-full'>
-                          Add Item
-                        </Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                  <Button
-                    onClick={fetchData}
-                    className='bg-white text-black border border-gray-200 hover:border-gray-400 transition-colors flex items-center h-10'
-                    title='Refresh menu items'>
-                    <RefreshCw className='w-4 h-4 mr-1' />
-                    Refresh
-                  </Button>
-                </div>
-              </div>
-              <Separator className='mb-6' />
-              {/* Search bar above menu items */}
-              <div className='flex flex-col md:flex-row md:items-center md:space-x-4 mb-8 gap-4'>
-                {/* Search */}
-                <div className='relative w-full md:w-1/3 mb-2 md:mb-0'>
-                  <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'>
-                    <svg
-                      width='18'
-                      height='18'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='2'
-                      viewBox='0 0 24 24'>
-                      <circle cx='11' cy='11' r='8' />
-                      <path d='M21 21l-4.35-4.35' />
-                    </svg>
-                  </span>
-                  <input
-                    type='text'
-                    placeholder='Search menu items by name...'
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className='w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-700'
-                  />
-                </div>
-                {/* Status Filter */}
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className='rounded-lg border border-gray-200 bg-white shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-700 mr-2'>
-                  <option value='all'>All Items ({menuItems.length})</option>
-                  <option value='active'>
-                    Active Items (
-                    {
-                      menuItems.filter((i) =>
-                        'available' in i ? i.available : true
-                      ).length
-                    }
-                    )
-                  </option>
-                  <option value='inactive'>
-                    Inactive Items (
-                    {
-                      menuItems.filter((i) =>
-                        'available' in i ? !i.available : false
-                      ).length
-                    }
-                    )
-                  </option>
-                </select>
-                {/* Category Filter */}
-                <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className='rounded-lg border border-gray-200 bg-white shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-700'>
-                  <option value='all'>All Categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </option>
-                  ))}
-                  <option value='snacks'>Snacks</option>
-                  <option value='salads'>Salads</option>
-                  <option value='soups'>Soups</option>
-                  <option value='breads'>Breads</option>
-
-                  <option value='beverages'>Beverages</option>
-                  <option value='desserts'>Desserts</option>
-                  <option value='others'>Others</option>
-                </select>
-              </div>
-
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
-                {filteredItems.map((item) => (
-                  <Card
-                    key={item._id}
-                    className='flex flex-col h-full bg-white border-2 border-white shadow-md rounded-xl transition-all duration-200 hover:shadow-xl hover:outline hover:outline-2 hover:outline-white'>
-                    <div className='relative bg-white rounded-t-xl'>
-                      <img
-                        src={item.image || '/placeholder.svg'}
-                        alt={item.name}
-                        className='w-full h-40 object-cover rounded-t-xl bg-white'
-                      />
-                      <span className='absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
-                        Active
-                      </span>
-                      {item.isVeg ? (
-                        <span className='absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center'>
-                          <Leaf className='w-3 h-3 mr-1' /> VEG
-                        </span>
-                      ) : (
-                        <span className='absolute top-2 right-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full flex items-center'>
-                          <Leaf className='w-3 h-3 mr-1 rotate-180' /> NON-VEG
-                        </span>
-                      )}
-                    </div>
-                    <CardContent className='flex-1 flex flex-col p-4 bg-white'>
-                      <h3 className='font-semibold text-gray-800'>
-                        {item.name}
-                      </h3>
-                      <p className='text-xs text-gray-500 mb-2'>
-                        {item.description || 'No description available'}
-                      </p>
-                      <div className='mb-2'>
-                        <span className='text-lg font-bold text-gray-800'>
-                          ₹{item.price}
-                        </span>
-                        {/* If you want to show a strikethrough price, add here: */}
-                        {/* <span className='text-sm text-gray-400 line-through ml-2'>₹{item.originalPrice}</span> */}
-                      </div>
-                      <p className='text-xs text-gray-500 capitalize'>
-                        {item.category}
-                      </p>
-                      <div className='flex space-x-4 mt-auto'>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 flex items-center px-4'
-                          onClick={() => handleEdit(item)}>
-                          <Edit className='w-4 h-4 mr-1' /> Edit
-                        </Button>
-                        <Button
-                          size='sm'
-                          variant='ghost'
-                          className='bg-red-50 text-red-700 border-none hover:bg-red-100 flex items-center px-4'
-                          onClick={() => handleDelete(item._id)}>
-                          <span className='w-2 h-2 bg-red-500 rounded-full mr-2 inline-block'></span>
-                          Deactivate
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+            <MenuTab
+              menuItems={menuItems}
+              filteredItems={filteredItems}
+              categories={categories}
+              menuLoading={menuLoading}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              isAddItemOpen={isAddItemOpen}
+              setIsAddItemOpen={setIsAddItemOpen}
+              isEditItemOpen={isEditItemOpen}
+              setIsEditItemOpen={setIsEditItemOpen}
+              formData={formData}
+              setFormData={setFormData}
+              imageUploading={imageUploading}
+              imagePreview={imagePreview}
+              editingItem={editingItem}
+              onSubmit={handleSubmit}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onImageUpload={handleImageUpload}
+              onRefresh={() => canteenId && fetchData(canteenId)}
+              resetForm={resetForm}
+              canteenId={canteenId}
+            />
           )}
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <div className='space-y-10'>
-              <div className='flex justify-between items-end mb-6'>
-                <div>
-                  <h1 className='text-2xl font-bold text-gray-800 mb-1'>
-                    Orders
-                  </h1>
-                  <p className='text-gray-600'>
-                    Manage and track all orders in real-time
-                  </p>
-                </div>
-                <Button
-                  variant='outline'
-                  onClick={fetchData}
-                  className='bg-white text-black border border-gray-200 hover:border-gray-400 flex items-center space-x-2'>
-                  <RefreshCw className='w-4 h-4' />
-                  <span>Refresh</span>
-                </Button>
-              </div>
-              <Separator className='mb-6' />
-              <div className='space-y-8'>
-                {orders.map((order: any) => (
-                  <div
-                    key={order._id}
-                    className='bg-white rounded-xl shadow p-6 flex flex-col space-y-4'
-                    onClick={() => fetchOrderDetails(order._id)}
-                    style={{ cursor: 'pointer' }}>
-                    {/* Header: Order number, status, date, total */}
-                    <div className='flex justify-between items-center'>
-                      <div className='flex items-center space-x-3'>
-                        <span className='font-bold text-lg'>
-                          Order #{order._id.slice(-4)}
-                        </span>
-                        <span className='bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full font-semibold'>
-                          {order.status.toUpperCase()}
-                        </span>
-                      </div>
-                      <span className='font-bold text-xl'>
-                        ₹{order.total.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className='text-sm text-gray-500'>
-                      Order Date: {new Date(order.createdAt).toLocaleString()}
-                    </div>
-                    <hr className='my-2' />
-                    {/* Customer Details and Address */}
-                    <div className='flex flex-col md:flex-row md:justify-between md:items-start gap-4'>
-                      <div>
-                        <div className='font-semibold'>Customer Details</div>
-                        <div>{order.customerName || 'N/A'}</div>
-                        <div>{order.customerPhone || 'N/A'}</div>
-                      </div>
-                      <div className='text-right text-blue-900'>
-                        {order.customerAddress || 'N/A'}
-                      </div>
-                    </div>
-                    {/* Order Items */}
-                    <div>
-                      <div className='font-semibold mt-4'>Order Items</div>
-                      {order.items.map((item: any, idx: any) => (
-                        <div
-                          key={idx}
-                          className='flex justify-between text-sm mt-1'>
-                          <span>
-                            <span className='font-semibold'>
-                              {item.item.name}
-                            </span>
-                            <span className='ml-2 text-gray-500'>
-                              Quantity: {item.quantity}
-                            </span>
-                          </span>
-                          <span className='text-right'>
-                            ₹{(item.item.price * item.quantity).toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Order Status Update */}
-                    <div className='mt-4 pt-4 border-t border-gray-200'>
-                      <div className='flex items-center justify-between'>
-                        <div className='flex items-center space-x-2'>
-                          <span className='text-sm font-medium text-gray-700'>
-                            Status:
-                          </span>
-                          <Badge className={getStatusColor(order.status)}>
-                            {getStatusIcon(order.status)}
-                            <span className='ml-1'>
-                              {order.status.toUpperCase()}
-                            </span>
-                          </Badge>
-                        </div>
-                        <div className='flex space-x-2'>
-                          <div className='text-xs text-gray-500 italic'>
-                            Status updates require backend API support
-                          </div>
-                          {/* Disabled buttons with tooltips */}
-                          {order.status === 'placed' && (
-                            <Button
-                              size='sm'
-                              disabled
-                              title='Backend API support required for status updates'
-                              className='bg-gray-300 text-gray-500 cursor-not-allowed'>
-                              Start Preparing
-                            </Button>
-                          )}
-                          {order.status === 'preparing' && (
-                            <Button
-                              size='sm'
-                              disabled
-                              title='Backend API support required for status updates'
-                              className='bg-gray-300 text-gray-500 cursor-not-allowed'>
-                              Mark Ready
-                            </Button>
-                          )}
-                          {order.status === 'ready' && (
-                            <Button
-                              size='sm'
-                              disabled
-                              title='Backend API support required for status updates'
-                              className='bg-gray-300 text-gray-500 cursor-not-allowed'>
-                              Complete Order
-                            </Button>
-                          )}
-                          {(order.status === 'placed' ||
-                            order.status === 'preparing') && (
-                            <Button
-                              size='sm'
-                              variant='outline'
-                              disabled
-                              title='Backend API support required for status updates'
-                              className='border-gray-300 text-gray-500 cursor-not-allowed'>
-                              Cancel Order
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Separator className='my-10' />
-              <div className='mt-10'>
-                <span className='text-xs font-semibold text-gray-400 tracking-widest'>
-                  RECENT ORDERS
-                </span>
-                <div className='mt-3 flex flex-col gap-2'>
-                  {orders && orders.length > 0 ? (
-                    orders
-                      .slice()
-                      .sort(
-                        (a, b) =>
-                          new Date(b.createdAt).getTime() -
-                          new Date(a.createdAt).getTime()
-                      )
-                      .slice(0, 5)
-                      .map((order) => (
-                        <div
-                          key={order._id}
-                          className='flex flex-col bg-gray-50 rounded-lg p-2 border border-gray-100 hover:bg-blue-50 transition cursor-pointer mb-1'>
-                          <div className='flex items-center justify-between'>
-                            <span className='font-semibold text-sm text-gray-800'>
-                              #{order._id.slice(-4)}
-                            </span>
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusColor(
-                                order.status
-                              )}`}
-                              style={{ minWidth: 70, textAlign: 'center' }}>
-                              {getStatusIcon(order.status)}
-                              <span className='ml-1'>
-                                {order.status.charAt(0).toUpperCase() +
-                                  order.status.slice(1)}
-                              </span>
-                            </span>
-                          </div>
-                          <div className='flex items-center justify-between mt-1'>
-                            <span className='text-xs text-gray-500'>
-                              ₹{order.total.toFixed(2)}
-                            </span>
-                            <span className='text-xs text-gray-400'>
-                              {new Date(order.createdAt).toLocaleTimeString(
-                                [],
-                                { hour: '2-digit', minute: '2-digit' }
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                  ) : (
-                    <div className='text-xs text-gray-400 mt-2'>
-                      No recent orders
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <OrdersTab
+              orders={orders}
+              onRefresh={() => canteenId && fetchData(canteenId)}
+              onOrderClick={fetchOrderDetails}
+              canteenId={canteenId}
+            />
           )}
 
           {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className='space-y-10'>
-              <div className='mb-6'>
-                <h1 className='text-2xl font-bold text-gray-800 mb-1'>
-                  Analytics
-                </h1>
-                <p className='text-gray-600'>
-                  Detailed insights about your business performance
-                </p>
-              </div>
-              <Separator className='mb-6' />
-              {/* Calculate real analytics data */}
-              {(() => {
-                // Calculate order status distribution
-                const statusData = [
-                  {
-                    name: 'Completed',
-                    value: orders.filter((o) => o.status === 'completed')
-                      .length,
-                  },
-                  {
-                    name: 'Preparing',
-                    value: orders.filter((o) => o.status === 'preparing')
-                      .length,
-                  },
-                  {
-                    name: 'Placed',
-                    value: orders.filter((o) => o.status === 'placed').length,
-                  },
-                  {
-                    name: 'Cancelled',
-                    value: orders.filter((o) => o.status === 'cancelled')
-                      .length,
-                  },
-                ];
-
-                // Calculate popular items from actual orders
-                const itemStats = new Map<
-                  string,
-                  { orders: number; revenue: number }
-                >();
-
-                orders.forEach((order) => {
-                  order.items.forEach((orderItem) => {
-                    const itemName = orderItem.item.name;
-                    const quantity = orderItem.quantity;
-                    const price = orderItem.item.price;
-                    const revenue = quantity * price;
-
-                    if (itemStats.has(itemName)) {
-                      const existing = itemStats.get(itemName)!;
-                      existing.orders += quantity;
-                      existing.revenue += revenue;
-                    } else {
-                      itemStats.set(itemName, { orders: quantity, revenue });
-                    }
-                  });
-                });
-
-                const popularItems = Array.from(itemStats.entries())
-                  .map(([name, stats]) => ({
-                    name,
-                    orders: stats.orders,
-                    revenue: stats.revenue,
-                  }))
-                  .sort((a, b) => b.orders - a.orders)
-                  .slice(0, 5);
-
-                return (
-                  <>
-                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-                      <Card className='bg-blue-50'>
-                        <CardHeader>
-                          <CardTitle className='text-gray-800'>
-                            Revenue Trend (Last 7 Days)
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className='flex items-center justify-center h-[300px] text-gray-500'>
-                            <div className='text-center'>
-                              <p className='text-lg font-medium'>
-                                No Revenue Data
-                              </p>
-                              <p className='text-sm'>
-                                Revenue trends will appear here once orders are
-                                placed
-                              </p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card className='bg-blue-50'>
-                        <CardHeader>
-                          <CardTitle className='text-gray-800'>
-                            Order Status Distribution
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <ResponsiveContainer width='100%' height={300}>
-                            <PieChart>
-                              <Pie
-                                data={statusData}
-                                cx='50%'
-                                cy='50%'
-                                labelLine={false}
-                                label={({ name, percent }) =>
-                                  `${name} ${(percent * 100).toFixed(0)}%`
-                                }
-                                outerRadius={80}
-                                fill='#8884d8'
-                                dataKey='value'>
-                                {statusData.map((entry, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={COLORS[index % COLORS.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <Card className='bg-blue-50'>
-                      <CardHeader>
-                        <CardTitle className='text-gray-800'>
-                          Top Performing Items
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className='space-y-4'>
-                          {popularItems.length > 0 ? (
-                            popularItems.map((item, index) => (
-                              <div
-                                key={index}
-                                className='flex items-center justify-between p-4 border rounded-lg'>
-                                <div className='flex items-center space-x-4'>
-                                  <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center'>
-                                    <span className='text-sm font-semibold text-blue-600'>
-                                      {index + 1}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <h4 className='font-semibold text-gray-800'>
-                                      {item.name}
-                                    </h4>
-                                    <p className='text-sm text-gray-600'>
-                                      {item.orders} orders
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className='text-right'>
-                                  <p className='font-semibold text-gray-800'>
-                                    ₹{item.revenue.toFixed(2)}
-                                  </p>
-                                  <p className='text-sm text-gray-600'>
-                                    Revenue
-                                  </p>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className='text-center py-8 text-gray-500'>
-                              <p>No order data available yet</p>
-                              <p className='text-sm'>
-                                Orders will appear here once customers start
-                                ordering
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </>
-                );
-              })()}
-            </div>
-          )}
+          {activeTab === 'analytics' && <AnalyticsTab orders={orders} />}
 
           {/* Profile Tab */}
           {activeTab === 'profile' && (
-            <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-12 border border-gray-100'>
-              <h2 className='text-2xl font-bold text-gray-800 mb-2'>
-                Vendor Profile
-              </h2>
-              <Separator className='mb-8' />
-              {/* Personal Details Section */}
-              <div className='mb-10'>
-                <h3 className='text-xl font-semibold text-gray-700 mb-4'>
-                  Personal Details
-                </h3>
-                <form
-                  className='space-y-6'
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    setPersonalSubmitting(true);
-                    await new Promise((res) => setTimeout(res, 1200));
-                    setPersonalSuccess(true);
-                    setTimeout(() => setPersonalSuccess(false), 2000);
-                    setPersonalSubmitting(false);
-                  }}>
-                  <div className='flex items-center gap-8'>
-                    <div className='relative'>
-                      <img
-                        src={
-                          profilePicPreview ||
-                          personalData.profilePic ||
-                          '/placeholder-user.jpg'
-                        }
-                        alt='Profile'
-                        className='w-24 h-24 rounded-full object-cover border border-gray-300'
-                      />
-                      <label className='absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 cursor-pointer hover:bg-blue-700'>
-                        <input
-                          type='file'
-                          accept='image/*'
-                          className='hidden'
-                          onChange={handleProfilePicUpload}
-                        />
-                        <Upload className='w-4 h-4' />
-                      </label>
-                    </div>
-                    <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-4'>
-                      <div>
-                        <label className='block font-medium mb-1'>
-                          Vendor Name
-                        </label>
-                        <input
-                          type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                          placeholder='Enter vendor/canteen name'
-                          value={personalData.vendorName}
-                          onChange={(e) =>
-                            setPersonalData({
-                              ...personalData,
-                              vendorName: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className='block font-medium mb-1'>
-                          Contact Person
-                        </label>
-                        <input
-                          type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                          placeholder='Enter contact person name'
-                          value={personalData.contactPerson}
-                          onChange={(e) =>
-                            setPersonalData({
-                              ...personalData,
-                              contactPerson: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className='block font-medium mb-1'>
-                          Mobile Number
-                        </label>
-                        <input
-                          type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                          placeholder='Enter mobile number'
-                          value={personalData.mobileNumber}
-                          onChange={(e) =>
-                            setPersonalData({
-                              ...personalData,
-                              mobileNumber: e.target.value
-                                .replace(/[^0-9]/g, '')
-                                .slice(0, 10),
-                            })
-                          }
-                          maxLength={10}
-                        />
-                      </div>
-                      <div>
-                        <label className='block font-medium mb-1'>Email</label>
-                        <input
-                          type='email'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                          placeholder='Enter email address'
-                          value={personalData.email}
-                          onChange={(e) =>
-                            setPersonalData({
-                              ...personalData,
-                              email: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label className='block font-medium mb-1'>Address</label>
-                    <textarea
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                      placeholder='Enter address'
-                      value={personalData.address}
-                      onChange={(e) =>
-                        setPersonalData({
-                          ...personalData,
-                          address: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <button
-                    type='submit'
-                    className='w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed mt-2'
-                    disabled={personalSubmitting}>
-                    {personalSubmitting ? 'Saving...' : 'Save Personal Details'}
-                  </button>
-                  {personalSuccess && (
-                    <div className='text-green-600 text-center mt-2'>
-                      Personal details updated successfully!
-                    </div>
-                  )}
-                </form>
-              </div>
-              <Separator className='mb-8' />
-              {/* Bank/Payout Details Section */}
-              <div>
-                <h3 className='text-xl font-semibold text-gray-700 mb-4'>
-                  Bank / Payout Details
-                </h3>
-                <form
-                  className='space-y-6'
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    setProfileSubmitting(true);
-                    await new Promise((res) => setTimeout(res, 1200));
-                    setProfileSuccess(true);
-                    setTimeout(() => setProfileSuccess(false), 2000);
-                    setProfileSubmitting(false);
-                  }}>
-                  <div>
-                    <label className='block font-medium mb-1'>
-                      PAN Card or GST No.{' '}
-                      <span className='text-red-500'>*</span>
-                    </label>
-                    <input
-                      type='text'
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                      placeholder='Enter PAN or GST number'
-                      value={profileData.panOrGst}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          panOrGst: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div>
-                      <label className='block font-medium mb-1'>
-                        Account Number
-                      </label>
-                      <input
-                        type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                        placeholder='Enter account number'
-                        value={profileData.accountNo}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            accountNo: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className='block font-medium mb-1'>
-                        Bank Name
-                      </label>
-                      <input
-                        type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                        placeholder='Enter bank name'
-                        value={profileData.bankName}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            bankName: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div>
-                      <label className='block font-medium mb-1'>
-                        IFSC Code
-                      </label>
-                      <input
-                        type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                        placeholder='Enter IFSC code'
-                        value={profileData.ifsc}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            ifsc: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className='block font-medium mb-1'>Branch</label>
-                      <input
-                        type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                        placeholder='Enter branch name'
-                        value={profileData.branch}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            branch: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div className='flex items-center my-2'>
-                    <span className='text-gray-500 mx-2'>OR</span>
-                  </div>
-                  <div>
-                    <label className='block font-medium mb-1'>UPI ID</label>
-                    <input
-                      type='text'
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
-                      placeholder='Enter UPI ID (if applicable)'
-                      value={profileData.upiId}
-                      onChange={(e) =>
-                        setProfileData({
-                          ...profileData,
-                          upiId: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <button
-                    type='submit'
-                    className='w-full bg-blue-600 text-white py-2 rounded font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed mt-2'
-                    disabled={profileSubmitting}>
-                    {profileSubmitting ? 'Saving...' : 'Save Bank Details'}
-                  </button>
-                  {profileSuccess && (
-                    <div className='text-green-600 text-center mt-2'>
-                      Bank details updated successfully!
-                    </div>
-                  )}
-                </form>
-              </div>
-            </div>
+            <ProfileTab
+              personalData={personalData}
+              setPersonalData={setPersonalData}
+              profileData={profileData}
+              setProfileData={setProfileData}
+              personalSubmitting={personalSubmitting}
+              setPersonalSubmitting={setPersonalSubmitting}
+              personalSuccess={personalSuccess}
+              setPersonalSuccess={setPersonalSuccess}
+              profileSubmitting={profileSubmitting}
+              setProfileSubmitting={setProfileSubmitting}
+              profileSuccess={profileSuccess}
+              setProfileSuccess={setProfileSuccess}
+              profilePicPreview={profilePicPreview}
+              handleProfilePicUpload={handleProfilePicUpload}
+            />
+          )}
+
+          {/* Payouts Tab */}
+          {activeTab === 'payouts' && (
+            <PayoutsTab
+              canteenStats={canteenStats}
+              orders={orders}
+              onRefresh={() => canteenId && fetchData(canteenId)}
+              canteenId={canteenId}
+            />
           )}
         </div>
       </div>
 
-      {/* Edit Item Dialog */}
-      <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
-        <DialogContent className='max-w-md bg-white border border-gray-200 text-black'>
-          <DialogHeader>
-            <DialogTitle className='text-black'>Edit Menu Item</DialogTitle>
-            <DialogDescription className='text-black'>
-              Update the details of your menu item.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className='space-y-4 text-black'>
-            <div>
-              <Label htmlFor='edit-name' className='text-black'>
-                Item Name
-              </Label>
-              <Input
-                id='edit-name'
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-                className='bg-white text-black placeholder:text-black'
-              />
-            </div>
-            <div>
-              <Label htmlFor='edit-price' className='text-black'>
-                Price (₹)
-              </Label>
-              <Input
-                id='edit-price'
-                type='number'
-                step='0.01'
-                value={formData.price}
-                onChange={(e) =>
-                  setFormData({ ...formData, price: e.target.value })
-                }
-                required
-                className='bg-white text-black placeholder:text-black'
-              />
-            </div>
-            <div>
-              <Label htmlFor='edit-description' className='text-black'>
-                Description
-              </Label>
-              <Textarea
-                id='edit-description'
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className='bg-white text-black placeholder:text-black'
-              />
-            </div>
-            <div>
-              <Label htmlFor='edit-category' className='text-black'>
-                Category
-              </Label>
-              <Select
-                value={formData.category}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, category: value })
-                }>
-                <SelectTrigger className='bg-white text-black'>
-                  <SelectValue
-                    placeholder='Select category'
-                    className='text-black'
-                  />
-                </SelectTrigger>
-                <SelectContent className='bg-white text-black'>
-                  <SelectItem value='appetizers' className='text-black'>
-                    Appetizers
-                  </SelectItem>
-                  <SelectItem value='main-course' className='text-black'>
-                    Main Course
-                  </SelectItem>
-                  <SelectItem value='desserts' className='text-black'>
-                    Desserts
-                  </SelectItem>
-                  <SelectItem value='beverages' className='text-black'>
-                    Beverages
-                  </SelectItem>
-                  <SelectItem value='snacks' className='text-black'>
-                    Snacks
-                  </SelectItem>
-                  <SelectItem value='salads' className='text-black'>
-                    Salads
-                  </SelectItem>
-                  <SelectItem value='soups' className='text-black'>
-                    Soups
-                  </SelectItem>
-                  <SelectItem value='breads' className='text-black'>
-                    Breads
-                  </SelectItem>
-                  <SelectItem value='rice' className='text-black'>
-                    Rice
-                  </SelectItem>
-                  <SelectItem value='others' className='text-black'>
-                    Others
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor='edit-image' className='text-black'>
-                Image
-              </Label>
-              <Input
-                id='edit-image'
-                type='file'
-                accept='image/*'
-                onChange={handleImageUpload}
-                className='bg-white text-black placeholder:text-black'
-              />
-              {imagePreview && (
-                <div className='mt-2'>
-                  <img
-                    src={imagePreview}
-                    alt='Preview'
-                    className='w-20 h-20 object-cover rounded'
-                  />
-                </div>
-              )}
-            </div>
-            <div className='flex items-center space-x-4'>
-              <div className='flex items-center space-x-2'>
-                <input
-                  type='checkbox'
-                  id='edit-isVeg'
-                  checked={formData.isVeg}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isVeg: e.target.checked })
-                  }
-                  className='bg-white text-black'
-                />
-                <Label htmlFor='edit-isVeg' className='text-black'>
-                  Vegetarian
-                </Label>
-              </div>
-              <div className='flex items-center space-x-2'>
-                <input
-                  type='checkbox'
-                  id='edit-isNonVeg'
-                  checked={!formData.isVeg}
-                  onChange={(e) =>
-                    setFormData({ ...formData, isVeg: !e.target.checked })
-                  }
-                  className='bg-white text-black'
-                />
-                <Label htmlFor='edit-isNonVeg' className='text-black'>
-                  Non-Vegetarian
-                </Label>
-              </div>
-            </div>
-            <Button type='submit' className='w-full'>
-              Update Item
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Order Details Modal */}
-      {orderDetails && (
-        <Dialog
-          open={!!orderDetails}
-          onOpenChange={() => setOrderDetails(null)}>
-          <DialogContent className='max-w-lg bg-white border border-gray-200 text-black'>
-            <DialogHeader>
-              <DialogTitle className='text-black'>Order Details</DialogTitle>
-              <DialogDescription className='text-black'>
-                Detailed information for Order #{orderDetails._id.slice(-4)}
-              </DialogDescription>
-            </DialogHeader>
-            <div className='space-y-2'>
-              <div className='flex justify-between'>
-                <span className='font-semibold'>Order ID:</span>
-                <span>{orderDetails._id}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='font-semibold'>Status:</span>
-                <span>{orderDetails.status}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='font-semibold'>Total:</span>
-                <span>₹{orderDetails.total.toFixed(2)}</span>
-              </div>
-              <div className='flex justify-between'>
-                <span className='font-semibold'>Order Date:</span>
-                <span>{new Date(orderDetails.createdAt).toLocaleString()}</span>
-              </div>
-              <div className='font-semibold mt-2'>Customer Details</div>
-              <div>Name: {orderDetails.customerName || 'N/A'}</div>
-              <div>Phone: {orderDetails.customerPhone || 'N/A'}</div>
-              <div>Address: {orderDetails.customerAddress || 'N/A'}</div>
-              <div className='font-semibold mt-2'>Order Items</div>
-              <div className='space-y-1'>
-                {orderDetails.items.map((item: any, idx: any) => (
-                  <div key={idx} className='flex justify-between'>
-                    <span>
-                      {item.item.name} x {item.quantity}
-                    </span>
-                    <span>₹{(item.item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <Button
-              onClick={() => setOrderDetails(null)}
-              className='w-full mt-4'>
-              Close
-            </Button>
-          </DialogContent>
-        </Dialog>
-      )}
+      <OrderDetailsDialog
+        orderDetails={orderDetails}
+        setOrderDetails={setOrderDetails}
+      />
     </div>
   );
 }

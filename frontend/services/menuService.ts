@@ -19,7 +19,6 @@ export interface CreateMenuItemRequest {
   category: string;
   canteen: string;
   isVeg?: boolean;
-  image?: string;
 }
 
 export interface UpdateMenuItemRequest {
@@ -28,7 +27,6 @@ export interface UpdateMenuItemRequest {
   description?: string;
   category?: string;
   isVeg?: boolean;
-  image?: string;
   available?: boolean;
 }
 
@@ -47,11 +45,23 @@ export async function getMenuByCanteenId(
 export async function createMenuItem(
   data: CreateMenuItemRequest
 ): Promise<MenuItem> {
-  const res = await axios.post('/api/v1/menu', data, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem('token')}`,
+  const res = await axios.post(
+    '/api/v1/menu',
+    {
+      name: data.name,
+      price: data.price,
+      description: data.description || '',
+      category: data.category,
+      canteen: data.canteen,
+      isVeg: data.isVeg || false,
     },
-  });
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
   return res.data.data;
 }
 
@@ -59,9 +69,18 @@ export async function updateMenuItem(
   id: string,
   data: UpdateMenuItemRequest
 ): Promise<MenuItem> {
-  const res = await axios.put(`/api/v1/menu/${id}`, data, {
+  const payload: any = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.price !== undefined) payload.price = data.price;
+  if (data.description !== undefined) payload.description = data.description;
+  if (data.category !== undefined) payload.category = data.category;
+  if (data.isVeg !== undefined) payload.isVeg = data.isVeg;
+  if (data.available !== undefined) payload.available = data.available;
+
+  const res = await axios.put(`/api/v1/menu/${id}`, payload, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem('token')}`,
+      'Content-Type': 'application/json',
     },
   });
   return res.data.data;
