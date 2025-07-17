@@ -40,6 +40,7 @@ export async function getMenuByCanteenId(
       Authorization: `Bearer ${localStorage.getItem('token')}`,
     },
   });
+  console.log(res);
   return res.data.data;
 }
 

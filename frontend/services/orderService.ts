@@ -78,8 +78,10 @@ export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
         Authorization: `Bearer ${token}`,
       },
     });
+    
     return response.data;
   } catch (error) {
+    console.log(error)
     handleAuthError(error);
     return Promise.reject(error);
   }
@@ -109,7 +111,7 @@ export const getOrderById = async (
   token: string
 ): Promise<{ success: boolean; data: Order }> => {
   try {
-    const response = await api.get<{ success: boolean; data: Order }>(`/api/orders/${orderId}`, {
+    const response = await api.get<{ success: boolean; data: Order }>(`/api/v1/order/${orderId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

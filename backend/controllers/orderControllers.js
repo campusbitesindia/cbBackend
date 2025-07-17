@@ -7,19 +7,14 @@ const SendNotification=require("../utils/sendNotification")
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
 const Counter=require("../models/CounterSchema")
-const webPush = require("../config/webPush").webPush;
-const PushSubscription = require("../models/PushSubscription");
-
-
-
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:_items,pickUpTime}=req.body; 
+        const {items:Items,pickUpTime}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        const Items=JSON.parse(_items); //converting _items to an Json array;
+        // const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
@@ -183,7 +178,7 @@ exports.UpdateOrderStatus = async (req, res) => {
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
         order.status = "cancelled";
 
-         await SendNotification(order.student,"Order Status Updated","Your order has been cancelled and penaly applied for next order")
+         await SendNotification(order.student._id,"Order Status Updated","Your order has been cancelled and penaly applied for next order")
 
 
         await order.save();
@@ -198,7 +193,7 @@ exports.UpdateOrderStatus = async (req, res) => {
         await order.save();
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
         
-         await SendNotification(order.student,"Order Status Updated","Your order has been cancelled")
+         await SendNotification(order.student._id,"Order Status Updated","Your order has been cancelled")
         return res.status(200).json({
           success: true,
           message: "Order cancelled with no penalty",
@@ -225,7 +220,7 @@ exports.UpdateOrderStatus = async (req, res) => {
 
 
     // After updating order status, notify student
-    await SendNotification(order.student,"Order Status Changes",`Your Order is ${status}`)
+    await SendNotification(order.student._id,"Order Status Changes",`Your Order is ${status}`)
 
     return res.status(200).json({
       success: true,
