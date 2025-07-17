@@ -5,12 +5,10 @@ import {
   Menu,
   ShoppingCart,
   BarChart3,
-  Settings,
   Plus,
   Edit,
   Trash2,
   Upload,
-  Eye,
   Clock,
   CheckCircle,
   XCircle,
@@ -68,7 +66,6 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
-  getMenuByCanteenId,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
@@ -77,15 +74,19 @@ import {
 import {
   getCanteenOrders,
   getCanteenStats,
-  updateCanteenOrderStatus,
   CanteenStats,
   getCanteenByOwner,
 } from '@/services/canteenOrderService';
 import { Order } from '@/types';
-import { uploadImage, validateImage } from '@/services/imageService';
+import {
+  uploadImage,
+  validateImage,
+  createImagePreview,
+} from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
 import { useNotificationToast } from '@/hooks/use-notification';
+import axios from 'axios';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -95,6 +96,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [canteenStats, setCanteenStats] = useState<CanteenStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [menuLoading, setMenuLoading] = useState(false);
   const [isAddItemOpen, setIsAddItemOpen] = useState(false);
   const [isEditItemOpen, setIsEditItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -166,43 +168,199 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    const fetchCanteen = async () => {
-      if (user?.role === 'canteen') {
-        const canteen = await getCanteenByOwner(user.id);
-        setCanteenId(canteen?._id || null);
-      }
-    };
-    fetchCanteen();
-  }, [user]);
+    console.log('useEffect triggered:', {
+      isAuthenticated,
+      user: user?.id,
+      activeTab,
+    });
+    if (isAuthenticated && user) {
+      console.log('Starting fetchCanteenData...');
+      fetchCanteenData();
+    } else {
+      console.log('Not authenticated or no user, setting loading to false');
+      setLoading(false);
+    }
+  }, [activeTab, isAuthenticated, user]);
 
+  // Additional useEffect to refetch data when canteenId changes
   useEffect(() => {
-    if (canteenId) {
-        fetchData();
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    console.log('canteenId changed:', canteenId);
+    if (canteenId && isAuthenticated && user) {
+      console.log('Fetching data due to canteenId change...');
+      fetchData(canteenId);
+    }
   }, [canteenId]);
 
-  console.log(user, 'UserDetails');
-  const fetchData = async () => {
+  // Fetch canteen data associated with the current user
+  const fetchCanteenData = async () => {
     try {
-      setLoading(true);
-      if (!isAuthenticated || !user || user?.role !== 'canteen' || !canteenId) {
+      console.log('fetchCanteenData called for user:', user?.id);
+
+      if (!user?.id) {
+        console.error('No user ID available');
+        setLoading(false); // Add this line to stop loading
         toast({
           title: 'Error',
-          description: 'You must be logged in as a canteen user',
+          description: 'User session invalid. Please login again.',
           variant: 'destructive',
         });
         return;
       }
+
+      console.log('Fetching canteen data for user:', user.id);
+      const canteenData = await getCanteenByOwner(user.id);
+      console.log('Canteen data received:', canteenData);
+
+      if (canteenData && canteenData._id) {
+        const dynamicCanteenId = canteenData._id;
+        console.log('Setting canteenId to:', dynamicCanteenId);
+        setCanteenId(dynamicCanteenId);
+
+        // Don't call fetchData here since the useEffect will handle it
+        console.log('Canteen ID set, useEffect will trigger data fetch');
+      } else {
+        console.error('No canteen data received:', canteenData);
+        setLoading(false); // Add this line to stop loading
+        toast({
+          title: 'Error',
+          description:
+            'No canteen associated with your account. Please contact support.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching canteen data:', error);
+      setLoading(false); // Add this line to stop loading
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch canteen information',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
+  const fetchData = async (currentCanteenId?: string) => {
+    try {
+      setLoading(true);
+      if (!isAuthenticated || !user) {
+        setLoading(false);
+        toast({
+          title: 'Error',
+          description: 'You must be logged in to access this feature',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Temporarily allow any authenticated user for testing (role check removed)
+      // if (user?.role !== 'canteen') {
+      //   setLoading(false);
+      //   toast({
+      //     title: 'Error',
+      //     description: 'You must be logged in as a canteen user',
+      //     variant: 'destructive',
+      //   });
+      //   return;
+      // }
+
+      // Use the passed canteenId parameter or fallback to state canteenId
+      const canteenIdToUse = currentCanteenId || canteenId;
+
+      console.log('fetchData called with:', {
+        currentCanteenId,
+        stateCanteenId: canteenId,
+        canteenIdToUse,
+        userRole: user?.role,
+        userId: user?.id,
+      });
+
+      if (!canteenIdToUse) {
+        console.error('No canteen ID available for fetching data');
+        setLoading(false);
+        toast({
+          title: 'Error',
+          description: 'Canteen ID not found. Please refresh the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const token = localStorage.getItem('token') || '';
-      const [menuData, ordersData, statsData] = await Promise.all([
-        getMenuByCanteenId(canteenId),
-        getCanteenOrders(canteenId, token),
-        getCanteenStats(canteenId, token),
-      ]);
-      setMenuItems(menuData || []);
-      setOrders(ordersData.data || []);
-      setCanteenStats(statsData.data || null);
+
+      // Fetch menu items using dynamic canteenId
+      try {
+        setMenuLoading(true);
+        console.log(`Fetching menu items for canteen: ${canteenIdToUse}`);
+        const menuData = await axios.get(
+          `http://localhost:8080/api/v1/menu/${canteenIdToUse}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        console.log('Menu API response:', menuData.data);
+
+        // Handle different response structures
+        let menuItemsArray = [];
+        if (Array.isArray(menuData.data)) {
+          menuItemsArray = menuData.data;
+        } else if (menuData.data && Array.isArray(menuData.data.data)) {
+          menuItemsArray = menuData.data.data;
+        } else if (menuData.data && Array.isArray(menuData.data.items)) {
+          menuItemsArray = menuData.data.items;
+        } else {
+          console.warn('Unexpected menu data structure:', menuData.data);
+          menuItemsArray = [];
+        }
+
+        console.log(
+          `Setting ${menuItemsArray.length} menu items:`,
+          menuItemsArray
+        );
+        setMenuItems(menuItemsArray);
+      } catch (error) {
+        console.error('Error fetching menu data:', error);
+        setMenuItems([]); // Clear menu items on error
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch menu items',
+          variant: 'destructive',
+        });
+      } finally {
+        setMenuLoading(false);
+      }
+
+      // Fetch orders using dynamic canteenId
+      try {
+        const ordersData = await getCanteenOrders(canteenIdToUse, token);
+        const ordersToSet = Array.isArray(ordersData?.data)
+          ? ordersData.data
+          : [];
+        setOrders(ordersToSet);
+      } catch (error) {
+        console.error('Error fetching orders data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch orders',
+          variant: 'destructive',
+        });
+      }
+
+      // Fetch statistics using dynamic canteenId
+      try {
+        const statsData = await getCanteenStats(canteenIdToUse, token);
+        const statsToSet = statsData?.data || null;
+        setCanteenStats(statsToSet);
+      } catch (error) {
+        console.error('Error fetching stats data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch statistics',
+          variant: 'destructive',
+        });
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -215,33 +373,97 @@ export default function Dashboard() {
     }
   };
 
+  const [imageUploading, setImageUploading] = useState(false);
+
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (file) {
       try {
+        setImageUploading(true);
+
+        // Validate the image first
         validateImage(file);
         setSelectedImage(file);
-        // Use a placeholder image URL instead of uploading
-        const placeholderUrl = '/placeholder.svg';
-        setImagePreview(placeholderUrl);
-        setFormData({ ...formData, image: placeholderUrl });
-      } catch (error) {
+
+        // Create a preview URL for immediate display
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
+
+        try {
+          // Attempt to upload the image to the server
+          const uploadResult = await uploadImage(file);
+
+          // Update form data with the uploaded image URL
+          setFormData({ ...formData, image: uploadResult.url });
+
+          toast({
+            title: 'Success',
+            description: 'Image uploaded successfully!',
+          });
+        } catch (uploadError) {
+          console.warn('Image upload failed, using fallback:', uploadError);
+
+          // If upload fails, create a data URL as fallback
+          try {
+            const dataUrl = await createImagePreview(file);
+            setFormData({ ...formData, image: dataUrl });
+
+            toast({
+              title: 'Upload Failed',
+              description:
+                'Using local image preview. Image may not be saved permanently.',
+              variant: 'destructive',
+            });
+          } catch (previewError) {
+            // If both upload and preview fail, use placeholder
+            setFormData({ ...formData, image: '/placeholder.svg' });
+
+            toast({
+              title: 'Error',
+              description:
+                'Failed to process image. Using placeholder instead.',
+              variant: 'destructive',
+            });
+          }
+        }
+      } catch (validationError) {
+        console.error('Image validation error:', validationError);
+        setSelectedImage(null);
+        setImagePreview('');
+        setFormData({ ...formData, image: '' });
+
         toast({
-          title: 'Error',
+          title: 'Invalid Image',
           description:
-            error instanceof Error ? error.message : 'Failed to upload image',
+            validationError instanceof Error
+              ? validationError.message
+              : 'Please select a valid image file',
           variant: 'destructive',
         });
+      } finally {
+        setImageUploading(false);
       }
     }
   };
 
+  // Handle form submission for creating/updating menu items using dynamic canteenId
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent submission while image is uploading
+    if (imageUploading) {
+      toast({
+        title: 'Please wait',
+        description: 'Image is still uploading. Please wait a moment.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      if (!isAuthenticated || !user || !canteenId) {
+      if (!isAuthenticated || !user) {
         toast({
           title: 'Error',
           description: 'You must be logged in to access this feature',
@@ -249,30 +471,80 @@ export default function Dashboard() {
         });
         return;
       }
+
+      // Ensure canteenId is available before proceeding
+      if (!canteenId) {
+        console.error('No canteenId available for form submission');
+        toast({
+          title: 'Error',
+          description: 'Canteen ID not found. Please refresh the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      console.log('Submitting menu item with canteenId:', canteenId);
+
+      // Use the image URL from formData.image (could be uploaded URL, data URL, or placeholder)
+      const imageUrl = formData.image || '/placeholder.svg';
+
+      // Log image source type for debugging
+      if (imageUrl.startsWith('data:')) {
+        console.log('Using local image data URL (upload may have failed)');
+      } else if (imageUrl.startsWith('http')) {
+        console.log('Using uploaded image URL');
+      } else {
+        console.log('Using placeholder image');
+      }
+
+      // Create menu item data with dynamic canteenId
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
         description: formData.description,
         category: formData.category,
-        canteen: canteenId,
+        canteen: canteenId, // Using dynamic canteenId
         isVeg: formData.isVeg,
-        image: imagePreview || formData.image,
+        image: imageUrl,
       };
+
+      console.log('Submitting item data:', itemData);
+
       if (editingItem) {
         await updateMenuItem(editingItem._id, itemData);
-        toast({ title: 'Success', description: 'Menu item updated successfully' });
+        console.log('Menu item updated successfully');
+        toast({
+          title: 'Success',
+          description: 'Menu item updated successfully',
+        });
       } else {
-        await createMenuItem(itemData);
-        toast({ title: 'Success', description: 'Menu item added successfully' });
+        const newItem = await createMenuItem(itemData);
+        console.log('New menu item created:', newItem);
+        toast({
+          title: 'Success',
+          description: 'Menu item added successfully',
+        });
       }
+
       setIsAddItemOpen(false);
       setIsEditItemOpen(false);
       setEditingItem(null);
       resetForm();
-      fetchData();
+
+      // Force refresh with the current canteenId
+      console.log('Refreshing menu data after form submission...');
+      if (canteenId) {
+        await fetchData(canteenId);
+      }
     } catch (error) {
       console.error('Error saving menu item:', error);
-      toast({ title: 'Error', description: 'Failed to save menu item', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: `Failed to save menu item: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }`,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -310,6 +582,11 @@ export default function Dashboard() {
   };
 
   const resetForm = () => {
+    // Clear any object URLs to prevent memory leaks
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
+
     setFormData({
       name: '',
       price: '',
@@ -320,6 +597,7 @@ export default function Dashboard() {
     });
     setSelectedImage(null);
     setImagePreview('');
+    setImageUploading(false);
   };
 
   const getStatusColor = (status: string) => {
@@ -365,6 +643,26 @@ export default function Dashboard() {
       // handle error (show toast, etc.)
     }
   };
+
+  // Debug: Add a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn(
+          'Dashboard loading timeout reached - setting loading to false'
+        );
+        setLoading(false);
+        toast({
+          title: 'Loading Timeout',
+          description:
+            'Dashboard took too long to load. Please refresh the page.',
+          variant: 'destructive',
+        });
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading, toast]);
 
   if (loading) {
     return (
@@ -412,6 +710,13 @@ export default function Dashboard() {
   // }
 
   // Filter items by search term (case-insensitive)
+  console.log('Current menuItems before filtering:', menuItems);
+  console.log('Current search filters:', {
+    searchTerm,
+    statusFilter,
+    categoryFilter,
+  });
+
   const filteredItems = menuItems.filter((item: MenuItem) => {
     // Search filter
     const matchesSearch = item.name
@@ -433,6 +738,8 @@ export default function Dashboard() {
     return matchesSearch && matchesStatus && matchesCategory;
   });
 
+  console.log('Filtered items for rendering:', filteredItems);
+
   const categories = Array.from(
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
@@ -444,9 +751,9 @@ export default function Dashboard() {
       {/* Sidebar */}
       <div className='w-64 h-screen bg-white border-r border-gray-200 flex flex-col overflow-y-auto shadow-lg px-0 py-0'>
         {/* Brand */}
-        <div className='px-8 py-8 border-b border-gray-100'></div>
+        <div className='px-8 py-3 '></div>
         {/* Overview Section */}
-        <div className='px-8 mt-6 mb-2'>
+        <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
             OVERVIEW
           </span>
@@ -463,7 +770,7 @@ export default function Dashboard() {
             <span>Dashboard</span>
           </button>
         </nav>
-        <Separator className='my-4' />
+        <Separator className='my-4 bg-gray-200' />
         {/* Management Section */}
         <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
@@ -502,7 +809,7 @@ export default function Dashboard() {
             <span>Analytics</span>
           </button>
         </nav>
-        <Separator className='my-4' />
+        <Separator className='my-4 bg-gray-200' />
         {/* Profile Section */}
         <div className='px-8 mb-2'>
           <span className='text-xs font-semibold text-gray-400 tracking-widest'>
@@ -519,6 +826,16 @@ export default function Dashboard() {
             onClick={() => setActiveTab('profile')}>
             <Users className='w-5 h-5' />
             <span>Profile</span>
+          </button>
+          <button
+            className={`flex items-center gap-3 px-4 py-2 rounded-lg ${
+              activeTab === 'payouts'
+                ? 'bg-blue-50 text-blue-600 font-semibold'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition'
+            }`}
+            onClick={() => setActiveTab('payouts')}>
+            <DollarSign className='w-5 h-5' />
+            <span>Payouts</span>
           </button>
           <button
             className='flex items-center gap-3 px-4 py-2 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600 transition mt-2'
@@ -549,7 +866,6 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className='flex-1 overflow-auto'>
-        {/* Header with profile and notifications */}
         <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
@@ -558,7 +874,7 @@ export default function Dashboard() {
                 <h2 className='text-3xl font-bold text-blue-900 mb-2'>
                   Campus Vendor Partner
                 </h2>
-                <Separator className='mb-4' />
+                <Separator className='mb-4 bg-gray-200' />
                 <h1 className='text-2xl font-bold text-gray-800 mb-1'>
                   Dashboard Overview
                 </h1>
@@ -567,7 +883,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Total Orders
@@ -576,13 +892,13 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className='text-2xl font-bold text-gray-800'>
-                      {canteenStats?.totalOrders || orders.length}
+                      {canteenStats?.totalOrders ?? 0}
                     </div>
                     <p className='text-xs text-gray-600'>All time orders</p>
                   </CardContent>
                 </Card>
 
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Revenue
@@ -591,18 +907,13 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className='text-2xl font-bold text-gray-800'>
-                      ₹
-                      {canteenStats?.totalRevenue ||
-                        orders.reduce(
-                          (sum: number, order: Order) => sum + order.total,
-                          0
-                        )}
+                      ₹{canteenStats?.totalRevenue ?? 0}
                     </div>
                     <p className='text-xs text-gray-600'>Total revenue</p>
                   </CardContent>
                 </Card>
 
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Menu Items
@@ -617,7 +928,7 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105'>
+                <Card className='bg-white shadow-md transition-transform duration-200 hover:shadow-lg hover:scale-105 border-gray-200'>
                   <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                     <CardTitle className='text-sm font-medium text-gray-600'>
                       Pending Orders
@@ -626,12 +937,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className='text-2xl font-bold text-gray-800'>
-                      {canteenStats?.pendingOrders ||
-                        orders.filter(
-                          (order: Order) =>
-                            order.status === 'placed' ||
-                            order.status === 'preparing'
-                        ).length}
+                      {canteenStats?.pendingOrders ?? 0}
                     </div>
                     <p className='text-xs text-gray-600'>Need attention</p>
                   </CardContent>
@@ -753,17 +1059,32 @@ export default function Dashboard() {
                           <Input
                             id='image'
                             type='file'
-                            accept='image/*'
+                            accept='image/jpeg,image/jpg,image/png,image/webp'
                             onChange={handleImageUpload}
                             className='bg-white text-black placeholder:text-black'
+                            disabled={imageUploading}
                           />
-                          {imagePreview && (
+                          <p className='text-xs text-gray-500 mt-1'>
+                            Supported formats: JPEG, PNG, WebP (max 5MB)
+                          </p>
+                          {imageUploading && (
+                            <div className='mt-2 flex items-center space-x-2 text-blue-600'>
+                              <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
+                              <span className='text-sm'>
+                                Processing image...
+                              </span>
+                            </div>
+                          )}
+                          {imagePreview && !imageUploading && (
                             <div className='mt-2'>
                               <img
                                 src={imagePreview}
                                 alt='Preview'
-                                className='w-20 h-20 object-cover rounded'
+                                className='w-20 h-20 object-cover rounded border border-gray-200'
                               />
+                              <p className='text-xs text-green-600 mt-1'>
+                                Image ready for upload!
+                              </p>
                             </div>
                           )}
                         </div>
@@ -783,22 +1104,26 @@ export default function Dashboard() {
                           />
                           <Label htmlFor='isVeg'>Vegetarian</Label>
                         </div> */}
-                        <Button type='submit' className='w-full'>
-                          Add Item
+                        <Button
+                          type='submit'
+                          className='w-full'
+                          disabled={imageUploading}>
+                          {imageUploading ? 'Uploading Image...' : 'Add Item'}
                         </Button>
                       </form>
                     </DialogContent>
                   </Dialog>
                   <Button
-                    onClick={fetchData}
+                    onClick={() => canteenId && fetchData(canteenId)}
                     className='bg-white text-black border border-gray-200 hover:border-gray-400 transition-colors flex items-center h-10'
-                    title='Refresh menu items'>
+                    title='Refresh menu items'
+                    disabled={!canteenId}>
                     <RefreshCw className='w-4 h-4 mr-1' />
                     Refresh
                   </Button>
                 </div>
               </div>
-              <Separator className='mb-6' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Search bar above menu items */}
               <div className='flex flex-col md:flex-row md:items-center md:space-x-4 mb-8 gap-4'>
                 {/* Search */}
@@ -871,66 +1196,144 @@ export default function Dashboard() {
               </div>
 
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
-                {filteredItems.map((item) => (
-                  <Card
-                    key={item._id}
-                    className='flex flex-col h-full bg-white border-2 border-white shadow-md rounded-xl transition-all duration-200 hover:shadow-xl hover:outline hover:outline-2 hover:outline-white'>
-                    <div className='relative bg-white rounded-t-xl'>
-                      <img
-                        src={item.image || '/placeholder.svg'}
-                        alt={item.name}
-                        className='w-full h-40 object-cover rounded-t-xl bg-white'
-                      />
-                      <span className='absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
-                        Active
-                      </span>
-                      {item.isVeg ? (
-                        <span className='absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center'>
-                          <Leaf className='w-3 h-3 mr-1' /> VEG
-                        </span>
-                      ) : (
-                        <span className='absolute top-2 right-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full flex items-center'>
-                          <Leaf className='w-3 h-3 mr-1 rotate-180' /> NON-VEG
-                        </span>
-                      )}
-                    </div>
-                    <CardContent className='flex-1 flex flex-col p-4 bg-white'>
-                      <h3 className='font-semibold text-gray-800'>
-                        {item.name}
+                {menuLoading ? (
+                  <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
+                    <div className='text-center'>
+                      <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
+                      <h3 className='text-lg font-semibold text-gray-700 mb-2'>
+                        Loading Menu Items...
                       </h3>
-                      <p className='text-xs text-gray-500 mb-2'>
-                        {item.description || 'No description available'}
+                      <p className='text-gray-500'>
+                        Please wait while we fetch your menu items.
                       </p>
-                      <div className='mb-2'>
-                        <span className='text-lg font-bold text-gray-800'>
-                          ₹{item.price}
+                    </div>
+                  </div>
+                ) : menuItems &&
+                  menuItems.length > 0 &&
+                  filteredItems.length > 0 ? (
+                  filteredItems.map((item) => (
+                    <Card
+                      key={item._id}
+                      className='flex flex-col h-full bg-white border-2 border-white shadow-md rounded-xl transition-all duration-200 hover:shadow-xl hover:outline hover:outline-2 hover:outline-white'>
+                      <div className='relative bg-white rounded-t-xl'>
+                        <img
+                          src={item.image || '/placeholder.svg'}
+                          alt={item.name}
+                          className='w-full h-40 object-cover rounded-t-xl bg-white'
+                        />
+                        <span className='absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full'>
+                          Active
                         </span>
-                        {/* If you want to show a strikethrough price, add here: */}
-                        {/* <span className='text-sm text-gray-400 line-through ml-2'>₹{item.originalPrice}</span> */}
+                        {item.isVeg ? (
+                          <span className='absolute top-2 right-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full flex items-center'>
+                            <Leaf className='w-3 h-3 mr-1' /> VEG
+                          </span>
+                        ) : (
+                          <span className='absolute top-2 right-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full flex items-center'>
+                            <Leaf className='w-3 h-3 mr-1 rotate-180' /> NON-VEG
+                          </span>
+                        )}
                       </div>
-                      <p className='text-xs text-gray-500 capitalize'>
-                        {item.category}
+                      <CardContent className='flex-1 flex flex-col p-4 bg-white'>
+                        <h3 className='font-semibold text-gray-800'>
+                          {item.name}
+                        </h3>
+                        <p className='text-xs text-gray-500 mb-2'>
+                          {item.description || 'No description available'}
+                        </p>
+                        <div className='mb-2'>
+                          <span className='text-lg font-bold text-gray-800'>
+                            ₹{item.price}
+                          </span>
+                          {/* If you want to show a strikethrough price, add here: */}
+                          {/* <span className='text-sm text-gray-400 line-through ml-2'>₹{item.originalPrice}</span> */}
+                        </div>
+                        <p className='text-xs text-gray-500 capitalize'>
+                          {item.category}
+                        </p>
+                        <div className='flex space-x-4 mt-auto'>
+                          <Button
+                            size='sm'
+                            variant='outline'
+                            className='bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 flex items-center px-4'
+                            onClick={() => handleEdit(item)}>
+                            <Edit className='w-4 h-4 mr-1' /> Edit
+                          </Button>
+                          <Button
+                            size='sm'
+                            variant='ghost'
+                            className='bg-red-50 text-red-700 border-none hover:bg-red-100 flex items-center px-4'
+                            onClick={() => handleDelete(item._id)}>
+                            <span className='w-2 h-2 bg-red-500 rounded-full mr-2 inline-block'></span>
+                            Deactivate
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className='col-span-full flex flex-col items-center justify-center py-16 px-4'>
+                    <div className='text-center max-w-md'>
+                      <Menu className='w-16 h-16 mx-auto mb-6 text-gray-300' />
+                      <h3 className='text-xl font-semibold text-gray-700 mb-2'>
+                        No Menu Items Found
+                      </h3>
+                      <p className='text-gray-500 mb-6'>
+                        {!menuItems || menuItems.length === 0
+                          ? "You haven't added any menu items yet. Start by adding your first menu item."
+                          : searchTerm ||
+                            statusFilter !== 'all' ||
+                            categoryFilter !== 'all'
+                          ? 'No items match your current filters. Try adjusting your search or filter criteria.'
+                          : 'No menu items available.'}
                       </p>
-                      <div className='flex space-x-4 mt-auto'>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          className='bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 flex items-center px-4'
-                          onClick={() => handleEdit(item)}>
-                          <Edit className='w-4 h-4 mr-1' /> Edit
-                        </Button>
-                        <Button
-                          size='sm'
-                          variant='ghost'
-                          className='bg-red-50 text-red-700 border-none hover:bg-red-100 flex items-center px-4'
-                          onClick={() => handleDelete(item._id)}>
-                          <span className='w-2 h-2 bg-red-500 rounded-full mr-2 inline-block'></span>
-                          Deactivate
-                        </Button>
+
+                      <div className='flex flex-col sm:flex-row gap-3 justify-center'>
+                        {!menuItems || menuItems.length === 0 ? (
+                          <>
+                            <Button
+                              onClick={() => {
+                                resetForm();
+                                setIsAddItemOpen(true);
+                              }}
+                              className='bg-blue-600 hover:bg-blue-700 text-white'>
+                              <Plus className='w-4 h-4 mr-2' />
+                              Add Your First Item
+                            </Button>
+                            <Button
+                              onClick={() => canteenId && fetchData(canteenId)}
+                              className='bg-green-600 hover:bg-green-700 text-white'
+                              disabled={!canteenId}>
+                              <RefreshCw className='w-4 h-4 mr-2' />
+                              Refresh Data
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant='outline'
+                              onClick={() => {
+                                setSearchTerm('');
+                                setStatusFilter('all');
+                                setCategoryFilter('all');
+                              }}
+                              className='border-gray-300 text-gray-700 hover:bg-gray-50'>
+                              <XCircle className='w-4 h-4 mr-2' />
+                              Clear Filters
+                            </Button>
+                            <Button
+                              onClick={() => canteenId && fetchData(canteenId)}
+                              className='bg-blue-600 hover:bg-blue-700 text-white'
+                              disabled={!canteenId}>
+                              <RefreshCw className='w-4 h-4 mr-2' />
+                              Refresh
+                            </Button>
+                          </>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -949,13 +1352,14 @@ export default function Dashboard() {
                 </div>
                 <Button
                   variant='outline'
-                  onClick={fetchData}
-                  className='bg-white text-black border border-gray-200 hover:border-gray-400 flex items-center space-x-2'>
+                  onClick={() => canteenId && fetchData(canteenId)}
+                  className='bg-white text-black border border-gray-200 hover:border-gray-400 flex items-center space-x-2'
+                  disabled={!canteenId}>
                   <RefreshCw className='w-4 h-4' />
                   <span>Refresh</span>
                 </Button>
               </div>
-              <Separator className='mb-6' />
+              <Separator className='mb-6 bg-gray-200' />
               <div className='space-y-8'>
                 {orders.map((order: any) => (
                   <div
@@ -1077,7 +1481,7 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
-              <Separator className='my-10' />
+              {/* <Separator className='my-10' /> */}
               <div className='mt-10'>
                 <span className='text-xs font-semibold text-gray-400 tracking-widest'>
                   RECENT ORDERS
@@ -1146,7 +1550,7 @@ export default function Dashboard() {
                   Detailed insights about your business performance
                 </p>
               </div>
-              <Separator className='mb-6' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Calculate real analytics data */}
               {(() => {
                 // Calculate order status distribution
@@ -1207,7 +1611,7 @@ export default function Dashboard() {
                 return (
                   <>
                     <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-                      <Card className='bg-blue-50'>
+                      <Card className='bg-blue-50 border border-gray-200 transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                         <CardHeader>
                           <CardTitle className='text-gray-800'>
                             Revenue Trend (Last 7 Days)
@@ -1228,7 +1632,7 @@ export default function Dashboard() {
                         </CardContent>
                       </Card>
 
-                      <Card className='bg-blue-50'>
+                      <Card className='bg-blue-50 border border-gray-200 transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                         <CardHeader>
                           <CardTitle className='text-gray-800'>
                             Order Status Distribution
@@ -1262,7 +1666,7 @@ export default function Dashboard() {
                       </Card>
                     </div>
 
-                    <Card className='bg-blue-50'>
+                    <Card className='bg-blue-50 border border-gray-200 transition-transform duration-200 hover:shadow-lg hover:scale-105'>
                       <CardHeader>
                         <CardTitle className='text-gray-800'>
                           Top Performing Items
@@ -1320,24 +1724,22 @@ export default function Dashboard() {
 
           {/* Profile Tab */}
           {activeTab === 'profile' && (
-            <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-12 border border-gray-100'>
+            <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-6 border border-gray-100'>
               <h2 className='text-2xl font-bold text-gray-800 mb-2'>
                 Vendor Profile
               </h2>
-              <Separator className='mb-8' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Personal Details Section */}
-              <div className='mb-10'>
+              <div className='mb-6'>
                 <h3 className='text-xl font-semibold text-gray-700 mb-4'>
                   Personal Details
                 </h3>
                 <form
-                  className='space-y-6'
+                  className='space-y-4'
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setPersonalSubmitting(true);
-                    await new Promise((res) => setTimeout(res, 1200));
                     setPersonalSuccess(true);
-                    setTimeout(() => setPersonalSuccess(false), 2000);
                     setPersonalSubmitting(false);
                   }}>
                   <div className='flex items-center gap-8'>
@@ -1363,12 +1765,12 @@ export default function Dashboard() {
                     </div>
                     <div className='flex-1 grid grid-cols-1 md:grid-cols-2 gap-4'>
                       <div>
-                        <label className='block font-medium mb-1'>
+                        <label className='block font-medium mb-1 text-black'>
                           Vendor Name
                         </label>
                         <input
                           type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter vendor/canteen name'
                           value={personalData.vendorName}
                           onChange={(e) =>
@@ -1380,12 +1782,12 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className='block font-medium mb-1'>
+                        <label className='block font-medium mb-1 text-black'>
                           Contact Person
                         </label>
                         <input
                           type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter contact person name'
                           value={personalData.contactPerson}
                           onChange={(e) =>
@@ -1397,12 +1799,12 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className='block font-medium mb-1'>
+                        <label className='block font-medium mb-1 text-black'>
                           Mobile Number
                         </label>
                         <input
                           type='text'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter mobile number'
                           value={personalData.mobileNumber}
                           onChange={(e) =>
@@ -1417,10 +1819,12 @@ export default function Dashboard() {
                         />
                       </div>
                       <div>
-                        <label className='block font-medium mb-1'>Email</label>
+                        <label className='block font-medium mb-1 text-black'>
+                          Email
+                        </label>
                         <input
                           type='email'
-                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                          className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                           placeholder='Enter email address'
                           value={personalData.email}
                           onChange={(e) =>
@@ -1434,9 +1838,11 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div>
-                    <label className='block font-medium mb-1'>Address</label>
+                    <label className='block font-medium mb-1 text-black'>
+                      Address
+                    </label>
                     <textarea
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                       placeholder='Enter address'
                       value={personalData.address}
                       onChange={(e) =>
@@ -1460,30 +1866,28 @@ export default function Dashboard() {
                   )}
                 </form>
               </div>
-              <Separator className='mb-8' />
+              <Separator className='mb-6 bg-gray-200' />
               {/* Bank/Payout Details Section */}
               <div>
                 <h3 className='text-xl font-semibold text-gray-700 mb-4'>
                   Bank / Payout Details
                 </h3>
                 <form
-                  className='space-y-6'
+                  className='space-y-4'
                   onSubmit={async (e) => {
                     e.preventDefault();
                     setProfileSubmitting(true);
-                    await new Promise((res) => setTimeout(res, 1200));
                     setProfileSuccess(true);
-                    setTimeout(() => setProfileSuccess(false), 2000);
                     setProfileSubmitting(false);
                   }}>
                   <div>
-                    <label className='block font-medium mb-1'>
+                    <label className='block font-medium mb-1 text-black'>
                       PAN Card or GST No.{' '}
                       <span className='text-red-500'>*</span>
                     </label>
                     <input
                       type='text'
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                       placeholder='Enter PAN or GST number'
                       value={profileData.panOrGst}
                       onChange={(e) =>
@@ -1502,7 +1906,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter account number'
                         value={profileData.accountNo}
                         onChange={(e) =>
@@ -1519,7 +1923,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter bank name'
                         value={profileData.bankName}
                         onChange={(e) =>
@@ -1538,7 +1942,7 @@ export default function Dashboard() {
                       </label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter IFSC code'
                         value={profileData.ifsc}
                         onChange={(e) =>
@@ -1553,7 +1957,7 @@ export default function Dashboard() {
                       <label className='block font-medium mb-1'>Branch</label>
                       <input
                         type='text'
-                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                        className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                         placeholder='Enter branch name'
                         value={profileData.branch}
                         onChange={(e) =>
@@ -1569,10 +1973,12 @@ export default function Dashboard() {
                     <span className='text-gray-500 mx-2'>OR</span>
                   </div>
                   <div>
-                    <label className='block font-medium mb-1'>UPI ID</label>
+                    <label className='block font-medium mb-1 text-black'>
+                      UPI ID
+                    </label>
                     <input
                       type='text'
-                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100'
+                      className='w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 bg-white text-black'
                       placeholder='Enter UPI ID (if applicable)'
                       value={profileData.upiId}
                       onChange={(e) =>
@@ -1596,6 +2002,205 @@ export default function Dashboard() {
                   )}
                 </form>
               </div>
+            </div>
+          )}
+
+          {/* Payouts Tab */}
+          {activeTab === 'payouts' && (
+            <div className='space-y-10'>
+              <div className='mb-6'>
+                <h1 className='text-2xl font-bold text-gray-800 mb-1'>
+                  Payouts & Earnings
+                </h1>
+                <p className='text-gray-600'>
+                  Track your earnings and manage payout requests
+                </p>
+              </div>
+              <Separator className='mb-6 bg-gray-200' />
+
+              {/* Payout Summary Cards */}
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+                <Card className='bg-gradient-to-r from-green-50 to-green-100 border border-green-200 shadow-md'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium text-green-700'>
+                      Total Earnings
+                    </CardTitle>
+                    <TrendingUp className='h-4 w-4 text-green-600' />
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-bold text-green-800'>
+                      ₹{canteenStats?.totalRevenue || 0}
+                    </div>
+                    <p className='text-xs text-green-600'>All time earnings</p>
+                  </CardContent>
+                </Card>
+
+                <Card className='bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-md'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium text-blue-700'>
+                      Available Balance
+                    </CardTitle>
+                    <DollarSign className='h-4 w-4 text-blue-600' />
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-bold text-blue-800'>
+                      ₹{((canteenStats?.totalRevenue || 0) * 0.85).toFixed(0)}
+                    </div>
+                    <p className='text-xs text-blue-600'>Ready for payout</p>
+                  </CardContent>
+                </Card>
+
+                <Card className='bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 shadow-md'>
+                  <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                    <CardTitle className='text-sm font-medium text-orange-700'>
+                      Pending Payouts
+                    </CardTitle>
+                    <Clock className='h-4 w-4 text-orange-600' />
+                  </CardHeader>
+                  <CardContent>
+                    <div className='text-2xl font-bold text-orange-800'>₹0</div>
+                    <p className='text-xs text-orange-600'>Processing</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Quick Actions */}
+              <div className='flex flex-col sm:flex-row gap-4'>
+                <Button className='bg-green-600 hover:bg-green-700 text-white flex items-center'>
+                  <DollarSign className='w-4 h-4 mr-2' />
+                  Request Payout
+                </Button>
+                <Button
+                  variant='outline'
+                  onClick={() => canteenId && fetchData(canteenId)}
+                  className='border-gray-300 text-gray-700 hover:bg-gray-50'
+                  disabled={!canteenId}>
+                  <RefreshCw className='w-4 h-4 mr-2' />
+                  Refresh Balance
+                </Button>
+              </div>
+
+              {/* Payout History */}
+              <Card className='bg-white border border-gray-200 shadow-md'>
+                <CardHeader>
+                  <CardTitle className='text-gray-800'>
+                    Payout History
+                  </CardTitle>
+                  <CardDescription className='text-gray-600'>
+                    Your recent payout transactions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-4'>
+                    {/* Sample payout entries */}
+                    <div className='flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50'>
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center'>
+                          <CheckCircle className='w-5 h-5 text-green-600' />
+                        </div>
+                        <div>
+                          <h4 className='font-semibold text-gray-800'>
+                            Payout #1234
+                          </h4>
+                          <p className='text-sm text-gray-600'>
+                            Completed on Dec 15, 2024
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-semibold text-gray-800'>₹0</p>
+                        <p className='text-sm text-green-600'>Completed</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50'>
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center'>
+                          <Clock className='w-5 h-5 text-orange-600' />
+                        </div>
+                        <div>
+                          <h4 className='font-semibold text-gray-800'>
+                            Payout #1235
+                          </h4>
+                          <p className='text-sm text-gray-600'>
+                            Requested on Dec 18, 2024
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-semibold text-gray-800'>₹0</p>
+                        <p className='text-sm text-orange-600'>Processing</p>
+                      </div>
+                    </div>
+
+                    <div className='flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50'>
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center'>
+                          <CheckCircle className='w-5 h-5 text-green-600' />
+                        </div>
+                        <div>
+                          <h4 className='font-semibold text-gray-800'>
+                            Payout #1233
+                          </h4>
+                          <p className='text-sm text-gray-600'>
+                            Completed on Dec 10, 2024
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-semibold text-gray-800'>₹0</p>
+                        <p className='text-sm text-green-600'>Completed</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Empty state fallback */}
+                  {orders.length === 0 && (
+                    <div className='text-center py-8 text-gray-500'>
+                      <DollarSign className='w-12 h-12 mx-auto mb-4 text-gray-300' />
+                      <p className='text-lg font-medium'>No payouts yet</p>
+                      <p className='text-sm'>
+                        Your payout history will appear here once you start
+                        receiving payments
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Payout Information */}
+              <Card className='bg-blue-50 border border-blue-200 shadow-md'>
+                <CardHeader>
+                  <CardTitle className='text-blue-800 flex items-center'>
+                    <Bell className='w-5 h-5 mr-2' />
+                    Payout Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-3 text-blue-700'>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>
+                      Payouts are processed every Monday and Thursday
+                    </p>
+                  </div>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>Minimum payout amount is ₹500</p>
+                  </div>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>
+                      Platform fee of 15% is deducted from earnings
+                    </p>
+                  </div>
+                  <div className='flex items-start space-x-2'>
+                    <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
+                    <p className='text-sm'>
+                      Payments are made to your registered bank account
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
@@ -1710,17 +2315,30 @@ export default function Dashboard() {
               <Input
                 id='edit-image'
                 type='file'
-                accept='image/*'
+                accept='image/jpeg,image/jpg,image/png,image/webp'
                 onChange={handleImageUpload}
                 className='bg-white text-black placeholder:text-black'
+                disabled={imageUploading}
               />
-              {imagePreview && (
+              <p className='text-xs text-gray-500 mt-1'>
+                Supported formats: JPEG, PNG, WebP (max 5MB)
+              </p>
+              {imageUploading && (
+                <div className='mt-2 flex items-center space-x-2 text-blue-600'>
+                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
+                  <span className='text-sm'>Processing image...</span>
+                </div>
+              )}
+              {imagePreview && !imageUploading && (
                 <div className='mt-2'>
                   <img
                     src={imagePreview}
                     alt='Preview'
-                    className='w-20 h-20 object-cover rounded'
+                    className='w-20 h-20 object-cover rounded border border-gray-200'
                   />
+                  <p className='text-xs text-green-600 mt-1'>
+                    Image ready for upload!
+                  </p>
                 </div>
               )}
             </div>
@@ -1754,8 +2372,8 @@ export default function Dashboard() {
                 </Label>
               </div>
             </div>
-            <Button type='submit' className='w-full'>
-              Update Item
+            <Button type='submit' className='w-full' disabled={imageUploading}>
+              {imageUploading ? 'Uploading Image...' : 'Update Item'}
             </Button>
           </form>
         </DialogContent>
