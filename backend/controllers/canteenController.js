@@ -1,10 +1,10 @@
 const Canteen = require("../models/Canteen")
 const cloudinary = require("../utils/cloudinary")
 
-// Create Canteen with image support
+// Create Canteen with image support and business details
 exports.createCanteen = async (req, res) => {
   try {
-    const { name, campus } = req.body
+    const { name, campus, adhaarNumber, panNumber, gstNumber, contactPersonName, contactPhone, description } = req.body
     const userRole = req.user.role
 
     // Only canteen owners can create canteens
@@ -15,10 +15,12 @@ exports.createCanteen = async (req, res) => {
       })
     }
 
-    if (!name || !campus) {
+    // Validate required fields
+    if (!name || !campus || !adhaarNumber || !panNumber || !gstNumber || !contactPersonName) {
       return res.status(400).json({
         success: false,
-        message: "Name and campus are required",
+        message: "All required fields must be provided",
+        required: ["name", "campus", "adhaarNumber", "panNumber", "gstNumber", "contactPersonName"],
       })
     }
 
@@ -41,6 +43,31 @@ exports.createCanteen = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "You already have a canteen. Each vendor can only have one canteen.",
+      })
+    }
+
+    // Check for duplicate business details
+    const duplicateAdhaar = await Canteen.findOne({ adhaarNumber, isDeleted: false })
+    if (duplicateAdhaar) {
+      return res.status(400).json({
+        success: false,
+        message: "Adhaar number is already registered with another canteen",
+      })
+    }
+
+    const duplicatePAN = await Canteen.findOne({ panNumber, isDeleted: false })
+    if (duplicatePAN) {
+      return res.status(400).json({
+        success: false,
+        message: "PAN number is already registered with another canteen",
+      })
+    }
+
+    const duplicateGST = await Canteen.findOne({ gstNumber, isDeleted: false })
+    if (duplicateGST) {
+      return res.status(400).json({
+        success: false,
+        message: "GST number is already registered with another canteen",
       })
     }
 
@@ -98,6 +125,12 @@ exports.createCanteen = async (req, res) => {
       campus: campusDoc._id,
       owner: req.user._id,
       images: imageUrls,
+      adhaarNumber,
+      panNumber,
+      gstNumber,
+      contactPersonName,
+      contactPhone,
+      description,
       isOpen: false, // Closed until approved
       isApproved: false,
       approvalStatus: "pending",
@@ -117,15 +150,33 @@ exports.createCanteen = async (req, res) => {
         images: imageUrls,
         approvalStatus: newCanteen.approvalStatus,
         imageCount: imageUrls.length,
+        businessDetails: {
+          adhaarNumber: newCanteen.adhaarNumber,
+          panNumber: newCanteen.panNumber,
+          gstNumber: newCanteen.gstNumber,
+          contactPersonName: newCanteen.contactPersonName,
+        },
       },
       nextSteps: [
         "Wait for admin approval",
+        "Set up your bank details for payouts",
         "Once approved, you can start adding menu items",
         "Set up your canteen operating hours",
       ],
     })
   } catch (error) {
     console.error("Error in creating canteen:", error)
+
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const validationErrors = Object.values(error.errors).map((err) => err.message)
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed",
+        errors: validationErrors,
+      })
+    }
+
     res.status(500).json({
       success: false,
       message: "Internal server error",
