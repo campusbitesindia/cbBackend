@@ -11,14 +11,14 @@ exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:_items,pickUpTime}=req.body; 
+        const {items:_items,pickUpTime,canteenId}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
         const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
-        if(!UserId || !campusId  || Items.length===0 ){
+        if(!UserId || !campusId || !canteenId || Items.length===0 ){
             return res.status(400).json({
                 success:false,
                 message:"Please provide all the fields"
@@ -36,7 +36,7 @@ exports.CreateOrder=async(req,res)=>{
         }
         // search canteen with given Id
         console.log(campusId)
-         const canteen=await Canteen.findOne({campus:campusId})
+         const canteen=await Canteen.findOne({_id:canteenId,campus:campusId})
         //if canteen not found 
         if(!canteen){
             return res.status(400).json({
