@@ -21,6 +21,7 @@ interface MenuItemFormData {
   description: string;
   category: string;
   isVeg: boolean;
+  available: boolean;
   image: string;
 }
 

@@ -29,7 +29,7 @@ import { MenuTab } from '@/app/campus/dashboard/MenuTab';
 import { OrdersTab } from '@/app/campus/dashboard/OrdersTab';
 import { AnalyticsTab } from '@/app/campus/dashboard/AnalyticsTab';
 import { ProfileTab } from '@/app/campus/dashboard/ProfileTab';
-import { PayoutsTab } from '@/app/campus/dashboard/PayoutsTab';
+import { PayoutsTab } from '@/app/campus/dashboard/PayoutsTab'; // Re-added placeholder component
 import { OrderDetailsDialog } from '@/app/campus/dashboard/OrderDetailsDialog';
 import {
   Card,
@@ -74,6 +74,7 @@ export default function Dashboard() {
     description: '',
     category: '',
     isVeg: false,
+    available: true,
     image: '',
   });
 
@@ -84,18 +85,6 @@ export default function Dashboard() {
 
   // State for order details modal
   const [orderDetails, setOrderDetails] = useState<any | null>(null);
-
-  // Add state for profile form
-  const [profileData, setProfileData] = useState({
-    panOrGst: '',
-    accountNo: '',
-    bankName: '',
-    ifsc: '',
-    branch: '',
-    upiId: '',
-  });
-  const [profileSubmitting, setProfileSubmitting] = useState(false);
-  const [profileSuccess, setProfileSuccess] = useState(false);
 
   // Personal details state
   const [personalData, setPersonalData] = useState({
@@ -111,20 +100,67 @@ export default function Dashboard() {
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState('');
 
+  // Bank details state
+  const [bankDetails, setBankDetails] = useState({
+    panNumber: '',
+    gstNumber: '',
+    accountNumber: '',
+    bankName: '',
+    ifscCode: '',
+    branchName: '',
+    upiId: '',
+  });
+  const [bankSubmitting, setBankSubmitting] = useState(false);
+  const [bankSuccess, setBankSuccess] = useState(false);
+
   // Handle profile picture upload
-  const handleProfilePicUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePicUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       setProfilePicFile(file);
+
+      // Create immediate preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePicPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      try {
+        // Upload to server
+        const token = localStorage.getItem('token') || '';
+        const { uploadProfileImage } = await import('@/services/userService');
+        const uploadResult = await uploadProfileImage(file, token);
+
+        // Update with uploaded URL
+        setPersonalData((prev) => ({
+          ...prev,
+          profilePic: uploadResult.url,
+        }));
+
+        toast({
+          title: 'Success',
+          description: 'Profile picture uploaded successfully!',
+        });
+      } catch (error) {
+        console.error('Profile picture upload error:', error);
+        toast({
+          title: 'Upload Failed',
+          description:
+            error instanceof Error
+              ? error.message
+              : 'Failed to upload profile picture',
+          variant: 'destructive',
+        });
+
+        // Keep local preview but mark as not uploaded
         setPersonalData((prev) => ({
           ...prev,
           profilePic: reader.result as string,
         }));
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -466,6 +502,7 @@ export default function Dashboard() {
         category: formData.category,
         canteen: canteenId, // Using dynamic canteenId
         isVeg: formData.isVeg,
+        available: formData.available,
         image: imageUrl,
       };
 
@@ -517,6 +554,7 @@ export default function Dashboard() {
       description: item.description || '',
       category: item.category,
       isVeg: item.isVeg,
+      available: item.available !== false,
       image: item.image || '',
     });
     setImagePreview(item.image || '');
@@ -554,6 +592,7 @@ export default function Dashboard() {
       description: '',
       category: '',
       isVeg: false,
+      available: true,
       image: '',
     });
     setSelectedImage(null);
@@ -735,16 +774,16 @@ export default function Dashboard() {
             <ProfileTab
               personalData={personalData}
               setPersonalData={setPersonalData}
-              profileData={profileData}
-              setProfileData={setProfileData}
+              bankDetails={bankDetails}
+              setBankDetails={setBankDetails}
               personalSubmitting={personalSubmitting}
               setPersonalSubmitting={setPersonalSubmitting}
               personalSuccess={personalSuccess}
               setPersonalSuccess={setPersonalSuccess}
-              profileSubmitting={profileSubmitting}
-              setProfileSubmitting={setProfileSubmitting}
-              profileSuccess={profileSuccess}
-              setProfileSuccess={setProfileSuccess}
+              bankSubmitting={bankSubmitting}
+              setBankSubmitting={setBankSubmitting}
+              bankSuccess={bankSuccess}
+              setBankSuccess={setBankSuccess}
               profilePicPreview={profilePicPreview}
               handleProfilePicUpload={handleProfilePicUpload}
             />
@@ -762,10 +801,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <OrderDetailsDialog
-        orderDetails={orderDetails}
-        setOrderDetails={setOrderDetails}
-      />
+      {/* Order Details Modal */}
+      {orderDetails && (
+        <OrderDetailsDialog
+          orderDetails={orderDetails}
+          setOrderDetails={setOrderDetails}
+        />
+      )}
     </div>
   );
 }

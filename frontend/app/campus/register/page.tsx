@@ -85,26 +85,29 @@ const vendorSchema = z
     daysOfOperation: z
       .array(z.string())
       .min(1, 'Please select at least one day'),
-    adhaarCard: z.any().refine((file) => {
-      if (!file || (file instanceof File && file.size === 0)) return false;
-      // Accept only images and pdf, max 5MB
-      const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/jpg',
-        'application/pdf',
-      ];
-      if (file instanceof File) {
-        return allowedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024;
-      }
-      // If file is array (from input), check first file
-      if (Array.isArray(file) && file.length > 0) {
-        const f = file[0];
-        return allowedTypes.includes(f.type) && f.size <= 5 * 1024 * 1024;
-      }
-      return false;
-    }, 'Adhaar card is required and must be an image (jpg, jpeg, png) or PDF, max 5MB.'),
-    fssaiLicense: z.any().optional(),
+    adhaarNumber: z
+      .string()
+      .regex(
+        /^[2-9][0-9]{11}$/,
+        'Aadhar number must be 12 digits and cannot start with 0 or 1'
+      ),
+    panNumber: z
+      .string()
+      .regex(
+        /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/,
+        'PAN number must be in format: ABCDE1234F (5 letters, 4 digits, 1 letter)'
+      ),
+    gstNumber: z
+      .string()
+      .regex(
+        /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
+        'GST number must be 15 characters in valid GST format'
+      ),
+    fssaiLicense: z
+      .string()
+      .regex(/^[0-9]{14}$/, 'FSSAI license must be 14 digits')
+      .optional()
+      .or(z.literal('')),
     termsAccepted: z
       .boolean()
       .refine(
@@ -178,8 +181,6 @@ const daysOfWeek = [
 
 export default function VendorOnboardingForm() {
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [adhaarFile, setAdhaarFile] = useState<File | null>(null);
-  const [fssaiFile, setFssaiFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -207,6 +208,10 @@ export default function VendorOnboardingForm() {
     defaultValues: {
       daysOfOperation: [],
       termsAccepted: false,
+      adhaarNumber: '',
+      panNumber: '',
+      gstNumber: '',
+      fssaiLicense: '',
     },
   });
 
@@ -216,16 +221,6 @@ export default function VendorOnboardingForm() {
       : [...selectedDays, day];
     setSelectedDays(updatedDays);
     setValue('daysOfOperation', updatedDays);
-  };
-
-  const handleFileUpload = (file: File, type: string) => {
-    if (type === 'adhaar') {
-      setAdhaarFile(file);
-      setValue('adhaarCard', file);
-    } else if (type === 'fssai') {
-      setFssaiFile(file);
-      setValue('fssaiLicense', file);
-    }
   };
 
   const onSubmit = async (data: any) => {
@@ -577,77 +572,126 @@ export default function VendorOnboardingForm() {
           </CardContent>
         </Card>
 
-        {/* Documentation Upload */}
+        {/* Documentation */}
         <Card className='bg-gray-50 shadow-sm border border-gray-100'>
           <CardHeader className='pb-2'>
-            <CardTitle className='flex items-center'>
-              <FileText className='h-5 w-5 mr-2' /> Documentation Upload
+            <CardTitle className='flex items-center text-black'>
+              <FileText className='h-5 w-5 mr-2 ' /> Documentation Details
             </CardTitle>
-            <CardDescription>Upload required documents</CardDescription>
+            <CardDescription>Enter required document numbers</CardDescription>
           </CardHeader>
           <CardContent className='space-y-4 pt-0 text-gray-700'>
             <div>
-              <Label htmlFor='adhaarCard'>Adhaar Card *</Label>
-              <div className='border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors'>
-                <Upload className='h-8 w-8 mx-auto mb-2 text-gray-400' />
-                <p className='text-sm text-gray-600 mb-2'>
-                  {adhaarFile ? adhaarFile.name : 'Click to upload Adhaar Card'}
-                </p>
-                <Input
-                  id='adhaarCard'
-                  type='file'
-                  accept='.pdf,.jpg,.jpeg,.png'
-                  onChange={(e: any) =>
-                    handleFileUpload(e.target.files?.[0] as File, 'adhaar')
-                  }
-                  className='hidden bg-white'
-                />
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() =>
-                    document.getElementById('adhaarCard')?.click()
-                  }>
-                  Choose File
-                </Button>
-                <p className='text-xs text-gray-500 mt-2'>
-                  Allowed: PDF, JPG, JPEG, PNG. Max size: 5MB.
-                </p>
-              </div>
-              {errors.adhaarCard && (
+              <Label htmlFor='adhaarNumber'>Aadhar Number *</Label>
+              <Input
+                id='adhaarNumber'
+                placeholder='Enter 12-digit Aadhar number'
+                {...register('adhaarNumber')}
+                className='bg-white'
+                maxLength={12}
+                inputMode='numeric'
+                pattern='\d*'
+                onInput={(e) => {
+                  // @ts-ignore
+                  e.target.value = e.target.value
+                    .replace(/[^0-9]/g, '')
+                    .slice(0, 12);
+                }}
+              />
+              <p className='text-xs text-gray-500 mt-1'>
+                Enter your 12-digit Aadhar number (without spaces or dashes)
+              </p>
+              {errors.adhaarNumber && (
                 <p className='text-sm text-red-500 mt-1'>
-                  {errors.adhaarCard.message as string}
+                  {errors.adhaarNumber.message}
                 </p>
               )}
             </div>
 
-            <div>
-              <Label htmlFor='fssaiLicense'>FSSAI License (Optional)</Label>
-              <div className='border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors'>
-                <Upload className='h-8 w-8 mx-auto mb-2 text-gray-400' />
-                <p className='text-sm text-gray-600 mb-2'>
-                  {fssaiFile
-                    ? fssaiFile.name
-                    : 'Click to upload FSSAI License (Optional)'}
-                </p>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <Label htmlFor='panNumber'>PAN Number *</Label>
                 <Input
-                  id='fssaiLicense'
-                  type='file'
-                  accept='.pdf,.jpg,.jpeg,.png'
-                  onChange={(e: any) =>
-                    handleFileUpload(e.target.files?.[0] as File, 'fssai')
-                  }
-                  className='hidden bg-white'
+                  id='panNumber'
+                  placeholder='ABCDE1234F'
+                  {...register('panNumber')}
+                  className='bg-white'
+                  maxLength={10}
+                  style={{ textTransform: 'uppercase' }}
+                  onInput={(e) => {
+                    // @ts-ignore
+                    e.target.value = e.target.value
+                      .replace(/[^A-Za-z0-9]/g, '')
+                      .toUpperCase()
+                      .slice(0, 10);
+                  }}
                 />
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() =>
-                    document.getElementById('fssaiLicense')?.click()
-                  }>
-                  Choose File
-                </Button>
+                <p className='text-xs text-gray-500 mt-1'>
+                  Format: 5 letters + 4 digits + 1 letter (e.g., ABCDE1234F)
+                </p>
+                {errors.panNumber && (
+                  <p className='text-sm text-red-500 mt-1'>
+                    {errors.panNumber.message}
+                  </p>
+                )}
               </div>
+
+              <div>
+                <Label htmlFor='gstNumber'>GST Number </Label>
+                <Input
+                  id='gstNumber'
+                  placeholder='22ABCDE1234F1Z5'
+                  {...register('gstNumber')}
+                  className='bg-white'
+                  maxLength={15}
+                  style={{ textTransform: 'uppercase' }}
+                  onInput={(e) => {
+                    // @ts-ignore
+                    e.target.value = e.target.value
+                      .replace(/[^A-Za-z0-9]/g, '')
+                      .toUpperCase()
+                      .slice(0, 15);
+                  }}
+                />
+                <p className='text-xs text-gray-500 mt-1'>
+                  15-character GST number (e.g., 22ABCDE1234F1Z5)
+                </p>
+                {errors.gstNumber && (
+                  <p className='text-sm text-red-500 mt-1'>
+                    {errors.gstNumber.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor='fssaiLicense'>
+                FSSAI License Number (Optional)
+              </Label>
+              <Input
+                id='fssaiLicense'
+                placeholder='Enter 14-digit FSSAI license number'
+                {...register('fssaiLicense')}
+                className='bg-white'
+                maxLength={14}
+                inputMode='numeric'
+                pattern='\d*'
+                onInput={(e) => {
+                  // @ts-ignore
+                  e.target.value = e.target.value
+                    .replace(/[^0-9]/g, '')
+                    .slice(0, 14);
+                }}
+              />
+              <p className='text-xs text-gray-500 mt-1'>
+                Enter your 14-digit FSSAI license number (leave blank if not
+                available)
+              </p>
+              {errors.fssaiLicense && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.fssaiLicense.message}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

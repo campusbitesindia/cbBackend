@@ -17,7 +17,10 @@ interface MenuItemFormData {
   description: string;
   category: string;
   isVeg: boolean;
+  available: boolean;
   image: string;
+  portion: string;
+  quantity: string;
 }
 
 interface MenuItemFormProps {
@@ -25,9 +28,6 @@ interface MenuItemFormProps {
   setFormData: (data: MenuItemFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
   isEditing: boolean;
-  imageUploading: boolean;
-  imagePreview: string;
-  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const MenuItemForm: React.FC<MenuItemFormProps> = ({
@@ -35,9 +35,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   setFormData,
   onSubmit,
   isEditing,
-  imageUploading,
-  imagePreview,
-  onImageUpload,
 }) => {
   return (
     <form onSubmit={onSubmit} className='space-y-4 text-black'>
@@ -64,6 +61,51 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
           className='bg-white text-black placeholder:text-black'
         />
       </div>
+
+      <div className='grid grid-cols-2 gap-4'>
+        <div>
+          <Label htmlFor='portion'>Portion Size</Label>
+          <Select
+            value={formData.portion}
+            onValueChange={(value) =>
+              setFormData({ ...formData, portion: value })
+            }>
+            <SelectTrigger className='bg-white text-black'>
+              <SelectValue
+                placeholder='Select portion'
+                className='text-black'
+              />
+            </SelectTrigger>
+            <SelectContent className='bg-white text-black'>
+              <SelectItem value='full'>Full</SelectItem>
+              <SelectItem value='half'>Half</SelectItem>
+              <SelectItem value='quarter'>Quarter</SelectItem>
+              <SelectItem value='mini'>Mini</SelectItem>
+              <SelectItem value='large'>Large</SelectItem>
+              <SelectItem value='regular'>Regular</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor='quantity'>Quantity</Label>
+          <Input
+            id='quantity'
+            type='number'
+            min='1'
+            value={formData.quantity}
+            onChange={(e) =>
+              setFormData({ ...formData, quantity: e.target.value })
+            }
+            placeholder='e.g., 1, 2, 3'
+            required
+            className='bg-white text-black placeholder:text-gray-400'
+          />
+        </div>
+      </div>
+      <p className='text-xs text-gray-500 -mt-2'>
+        Select portion size and enter the number of servings per order
+      </p>
 
       <div>
         <Label htmlFor='description'>Description</Label>
@@ -103,34 +145,28 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
       </div>
 
       <div>
-        <Label htmlFor='image'>Image</Label>
+        <Label htmlFor='image'>Image URL</Label>
         <Input
           id='image'
-          type='file'
-          accept='image/jpeg,image/jpg,image/png,image/webp'
-          onChange={onImageUpload}
-          className='bg-white text-black placeholder:text-black'
-          disabled={imageUploading}
+          type='url'
+          value={formData.image}
+          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+          placeholder='https://example.com/image.jpg'
+          className='bg-white text-black placeholder:text-gray-400'
         />
         <p className='text-xs text-gray-500 mt-1'>
-          Supported formats: JPEG, PNG, WebP (max 5MB)
+          Enter a valid image URL (JPEG, PNG, WebP formats recommended)
         </p>
-        {imageUploading && (
-          <div className='mt-2 flex items-center space-x-2 text-blue-600'>
-            <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600'></div>
-            <span className='text-sm'>Processing image...</span>
-          </div>
-        )}
-        {imagePreview && !imageUploading && (
+        {formData.image && (
           <div className='mt-2'>
             <img
-              src={imagePreview}
+              src={formData.image}
               alt='Preview'
               className='w-20 h-20 object-cover rounded border border-gray-200'
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
             />
-            <p className='text-xs text-green-600 mt-1'>
-              Image ready for upload!
-            </p>
           </div>
         )}
       </div>
@@ -168,12 +204,39 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
         </div>
       )}
 
-      <Button type='submit' className='w-full' disabled={imageUploading}>
-        {imageUploading
-          ? 'Uploading Image...'
-          : isEditing
-          ? 'Update Item'
-          : 'Add Item'}
+      <div className='flex items-center space-x-4'>
+        <div className='flex items-center space-x-2'>
+          <input
+            type='checkbox'
+            id='isAvailable'
+            checked={formData.available}
+            onChange={(e) =>
+              setFormData({ ...formData, available: e.target.checked })
+            }
+            className='bg-white text-black'
+          />
+          <Label htmlFor='isAvailable' className='text-black'>
+            Available
+          </Label>
+        </div>
+        <div className='flex items-center space-x-2'>
+          <input
+            type='checkbox'
+            id='isNotAvailable'
+            checked={!formData.available}
+            onChange={(e) =>
+              setFormData({ ...formData, available: !e.target.checked })
+            }
+            className='bg-white text-black'
+          />
+          <Label htmlFor='isNotAvailable' className='text-black'>
+            Not Available
+          </Label>
+        </div>
+      </div>
+
+      <Button type='submit' className='w-full'>
+        {isEditing ? 'Update Item' : 'Add Item'}
       </Button>
     </form>
   );

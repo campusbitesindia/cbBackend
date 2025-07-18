@@ -93,3 +93,5 @@ export async function deleteMenuItem(id: string): Promise<void> {
     },
   });
 }
+
+// Removed toggleMenuItemStatus function since endpoint doesn't exist in backend
