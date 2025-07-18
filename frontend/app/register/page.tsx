@@ -22,6 +22,9 @@ const registerSchema = z
   .object({
     name: z.string().min(2, { message: "Name must be at least 2 characters" }),
     email: z.string().email({ message: "Please enter a valid email address" }),
+    phone: z.string()
+      .regex(/^\d{10}$/, { message: "Mobile number must be exactly 10 digits" })
+      .refine((val) => Number(val) > 0, { message: "Mobile number must be positive" }),
     password: z.string().min(6, { message: "Password must be at least 6 characters" }),
     confirmPassword: z.string(),
     role: z.enum(['student', 'canteen'], { message: 'Please select a valid role' }),
@@ -61,6 +64,12 @@ export default function RegisterPage() {
   const [requestLoading, setRequestLoading] = useState(false);
   // Add a new state to track if a campus is selected
   const [campusSelected, setCampusSelected] = useState(false);
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [otpSuccess, setOtpSuccess] = useState("");
 
   // Autocomplete filter
   const filteredCampuses = campusInput
@@ -76,6 +85,7 @@ export default function RegisterPage() {
       confirmPassword: "",
       role: "student",
       campus: "",
+      phone: "",
     },
   })
 
@@ -108,18 +118,13 @@ export default function RegisterPage() {
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true)
     try {
-      await register(values.name, values.email, values.password, values.role, values.campus); // <-- pass campus _id
+      await register(values.name, values.email, values.password, values.role, values.campus, values.phone); // <-- pass campus _id and phone
+      setPendingEmail(values.email);
+      setShowOtpDialog(true);
       toast({
-        title: "Welcome to Campus Bites! 🎉",
-        description: "Your account has been created successfully",
+        title: "Almost done!",
+        description: "Please verify your email with the OTP sent to your inbox.",
       }) 
-      
-      // Redirect based on role
-      if (values.role === 'student') {
-        router.push("/menu")
-      } else if (values.role === 'canteen') {
-        router.push("/campus/dashboard")
-      }
     } catch (error) {
       // Handle existing user professionally
       if (error instanceof Error) {
@@ -182,6 +187,28 @@ export default function RegisterPage() {
       toast({ title: 'Failed to submit campus request', description: err.message, variant: 'destructive' });
     } finally {
       setRequestLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    setIsVerifyingOtp(true);
+    setOtpError("");
+    setOtpSuccess("");
+    try {
+      const res = await api.post("/api/v1/users/verify-email", { email: pendingEmail, otp });
+      if (res.data.success) {
+        setOtpSuccess("Email verified successfully! You can now log in.");
+        setTimeout(() => {
+          setShowOtpDialog(false);
+          router.push("/login");
+        }, 1500);
+      } else {
+        setOtpError(res.data.message || "Invalid OTP");
+      }
+    } catch (err: any) {
+      setOtpError(err.response?.data?.message || "Invalid OTP or server error");
+    } finally {
+      setIsVerifyingOtp(false);
     }
   }
 
@@ -369,6 +396,36 @@ export default function RegisterPage() {
                         </FormItem>
                       );
                     }}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Mobile Number</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              placeholder="Enter your mobile number"
+                              type="tel"
+                              autoComplete="tel"
+                              maxLength={10}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={field.value}
+                              onChange={e => {
+                                // Only allow digits
+                                const val = e.target.value.replace(/[^0-9]/g, "");
+                                field.onChange(val);
+                              }}
+                              className="pl-4 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
+                      </FormItem>
+                    )}
                   />
 
                   <FormField
@@ -629,6 +686,32 @@ export default function RegisterPage() {
           <DialogFooter>
             <Button onClick={handleRequestCampus} disabled={requestLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full">
               {requestLoading ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Verification Dialog */}
+      <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Email Verification</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-200">Enter the OTP sent to <span className="font-semibold">{pendingEmail}</span></p>
+            <Input
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={e => setOtp(e.target.value)}
+              maxLength={6}
+              className="text-center text-lg tracking-widest font-mono"
+            />
+            {otpError && <div className="text-red-500 text-sm">{otpError}</div>}
+            {otpSuccess && <div className="text-green-600 text-sm">{otpSuccess}</div>}
+          </div>
+          <DialogFooter>
+            <Button onClick={handleVerifyOtp} disabled={isVerifyingOtp || !otp} className="bg-red-600 hover:bg-red-700 text-white font-semibold w-full">
+              {isVerifyingOtp ? 'Verifying...' : 'Verify OTP'}
             </Button>
           </DialogFooter>
         </DialogContent>

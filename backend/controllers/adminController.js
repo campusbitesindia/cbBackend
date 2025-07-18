@@ -861,7 +861,10 @@ exports.approveVendor = async (req, res) => {
   try {
     const { canteenId } = req.params
     const { approved, rejectionReason } = req.body
-    const adminId = req.user._id
+    const adminId = req.user && req.user._id ? req.user._id : null;
+    if (!adminId) {
+      return res.status(401).json({ success: false, message: "Admin not authenticated" });
+    }
 
     if (typeof approved !== "boolean") {
       return res.status(400).json({
@@ -901,11 +904,10 @@ exports.approveVendor = async (req, res) => {
 
     // Update user status if needed
     const owner = canteen.owner
-    if (approved) {
-      // Vendor is now fully approved
-      owner.isApproved = true
+    if (owner) {
+      if (approved) owner.isApproved = true;
+      await owner.save();
     }
-    await owner.save()
 
     res.status(200).json({
       success: true,

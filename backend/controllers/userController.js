@@ -11,13 +11,13 @@ const mongoose = require("mongoose")
 
 exports.registerUser = async (req, res) => {
   try {
-    const { name, email, password, role, campus } = req.body
+    const { name, email, password, role, campus, phone } = req.body
 
-    if (!name || !email || !password || !role || !campus) {
+    if (!name || !email || !password || !role || !campus || !phone) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
-        required: ["name", "email", "password", "role", "campus"],
+        required: ["name", "email", "password", "role", "campus", "phone"],
         note: "For campus field, send either campus ID or campus name",
       })
     }
@@ -27,6 +27,13 @@ exports.registerUser = async (req, res) => {
         success: false,
         message: "Invalid role. Allowed roles: student, canteen, admin",
       })
+    }
+
+    if (!/^\d{10}$/.test(phone) || Number(phone) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number must be exactly 10 digits and positive.",
+      });
     }
 
     // Handle both campus ID and campus name
@@ -88,6 +95,8 @@ exports.registerUser = async (req, res) => {
       password: hashedPass,
       role,
       campus: campusDoc._id,
+      phone,
+      is_verified: false,
     })
 
     // For vendors (canteen role), create a pending canteen that needs admin approval
@@ -132,7 +141,7 @@ exports.registerUser = async (req, res) => {
       success: true,
       message:
         role === "canteen"
-          ? "Vendor registered successfully. Your canteen is pending admin approval."
+          ? "Vendor registered successfully. Please verify your email. Your canteen is pending admin approval."
           : "User registered successfully. Please verify your email.",
       user: {
         id: user._id.toString(), // Consistent with token
@@ -259,6 +268,14 @@ exports.loginUser = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "This account was created with Google. Please use 'Sign in with Google' option.",
+      })
+    }
+
+    // Enforce email verification for all except Google OAuth
+    if (!user1.is_verified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email address before logging in.",
       })
     }
 

@@ -127,32 +127,46 @@ exports.isAdmin = async (req, res, next) => {
   }
 }
 
-exports.isAdminEnv = (req, res, next) => {
+exports.isAdminEnv = async (req, res, next) => {
   try {
     const token =
-      req.cookies.admin_token || (req.headers.authorization && req.headers.authorization.replace("Bearer ", ""))
+      req.cookies.admin_token ||
+      (req.headers.authorization && req.headers.authorization.replace("Bearer ", ""));
 
     if (!token) {
       return res.status(401).json({
         success: false,
         message: "Not logged in as admin",
-      })
+      });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Forbidden: Not admin",
-      })
+      });
     }
 
-    req.admin = { username: decoded.username }
-    next()
+    // Fetch admin user from DB and attach to req.user
+    let adminUser = await user.findOne({ role: "admin", email: decoded.username || decoded.email });
+    if (!adminUser) {
+      // fallback: get any admin
+      adminUser = await user.findOne({ role: "admin" });
+      if (!adminUser) {
+        return res.status(401).json({
+          success: false,
+          message: "Admin user not found in database",
+        });
+      }
+    }
+    req.user = adminUser;
+    req.admin = { username: decoded.username };
+    next();
   } catch (err) {
     return res.status(401).json({
       success: false,
       message: "Invalid or expired admin token",
-    })
+    });
   }
-}
+};
