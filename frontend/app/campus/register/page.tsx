@@ -637,7 +637,7 @@ export default function VendorOnboardingForm() {
               </div>
 
               <div>
-                <Label htmlFor='gstNumber'>GST Number *</Label>
+                <Label htmlFor='gstNumber'>GST Number </Label>
                 <Input
                   id='gstNumber'
                   placeholder='22ABCDE1234F1Z5'

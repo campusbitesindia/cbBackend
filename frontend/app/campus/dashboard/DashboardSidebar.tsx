@@ -5,7 +5,7 @@ import {
   ShoppingCart,
   BarChart3,
   Users,
-  DollarSign,
+  DollarSign, // Re-added since we have placeholder PayoutsTab
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
