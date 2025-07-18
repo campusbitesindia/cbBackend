@@ -13,14 +13,14 @@ export const uploadImage = async (file: File): Promise<ImageUploadResult> => {
 
     // Create FormData for file upload
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('ItemThumbnail', file); // Changed from 'image' to 'ItemThumbnail' to match backend
 
     // Get token for authentication
     const token = localStorage.getItem('token') || '';
 
-    // Upload to the API endpoint
+    // Upload to the existing items endpoint
     const response = await axios.post(
-      'http://localhost:8080/api/v1/upload',
+      'http://localhost:8080/api/v1/items/upload-image', // Using a more specific endpoint
       formData,
       {
         headers: {
@@ -45,7 +45,7 @@ export const uploadImage = async (file: File): Promise<ImageUploadResult> => {
     } else {
       throw new Error('Invalid response from upload API');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Image upload error:', error);
 
     if (axios.isAxiosError(error)) {
@@ -71,6 +71,44 @@ export const uploadImage = async (file: File): Promise<ImageUploadResult> => {
     } else {
       throw new Error('Failed to upload image. Please try again.');
     }
+  }
+};
+
+// Alternative method using profile image upload endpoint
+export const uploadImageViaProfile = async (
+  file: File
+): Promise<ImageUploadResult> => {
+  try {
+    validateImage(file);
+
+    const formData = new FormData();
+    formData.append('profileImage', file);
+
+    const token = localStorage.getItem('token') || '';
+
+    const response = await axios.post(
+      'http://localhost:8080/api/v1/users/profile/image',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 30000,
+      }
+    );
+
+    if (response.data && response.data.imageUrl) {
+      return {
+        url: response.data.imageUrl,
+        filename: file.name,
+      };
+    } else {
+      throw new Error('Invalid response from profile upload API');
+    }
+  } catch (error: any) {
+    console.error('Profile image upload error:', error);
+    throw error;
   }
 };
 

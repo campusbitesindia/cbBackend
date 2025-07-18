@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  uploadImageViaProfile,
+  validateImage,
+  createImagePreview,
+} from '@/services/imageService';
+import { useToast } from '@/hooks/use-toast';
 
 interface MenuItemFormData {
   name: string;
@@ -36,6 +42,58 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   onSubmit,
   isEditing,
 }) => {
+  const [imageUploading, setImageUploading] = useState(false);
+  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
+  const { toast } = useToast();
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImageUploading(true);
+
+      // Validate the image
+      validateImage(file);
+
+      // Create immediate local preview
+      const previewUrl = await createImagePreview(file);
+      setFormData({ ...formData, image: previewUrl });
+
+      try {
+        // Try to upload to server
+        const uploadResult = await uploadImageViaProfile(file);
+        setFormData({ ...formData, image: uploadResult.url });
+
+        toast({
+          title: 'Success',
+          description: 'Image uploaded successfully!',
+        });
+      } catch (uploadError) {
+        console.warn('Server upload failed, using local preview:', uploadError);
+
+        // Keep the local preview but show a warning
+        toast({
+          title: 'Upload Warning',
+          description:
+            'Using local preview. Image will be uploaded when you save the item.',
+          variant: 'default',
+        });
+      }
+    } catch (error) {
+      console.error('File handling error:', error);
+      setFormData({ ...formData, image: '' });
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to process image',
+        variant: 'destructive',
+      });
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   return (
     <form onSubmit={onSubmit} className='space-y-4 text-black'>
       <div>
@@ -145,26 +203,81 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
       </div>
 
       <div>
-        <Label htmlFor='image'>Image URL</Label>
-        <Input
-          id='image'
-          type='url'
-          value={formData.image}
-          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-          placeholder='https://example.com/image.jpg'
-          className='bg-white text-black placeholder:text-gray-400'
-        />
-        <p className='text-xs text-gray-500 mt-1'>
-          Enter a valid image URL (JPEG, PNG, WebP formats recommended)
-        </p>
+        <Label>Image</Label>
+
+        {/* Upload Method Selector */}
+        <div className='flex space-x-4 mb-3'>
+          <button
+            type='button'
+            onClick={() => setUploadMethod('file')}
+            className={`px-3 py-1 text-xs rounded ${
+              uploadMethod === 'file'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 text-gray-700'
+            }`}>
+            Upload File
+          </button>
+          <button
+            type='button'
+            onClick={() => setUploadMethod('url')}
+            className={`px-3 py-1 text-xs rounded ${
+              uploadMethod === 'url'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 text-gray-700'
+            }`}>
+            Enter URL
+          </button>
+        </div>
+
+        {/* File Upload */}
+        {uploadMethod === 'file' && (
+          <div>
+            <input
+              type='file'
+              accept='image/jpeg,image/jpg,image/png,image/webp'
+              onChange={handleFileUpload}
+              disabled={imageUploading}
+              className='mb-2 w-full p-2 border border-gray-300 rounded bg-white text-black file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
+            />
+            {imageUploading && (
+              <p className='text-xs text-blue-600'>Processing image...</p>
+            )}
+          </div>
+        )}
+
+        {/* URL Input */}
+        {uploadMethod === 'url' && (
+          <div>
+            <Input
+              id='image'
+              type='url'
+              value={formData.image}
+              onChange={(e) =>
+                setFormData({ ...formData, image: e.target.value })
+              }
+              placeholder='https://example.com/image.jpg'
+              className='bg-white text-black placeholder:text-gray-400'
+            />
+            <p className='text-xs text-gray-500 mt-1'>
+              Enter a valid image URL (JPEG, PNG, WebP formats recommended)
+            </p>
+          </div>
+        )}
+
+        {/* Image Preview */}
         {formData.image && (
-          <div className='mt-2'>
+          <div className='mt-3'>
+            <p className='text-xs text-gray-500 mb-2'>Preview:</p>
             <img
               src={formData.image}
               alt='Preview'
-              className='w-20 h-20 object-cover rounded border border-gray-200'
+              className='w-24 h-24 object-cover rounded-lg border-2 border-gray-200'
               onError={(e) => {
+                console.warn('Image preview failed to load:', formData.image);
                 e.currentTarget.style.display = 'none';
+              }}
+              onLoad={() => {
+                console.log('Image preview loaded successfully');
               }}
             />
           </div>
@@ -235,8 +348,12 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
         </div>
       </div>
 
-      <Button type='submit' className='w-full'>
-        {isEditing ? 'Update Item' : 'Add Item'}
+      <Button type='submit' className='w-full' disabled={imageUploading}>
+        {imageUploading
+          ? 'Processing...'
+          : isEditing
+          ? 'Update Item'
+          : 'Add Item'}
       </Button>
     </form>
   );

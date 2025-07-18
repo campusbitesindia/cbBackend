@@ -19,6 +19,7 @@ export interface CreateMenuItemRequest {
   category: string;
   canteen: string;
   isVeg?: boolean;
+  image?: string;
 }
 
 export interface UpdateMenuItemRequest {
@@ -28,6 +29,7 @@ export interface UpdateMenuItemRequest {
   category?: string;
   isVeg?: boolean;
   available?: boolean;
+  image?: string;
 }
 
 export async function getMenuByCanteenId(
@@ -54,6 +56,7 @@ export async function createMenuItem(
       category: data.category,
       canteen: data.canteen,
       isVeg: data.isVeg || false,
+      image: data.image || '',
     },
     {
       headers: {
@@ -76,6 +79,7 @@ export async function updateMenuItem(
   if (data.category !== undefined) payload.category = data.category;
   if (data.isVeg !== undefined) payload.isVeg = data.isVeg;
   if (data.available !== undefined) payload.available = data.available;
+  if (data.image !== undefined) payload.image = data.image;
 
   const res = await axios.put(`/api/v1/menu/${id}`, payload, {
     headers: {
