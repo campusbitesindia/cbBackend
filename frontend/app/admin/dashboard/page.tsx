@@ -242,7 +242,7 @@ export default function AdminDashboard() {
           fetch("http://localhost:8080/api/v1/admin/orders/monthly"),
           fetch("http://localhost:8080/api/v1/admin/orders/status-wise"),
           fetch("http://localhost:8080/api/v1/admin/orders/top-tcanteens"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/daily"), // Use daily revenue
+          fetch("http://localhost:8080/api/v1/admin/revenue/daily"), 
         ])
         if (!summaryRes.ok || !usersRes.ok || !userRolesRes.ok || !topSpendersRes.ok || !ordersRes.ok || !orderStatusRes.ok || !topCanteensRes.ok || !revenueDailyRes.ok) {
           throw new Error("API error")
@@ -468,7 +468,7 @@ export default function AdminDashboard() {
         animate="visible"
         variants={containerVariants}
       >
-        {/* Header */}
+      {/* Header */}
         <motion.div className="mb-12" variants={itemVariants}>
           <div className="flex items-center gap-6 mb-8">
             <motion.div 
@@ -483,7 +483,7 @@ export default function AdminDashboard() {
               <p className="text-xl text-slate-300">Monitor and manage your campus food ecosystem</p>
             </div>
           </div>
-
+          
           {/* Enhanced Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
             {summary && typeof summary.totalUsers !== 'undefined' && (
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
                       <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <Users className="w-8 h-8 text-white" />
                       </div>
-                    </div>
+            </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -518,12 +518,12 @@ export default function AdminDashboard() {
                         <div className="flex items-center mt-2">
                           <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
                           <span className="text-green-400 text-sm font-medium">+8% this month</span>
-                        </div>
-                      </div>
+            </div>
+          </div>
                       <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <Store className="w-8 h-8 text-white" />
-                      </div>
-                    </div>
+        </div>
+      </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -539,20 +539,19 @@ export default function AdminDashboard() {
                         <div className="flex items-center mt-2">
                           <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
                           <span className="text-green-400 text-sm font-medium">+15% this month</span>
-                        </div>
-                      </div>
+            </div>
+          </div>
                       <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <ShoppingCart className="w-8 h-8 text-white" />
-                      </div>
-                    </div>
+          </div>
+        </div>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
-          </div>
-
+              </div>
+              
           {/* Core Analytics Charts */}
-          {/* Move Performance Charts (Top Spenders and Daily Revenue) above the three main analytics charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
             {topSpenders.length > 0 && (
               <motion.div variants={cardVariants}>
@@ -570,7 +569,7 @@ export default function AdminDashboard() {
                           <CountUp end={topSpenders[0].amount || topSpenders[0].totalSpent} />
                         </span>
                         <span className="text-lg font-semibold text-white mb-1">{topSpenders[0].name || topSpenders[0].email}</span>
-                      </div>
+                </div>
                     ) : (
                       <Bar data={topSpendersChartData} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />
                     )}
@@ -595,13 +594,17 @@ export default function AdminDashboard() {
                       </span>
                       <span className="text-lg font-semibold text-white mb-1">{revenueDaily[0]._id || revenueDaily[0].date}</span>
                     </div>
+                  ) : revenueDaily.length === 0 ? (
+                    <div className="flex items-center justify-center h-full  text-lg font-semibold">
+                      No revenue data for today
+            </div>
                   ) : (
                     <Bar data={revenueDailyChartData} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />
                   )}
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
+              </div>
 
           {/* Place the three analytics charts (New Users, Orders, Revenue) below */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
@@ -662,8 +665,8 @@ export default function AdminDashboard() {
                     <div>
                       <h3 className="text-lg font-semibold text-white">Orders</h3>
                       <p className="text-slate-400 text-sm">Monthly order volume</p>
-                    </div>
-                  </div>
+                </div>
+              </div>
                 </CardHeader>
                 <CardContent>
                   <div style={{ height: '300px' }} className="flex items-center justify-center h-full">
@@ -709,8 +712,8 @@ export default function AdminDashboard() {
                     <div>
                       <h3 className="text-lg font-semibold text-white">Revenue</h3>
                       <p className="text-slate-400 text-sm">Monthly earnings</p>
-                    </div>
                   </div>
+                </div>
                 </CardHeader>
                 <CardContent>
                   <div style={{ height: '300px' }} className="flex items-center justify-center h-full">
@@ -745,8 +748,8 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
-
+              </div>
+              
           {/* Distribution Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
             <motion.div variants={cardVariants}>
@@ -755,12 +758,12 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
                       <Clock className="w-5 h-5 text-amber-400" />
-                    </div>
+              </div>
                     <div>
                       <h3 className="text-lg font-semibold text-white">Order Status</h3>
                       <p className="text-slate-400 text-sm">Distribution breakdown</p>
-                    </div>
-                  </div>
+                </div>
+              </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
@@ -783,7 +786,7 @@ export default function AdminDashboard() {
                         }}
                       />
                     }
-                  </div>
+              </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -826,7 +829,7 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </motion.div>
-          </div>
+                </div>
 
           {/* Performance Charts */}
 

@@ -180,74 +180,72 @@ export default function AdminVendorsPage() {
                 </tr>
               ) : (
                 filteredVendors.map((vendor) => (
-                  <>
-                    <tr key={vendor._id} className="border-b border-white/10 hover:bg-blue-900/40 transition group bg-blue-900/30 text-white">
-                      <td className="px-4 py-2 font-medium text-white">
-                        <Link href={`/admin/canteens/${vendor._id}`} className="hover:underline">
-                          {vendor.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2 text-white">{getOwnerName(vendor.owner)}</td>
-                      <td className="px-4 py-2">
-                        <Badge
-                          variant={vendor.isSuspended || vendor.isBanned ? "destructive" : "secondary"}
-                          className={vendor.isSuspended || vendor.isBanned ? "bg-green-500/90 text-white" : "bg-gray-700/80 text-white"}
-                        >
-                          {(vendor.isSuspended || vendor.isBanned) ? "Yes" : "No"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex gap-2 items-center">
+                  <tr key={vendor._id} className="border-b border-white/10 hover:bg-blue-900/40 transition group bg-blue-900/30 text-white">
+                    <td className="px-4 py-2 font-medium text-white">
+                      <Link href={`/admin/canteens/${vendor._id}`} className="hover:underline">
+                        {vendor.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2 text-white">{getOwnerName(vendor.owner)}</td>
+                    <td className="px-4 py-2">
+                      <Badge
+                        variant={vendor.isSuspended || vendor.isBanned ? "destructive" : "secondary"}
+                        className={vendor.isSuspended || vendor.isBanned ? "bg-green-500/90 text-white" : "bg-gray-700/80 text-white"}
+                      >
+                        {(vendor.isSuspended || vendor.isBanned) ? "Yes" : "No"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex gap-2 items-center">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className={`rounded-full border ${vendor.isSuspended ? 'text-green-400 border-green-400 hover:bg-green-600/20' : 'text-red-400 border-red-400 hover:bg-red-600/20'}`}
+                                onClick={() => handleBanVendor(vendor.owner?._id, !vendor.isSuspended, vendor._id)}
+                                aria-label={vendor.isSuspended ? "Unsuspend Vendor" : "Suspend Vendor"}
+                                disabled={actionLoading[vendor.owner?._id]}
+                              >
+                                {actionLoading[vendor.owner?._id]
+                                  ? <span className={`animate-spin w-5 h-5 border-2 ${vendor.isSuspended ? 'border-green-400' : 'border-red-400'} border-t-transparent rounded-full`}></span>
+                                  : vendor.isSuspended
+                                    ? <UserCheck className="w-5 h-5" />
+                                    : <UserX className="w-5 h-5" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {vendor.isSuspended ? "Unsuspend Vendor" : "Suspend Vendor"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        {vendor.approvalStatus !== "approved" && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className={`rounded-full border ${vendor.isSuspended ? 'text-green-400 border-green-400 hover:bg-green-600/20' : 'text-red-400 border-red-400 hover:bg-red-600/20'}`}
-                                  onClick={() => handleBanVendor(vendor.owner?._id, !vendor.isSuspended, vendor._id)}
-                                  aria-label={vendor.isSuspended ? "Unsuspend Vendor" : "Suspend Vendor"}
-                                  disabled={actionLoading[vendor.owner?._id]}
+                                  className="rounded-full border text-white border-green-400 hover:bg-green-600/20"
+                                  onClick={() => handleApproveVendor(vendor._id)}
+                                  aria-label="Approve Vendor"
+                                  disabled={approveLoading[vendor._id]}
                                 >
-                                  {actionLoading[vendor.owner?._id]
-                                    ? <span className={`animate-spin w-5 h-5 border-2 ${vendor.isSuspended ? 'border-green-400' : 'border-red-400'} border-t-transparent rounded-full`}></span>
-                                    : vendor.isSuspended
-                                      ? <UserCheck className="w-5 h-5" />
-                                      : <UserX className="w-5 h-5" />}
+                                  {approveLoading[vendor._id]
+                                    ? <span className="animate-spin w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full"></span>
+                                    : <CheckCircle2 className="w-5 h-5 text-green-400" />}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                {vendor.isSuspended ? "Unsuspend Vendor" : "Suspend Vendor"}
+                                Approve
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
-                          {vendor.approvalStatus !== "approved" && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="rounded-full border text-white border-green-400 hover:bg-green-600/20"
-                                    onClick={() => handleApproveVendor(vendor._id)}
-                                    aria-label="Approve Vendor"
-                                    disabled={approveLoading[vendor._id]}
-                                  >
-                                    {approveLoading[vendor._id]
-                                      ? <span className="animate-spin w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full"></span>
-                                      : <CheckCircle2 className="w-5 h-5 text-green-400" />}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  Approve
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 ))
               )}
             </tbody>

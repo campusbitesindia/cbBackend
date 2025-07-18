@@ -35,7 +35,6 @@ export default function AdminCanteenAnalyticsPage() {
   if (loading) return <div className="max-w-4xl mx-auto p-8"><div className="text-slate-300 py-12 text-center">Loading canteen details...</div></div>;
   if (error) return <div className="max-w-4xl mx-auto p-8"><div className="text-red-400 py-12 text-center">{error}</div><Button onClick={() => router.back()} className="mt-4"><ArrowLeft className="w-4 h-4 mr-2" /> Go Back</Button></div>;
   if (!canteen) return <div className="max-w-4xl mx-auto p-8"><div className="text-slate-400 py-12 text-center">Canteen not found</div><Button onClick={() => router.back()} className="mt-4"><ArrowLeft className="w-4 h-4 mr-2" /> Go Back</Button></div>;
-
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8">
       {/* Header */}
@@ -140,6 +139,7 @@ export default function AdminCanteenAnalyticsPage() {
             <CardTitle>Payouts</CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Payouts section removed as per local HEAD version */}
           </CardContent>
         </Card>
       </section>
