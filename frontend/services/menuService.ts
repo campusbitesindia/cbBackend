@@ -63,7 +63,6 @@ export async function createMenuItem(
   formData.append('name', data.name);
   formData.append('price', data.price.toString());
   if (data.description) formData.append('description', data.description);
-  if (data.canteen) formData.append('canteen', data.canteen);
   if (data.canteenId) formData.append('canteenId', data.canteenId);
   if (data.category) formData.append('category', data.category);
   if (data.isVeg !== undefined) formData.append('isVeg', data.isVeg.toString());
