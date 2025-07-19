@@ -1,22 +1,23 @@
 const{webPush}=require("../config/webPush")
 const Notification=require("../models/Notification");
-const PushSubscription = require("../models/PushSubscription");
-const SendNotification=async(user,title,message,type)=>{
+const User=require("../models/User")
+const SendNotification=async(userId,title,message,type)=>{
     try{
-
-
-        let subscription=await PushSubscription.findOne({user:user._id});
-        if(!subscription){
+        console.log("started")
+        const user=await User.findOne({_id:userId});
+        console.log(user)
+        if(!user){
             return;
         }
 
-        subscription=JSON.parse(subscription)
+        const subscription=JSON.parse(user.subscription);
+        console.log(subscription)
         const payload=JSON.stringify({
             title,
             body:message
         })
         const notification=await Notification.create({user:user._id,message,type:type?type:"order"});
-        const sentMessage=await webPush.sendNotification(subscription.subscription,payload);
+        const sentMessage=await webPush.sendNotification(subscription,payload);
        
     }
     catch(err){

@@ -30,8 +30,9 @@ exports.CreateCODTransaction=async(req,res)=>{
         }
         const UpdatedOrder=await Order.findByIdAndUpdate(orderId,{paymentStatus:"COD",status:"placed"},{new:true});
         const transaction=await Transaction.create({orderId:order._id,userId:order.student,amount:order.total,paymentMethod:"COD",currency:"INR"})
-
-        await SendNotification(order.student,"Order Status","Your Order has been placed");
+        
+       
+        await SendNotification(order.student._id,"Order Placed","Your Order has been Placed")
         return res.status(200).json({
             success:true,
             message:"Transaction Made SuccessFully",
