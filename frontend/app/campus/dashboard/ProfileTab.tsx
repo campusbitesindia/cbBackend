@@ -1,8 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Upload } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile, uploadProfileImage } from '@/services/userService';
+import {
+  getBankDetails,
+  updateBankDetails,
+  BankDetailsPayload,
+  BankDetailsResponse,
+} from '@/services/bankDetailsService';
 
 interface PersonalData {
   vendorName: string;
@@ -14,11 +20,11 @@ interface PersonalData {
 }
 
 interface BankDetails {
-  panNumber: string;
-  gstNumber: string;
+  accountHolderName: string;
   accountNumber: string;
-  bankName: string;
+  confirmAccountNumber: string;
   ifscCode: string;
+  bankName: string;
   branchName: string;
   upiId: string;
 }
@@ -57,30 +63,94 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   handleProfilePicUpload,
 }) => {
   const { toast } = useToast();
+  const [bankDetailsLoading, setBankDetailsLoading] = useState(false);
+  const [existingBankDetails, setExistingBankDetails] =
+    useState<BankDetailsResponse | null>(null);
+
+  // Load existing bank details on component mount
+  useEffect(() => {
+    const loadBankDetails = async () => {
+      setBankDetailsLoading(true);
+      try {
+        const response = await getBankDetails();
+        if (response.success && response.data) {
+          setExistingBankDetails(response.data);
+          // Pre-fill the form with existing data
+          // Note: Account number is masked in response, so we can't pre-fill it
+          setBankDetails({
+            accountHolderName: response.data.accountHolderName,
+            accountNumber: '', // Can't pre-fill masked account number
+            confirmAccountNumber: '', // Can't pre-fill masked account number
+            ifscCode: response.data.ifscCode,
+            bankName: response.data.bankName,
+            branchName: response.data.branchName,
+            upiId: response.data.upiId || '',
+          });
+        }
+      } catch (error: any) {
+        // If 404, it means no bank details exist yet - this is fine
+        if (error.response?.status !== 404) {
+          console.error('Error loading bank details:', error);
+          toast({
+            title: 'Error',
+            description:
+              error.response?.data?.message || 'Failed to load bank details',
+            variant: 'destructive',
+          });
+        }
+      } finally {
+        setBankDetailsLoading(false);
+      }
+    };
+
+    loadBankDetails();
+  }, [toast]);
 
   const handleBankDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation
+    if (bankDetails.accountNumber !== bankDetails.confirmAccountNumber) {
+      toast({
+        title: 'Validation Error',
+        description: 'Account numbers do not match',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setBankSubmitting(true);
     setBankSuccess(false);
 
     try {
-      const token = localStorage.getItem('token') || '';
-      // TODO: Implement bank details update API endpoint
-      // await updateBankDetails(bankDetails, token);
+      const bankData: BankDetailsPayload = {
+        accountHolderName: bankDetails.accountHolderName,
+        accountNumber: bankDetails.accountNumber,
+        confirmAccountNumber: bankDetails.confirmAccountNumber,
+        ifscCode: bankDetails.ifscCode,
+        bankName: bankDetails.bankName,
+        branchName: bankDetails.branchName,
+        upiId: bankDetails.upiId || undefined,
+      };
 
-      setBankSuccess(true);
-      toast({
-        title: 'Success',
-        description: 'Bank details updated successfully!',
-      });
-    } catch (error) {
+      const response = await updateBankDetails(bankData);
+
+      if (response.success) {
+        setBankSuccess(true);
+        setExistingBankDetails(response.data);
+        toast({
+          title: 'Success',
+          description: response.note || 'Bank details updated successfully!',
+        });
+      }
+    } catch (error: any) {
       console.error('Error updating bank details:', error);
       toast({
         title: 'Error',
         description:
-          error instanceof Error
-            ? error.message
-            : 'Failed to update bank details',
+          error.response?.data?.message ||
+          error.message ||
+          'Failed to update bank details',
         variant: 'destructive',
       });
     } finally {
@@ -276,41 +346,58 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           Bank & Payout Details
         </h3>
         <form className='space-y-4' onSubmit={handleBankDetailsSubmit}>
+          {bankDetailsLoading && (
+            <div className='text-center py-4'>
+              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto'></div>
+              <p className='text-gray-600 mt-2'>Loading bank details...</p>
+            </div>
+          )}
+
+          {existingBankDetails && (
+            <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
+              <div className='flex items-center justify-between'>
+                <div>
+                  <p className='text-sm font-medium text-blue-800'>
+                    Verification Status:{' '}
+                    {existingBankDetails.isVerified
+                      ? 'Verified'
+                      : 'Pending Verification'}
+                  </p>
+                  {existingBankDetails.verificationNotes && (
+                    <p className='text-xs text-blue-600 mt-1'>
+                      Notes: {existingBankDetails.verificationNotes}
+                    </p>
+                  )}
+                  <p className='text-xs text-blue-600 mt-1'>
+                    Note: For security reasons, you'll need to re-enter your
+                    account number when updating.
+                  </p>
+                </div>
+                {existingBankDetails.isVerified && (
+                  <span className='px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full'>
+                    ✓ Verified
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-1'>
-                PAN Number *
+                Account Holder Name *
               </label>
               <input
                 type='text'
-                value={bankDetails.panNumber}
+                value={bankDetails.accountHolderName}
                 onChange={(e) =>
                   setBankDetails({
                     ...bankDetails,
-                    panNumber: e.target.value.toUpperCase(),
+                    accountHolderName: e.target.value,
                   })
                 }
                 className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                maxLength={10}
                 required
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                GST Number
-              </label>
-              <input
-                type='text'
-                value={bankDetails.gstNumber}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    gstNumber: e.target.value.toUpperCase(),
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                maxLength={15}
               />
             </div>
 
@@ -330,6 +417,38 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                 className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                 required
               />
+            </div>
+
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Confirm Account Number *
+              </label>
+              <input
+                type='text'
+                value={bankDetails.confirmAccountNumber}
+                onChange={(e) =>
+                  setBankDetails({
+                    ...bankDetails,
+                    confirmAccountNumber: e.target.value,
+                  })
+                }
+                className={`w-full px-3 py-2 bg-white text-black border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  bankDetails.accountNumber &&
+                  bankDetails.confirmAccountNumber &&
+                  bankDetails.accountNumber !== bankDetails.confirmAccountNumber
+                    ? 'border-red-300 focus:ring-red-500'
+                    : 'border-gray-300'
+                }`}
+                required
+              />
+              {bankDetails.accountNumber &&
+                bankDetails.confirmAccountNumber &&
+                bankDetails.accountNumber !==
+                  bankDetails.confirmAccountNumber && (
+                  <p className='text-xs text-red-600 mt-1'>
+                    Account numbers do not match
+                  </p>
+                )}
             </div>
 
             <div>

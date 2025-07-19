@@ -1,5 +1,5 @@
-import React from 'react';
-import { RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { OrderCard } from './OrderCard';
@@ -9,6 +9,7 @@ interface OrdersTabProps {
   orders: Order[];
   onRefresh: () => void;
   onOrderClick: (orderId: string) => void;
+  onStatusUpdate?: (orderId: string, newStatus: string) => void;
   canteenId: string | null;
 }
 
@@ -16,8 +17,35 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   orders,
   onRefresh,
   onOrderClick,
+  onStatusUpdate,
   canteenId,
 }) => {
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [newOrderNotification, setNewOrderNotification] = useState<{
+    show: boolean;
+    count: number;
+  }>({ show: false, count: 0 });
+  const [lastOrderCount, setLastOrderCount] = useState(0);
+
+  // Check for new orders
+  useEffect(() => {
+    if (orders.length > lastOrderCount && lastOrderCount > 0) {
+      const newCount = orders.length - lastOrderCount;
+      setNewOrderNotification({
+        show: true,
+        count: newCount,
+      });
+
+      // Auto-hide notification after 10 seconds
+      const timer = setTimeout(() => {
+        setNewOrderNotification({ show: false, count: 0 });
+      }, 10000);
+
+      return () => clearTimeout(timer);
+    }
+    setLastOrderCount(orders.length);
+  }, [orders.length, lastOrderCount]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'placed':
@@ -55,8 +83,41 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     }
   };
 
+  const handleStatusUpdate = (orderId: string, newStatus: string) => {
+    // Call the parent callback to refresh the order list
+    if (onStatusUpdate) {
+      onStatusUpdate(orderId, newStatus);
+    }
+  };
+
   return (
     <div className='space-y-10'>
+      {/* New Order Notification */}
+      {newOrderNotification.show && (
+        <div className='bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between animate-in slide-in-from-top-2 duration-300'>
+          <div className='flex items-center space-x-3'>
+            <Bell className='w-5 h-5 text-green-600 animate-pulse' />
+            <div>
+              <p className='font-semibold text-green-800'>
+                New Order{newOrderNotification.count > 1 ? 's' : ''} Received!
+              </p>
+              <p className='text-sm text-green-600'>
+                {newOrderNotification.count} new order
+                {newOrderNotification.count > 1 ? 's' : ''} need
+                {newOrderNotification.count > 1 ? '' : 's'} your attention
+              </p>
+            </div>
+          </div>
+          <Button
+            variant='ghost'
+            size='sm'
+            onClick={() => setNewOrderNotification({ show: false, count: 0 })}
+            className='text-green-600 hover:text-green-800'>
+            <X className='w-4 h-4' />
+          </Button>
+        </div>
+      )}
+
       <div className='flex justify-between items-end mb-6'>
         <div>
           <h1 className='text-2xl font-bold text-gray-800 mb-1'>Orders</h1>
@@ -76,14 +137,49 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
       <Separator className='mb-6 bg-gray-200' />
 
+      {/* Status Filter */}
+      <div className='flex items-center space-x-4 mb-6'>
+        <span className='text-sm font-medium text-gray-700'>
+          Filter by Status:
+        </span>
+        <div className='flex space-x-2'>
+          {[
+            'all',
+            'placed',
+            'preparing',
+            'ready',
+            'completed',
+            'cancelled',
+          ].map((status) => (
+            <Button
+              key={status}
+              variant={statusFilter === status ? 'default' : 'outline'}
+              size='sm'
+              onClick={() => setStatusFilter(status)}
+              className={
+                statusFilter === status
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700'
+              }>
+              {status.charAt(0).toUpperCase() + status.slice(1)}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       <div className='space-y-8'>
-        {orders.map((order) => (
-          <OrderCard
-            key={order._id}
-            order={order}
-            onOrderClick={onOrderClick}
-          />
-        ))}
+        {orders
+          .filter(
+            (order) => statusFilter === 'all' || order.status === statusFilter
+          )
+          .map((order) => (
+            <OrderCard
+              key={order._id}
+              order={order}
+              onOrderClick={onOrderClick}
+              onStatusUpdate={handleStatusUpdate}
+            />
+          ))}
       </div>
 
       <div className='mt-10'>
@@ -125,12 +221,26 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     <span className='text-xs text-gray-500'>
                       ₹{order.total.toFixed(2)}
                     </span>
-                    <span className='text-xs text-gray-400'>
-                      {new Date(order.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-xs text-gray-400'>
+                        {new Date(order.createdAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                      {order.status === 'placed' && (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='text-xs h-6 px-2 bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusUpdate(order._id, 'preparing');
+                          }}>
+                          Start Preparing
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))

@@ -20,24 +20,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import {
+  payoutService,
+  PayoutBalance,
+  PayoutRequest,
+} from '@/services/payoutService';
 
-// Mock interfaces (would normally come from backend)
-interface PayoutHistory {
-  _id: string;
-  amount: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  requestedAt: string;
-  processedAt?: string;
-  transactionId?: string;
-  remarks?: string;
-}
-
-interface PayoutBalance {
-  availableBalance: number;
-  pendingAmount: number;
-  totalEarnings: number;
-  lastUpdated: string;
-}
+// Using real interfaces from payoutService
 
 interface PayoutsTabProps {
   canteenStats: any;
@@ -46,47 +35,23 @@ interface PayoutsTabProps {
   canteenId: string | null;
 }
 
-// Mock data for demonstration
-const mockPayoutBalance: PayoutBalance = {
-  availableBalance: 2850,
-  pendingAmount: 450,
-  totalEarnings: 15670,
-  lastUpdated: new Date().toISOString(),
+// Initial state for payout data
+const initialPayoutBalance: PayoutBalance = {
+  canteen: { id: '', name: '' },
+  balance: {
+    totalEarnings: 0,
+    totalPayouts: 0,
+    platformFee: 0,
+    availableBalance: 0,
+    pendingPayouts: 0,
+  },
+  statistics: {
+    totalOrders: 0,
+    completedPayouts: 0,
+    pendingPayoutRequests: 0,
+  },
+  pendingRequests: [],
 };
-
-const mockPayoutHistory: PayoutHistory[] = [
-  {
-    _id: '64f1a2b3c4d5e6f7g8h9i0j1',
-    amount: 1200,
-    status: 'completed',
-    requestedAt: '2024-01-15T10:30:00Z',
-    processedAt: '2024-01-16T14:22:00Z',
-    transactionId: 'TXN_123456789',
-    remarks: 'Regular payout request',
-  },
-  {
-    _id: '64f1a2b3c4d5e6f7g8h9i0j2',
-    amount: 800,
-    status: 'processing',
-    requestedAt: '2024-01-20T09:15:00Z',
-    remarks: 'Weekly payout',
-  },
-  {
-    _id: '64f1a2b3c4d5e6f7g8h9i0j3',
-    amount: 950,
-    status: 'completed',
-    requestedAt: '2024-01-10T16:45:00Z',
-    processedAt: '2024-01-11T11:30:00Z',
-    transactionId: 'TXN_987654321',
-  },
-  {
-    _id: '64f1a2b3c4d5e6f7g8h9i0j4',
-    amount: 500,
-    status: 'failed',
-    requestedAt: '2024-01-08T14:20:00Z',
-    remarks: 'Bank account verification failed',
-  },
-];
 
 const StatsCard = ({
   title,
@@ -127,29 +92,39 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
   canteenId,
 }) => {
   const { toast } = useToast();
-  const [payoutHistory, setPayoutHistory] =
-    useState<PayoutHistory[]>(mockPayoutHistory);
+  const [payoutHistory, setPayoutHistory] = useState<PayoutRequest[]>([]);
   const [payoutBalance, setPayoutBalance] =
-    useState<PayoutBalance>(mockPayoutBalance);
+    useState<PayoutBalance>(initialPayoutBalance);
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(false);
 
-  // Mock API calls (would be real API calls when backend is ready)
+  // Real API calls
   const fetchPayoutData = async () => {
     setLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
-      setPayoutHistory(mockPayoutHistory);
-      setPayoutBalance(mockPayoutBalance);
+    try {
+      const [balanceResponse, historyResponse] = await Promise.all([
+        payoutService.getBalance(),
+        payoutService.getPayoutHistory(),
+      ]);
+
+      setPayoutBalance(balanceResponse.data);
+      setPayoutHistory(historyResponse.data);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to fetch payout data',
+        variant: 'destructive',
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handlePayoutRequest = async () => {
-    if (payoutBalance.availableBalance < 500) {
+    if (payoutBalance.balance.availableBalance < 100) {
       toast({
         title: 'Insufficient Balance',
-        description: 'Minimum payout amount is ₹500',
+        description: 'Minimum payout amount is ₹100',
         variant: 'destructive',
       });
       return;
@@ -157,32 +132,28 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
 
     setRequesting(true);
 
-    // Simulate API request
-    setTimeout(() => {
-      const newPayout: PayoutHistory = {
-        _id: `mock_${Date.now()}`,
-        amount: payoutBalance.availableBalance,
-        status: 'pending',
-        requestedAt: new Date().toISOString(),
-        remarks: 'Regular payout request',
-      };
-
-      setPayoutHistory([newPayout, ...payoutHistory]);
-      setPayoutBalance({
-        ...payoutBalance,
-        availableBalance: 0,
-        pendingAmount:
-          payoutBalance.pendingAmount + payoutBalance.availableBalance,
-      });
-
-      setRequesting(false);
+    try {
+      const response = await payoutService.requestPayout(
+        payoutBalance.balance.availableBalance,
+        'Regular payout request'
+      );
 
       toast({
         title: 'Payout Request Submitted',
-        description:
-          'Your payout request has been submitted successfully! (Demo mode)',
+        description: response.message,
       });
-    }, 2000);
+
+      // Refresh data after successful request
+      await fetchPayoutData();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit payout request',
+        variant: 'destructive',
+      });
+    } finally {
+      setRequesting(false);
+    }
   };
 
   const handleRefresh = async () => {
@@ -232,18 +203,18 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
       </div>
       <Separator className='mb-6 bg-gray-200' />
 
-      {/* Demo Notice */}
-      <Card className='bg-amber-50 border-amber-200'>
+      {/* Live API Notice */}
+      <Card className='bg-green-50 border-green-200'>
         <CardHeader>
-          <CardTitle className='flex items-center gap-2 text-amber-800'>
-            <Eye className='w-5 h-5' />
-            Demo Mode
+          <CardTitle className='flex items-center gap-2 text-green-800'>
+            <CheckCircle className='w-5 h-5' />
+            Live API Integration
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className='text-amber-700 text-sm'>
-            This is a demo interface with mock data. Backend endpoints are not
-            yet implemented. All data shown is for demonstration purposes only.
+          <p className='text-green-700 text-sm'>
+            Connected to real backend API. All data is live from your canteen's
+            actual earnings and payout requests.
           </p>
         </CardContent>
       </Card>
@@ -252,7 +223,7 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         <StatsCard
           title='Total Earnings'
-          value={`₹${payoutBalance.totalEarnings.toLocaleString()}`}
+          value={`₹${payoutBalance.balance.totalEarnings.toLocaleString()}`}
           description='All time earnings'
           icon={TrendingUp}
           className='bg-gradient-to-r from-green-50 to-green-100 border-green-200'
@@ -261,7 +232,7 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
 
         <StatsCard
           title='Available Balance'
-          value={`₹${payoutBalance.availableBalance.toLocaleString()}`}
+          value={`₹${payoutBalance.balance.availableBalance.toLocaleString()}`}
           description='Ready for payout'
           icon={DollarSign}
           className='bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200'
@@ -270,7 +241,7 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
 
         <StatsCard
           title='Pending Payouts'
-          value={`₹${payoutBalance.pendingAmount.toLocaleString()}`}
+          value={`₹${payoutBalance.balance.pendingPayouts.toLocaleString()}`}
           description='Processing'
           icon={Clock}
           className='bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200'
@@ -284,7 +255,9 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
           className='bg-green-600 hover:bg-green-700 text-white flex items-center'
           onClick={handlePayoutRequest}
           disabled={
-            requesting || loading || payoutBalance.availableBalance < 500
+            requesting ||
+            loading ||
+            payoutBalance.balance.availableBalance < 100
           }>
           <DollarSign className='w-4 h-4 mr-2' />
           {requesting ? 'Processing...' : 'Request Payout'}
@@ -357,7 +330,7 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
                                 payout.processedAt
                               ).toLocaleDateString()}`
                             : `Requested on ${new Date(
-                                payout.requestedAt
+                                payout.createdAt
                               ).toLocaleDateString()}`}
                         </p>
                         {payout.transactionId && (
@@ -369,17 +342,23 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
                     </div>
                     <div className='text-right'>
                       <p className='font-semibold text-gray-800'>
-                        ₹{payout.amount.toLocaleString()}
+                        ₹{payout.requestedAmount.toLocaleString()}
                       </p>
                       <p
                         className={`text-sm text-${statusColor}-600 capitalize`}>
                         {payout.status}
                       </p>
-                      {payout.remarks && payout.status === 'failed' && (
+                      {payout.requestNotes && payout.status === 'failed' && (
                         <p className='text-xs text-red-500 mt-1'>
-                          {payout.remarks}
+                          {payout.requestNotes}
                         </p>
                       )}
+                      {payout.rejectionReason &&
+                        payout.status === 'rejected' && (
+                          <p className='text-xs text-red-500 mt-1'>
+                            {payout.rejectionReason}
+                          </p>
+                        )}
                     </div>
                   </div>
                 );
@@ -415,12 +394,12 @@ export const PayoutsTab: React.FC<PayoutsTabProps> = ({
           </div>
           <div className='flex items-start space-x-2'>
             <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
-            <p className='text-sm'>Minimum payout amount is ₹500</p>
+            <p className='text-sm'>Minimum payout amount is ₹100</p>
           </div>
           <div className='flex items-start space-x-2'>
             <div className='w-2 h-2 bg-blue-500 rounded-full mt-2'></div>
             <p className='text-sm'>
-              Platform fee of 15% is deducted from earnings
+              Platform fee of 5% is deducted from earnings
             </p>
           </div>
           <div className='flex items-start space-x-2'>

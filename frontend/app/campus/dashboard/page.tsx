@@ -104,11 +104,11 @@ export default function Dashboard() {
 
   // Bank details state
   const [bankDetails, setBankDetails] = useState({
-    panNumber: '',
-    gstNumber: '',
+    accountHolderName: '',
     accountNumber: '',
-    bankName: '',
+    confirmAccountNumber: '',
     ifscCode: '',
+    bankName: '',
     branchName: '',
     upiId: '',
   });
@@ -605,6 +605,22 @@ export default function Dashboard() {
     }
   };
 
+  const handleOrderStatusUpdate = (orderId: string, newStatus: string) => {
+    // Update the order in the local state
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order._id === orderId
+          ? { ...order, status: newStatus as Order['status'] }
+          : order
+      )
+    );
+
+    // Refresh the data to get updated statistics
+    if (canteenId) {
+      fetchData(canteenId);
+    }
+  };
+
   // Debug: Add a timeout to prevent infinite loading
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -757,6 +773,7 @@ export default function Dashboard() {
               orders={orders}
               onRefresh={() => canteenId && fetchData(canteenId)}
               onOrderClick={fetchOrderDetails}
+              onStatusUpdate={handleOrderStatusUpdate}
               canteenId={canteenId}
             />
           )}
@@ -801,6 +818,7 @@ export default function Dashboard() {
         <OrderDetailsDialog
           orderDetails={orderDetails}
           setOrderDetails={setOrderDetails}
+          onStatusUpdate={handleOrderStatusUpdate}
         />
       )}
     </div>

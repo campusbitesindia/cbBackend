@@ -64,7 +64,7 @@ export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
     );
     return response.data;
   } catch (error) {
-    console.log(error)
+    console.log(error);
     handleAuthError(error);
     return Promise.reject(error);
   }
