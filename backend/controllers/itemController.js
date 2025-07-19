@@ -19,7 +19,7 @@ exports.getItems = async (req, res) => {
         message: 'caneen not found',
       });
     }
-    const Items = await Item.find({ canteen: canteen._id });
+    const Items = await Item.find({ canteen: canteen._id,isDeleted:false });
     return res.status(200).json({
       success: true,
       message: 'Items Fetched SuccessFully',
