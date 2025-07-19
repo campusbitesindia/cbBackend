@@ -89,7 +89,12 @@ export default function CartPage() {
 
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:bg-gray-950 transition-colors duration-500">
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-500 relative">
+        {/* Background Elements */}
+        <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
+          <div className="absolute -top-1/2 -right-1/2 w-96 h-96 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-full blur-3xl" />
+        </div>
         {/* Header */}
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="container mx-auto px-4 py-4">
@@ -101,8 +106,7 @@ export default function CartPage() {
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Your Cart</h1>
               </div>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-                <MapPin className="h-4 w-4 text-red-500" />
-                <span>Pots campus 2, LDH V</span>
+              
               </div>
             </div>
           </div>
@@ -122,7 +126,7 @@ export default function CartPage() {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="text-gray-400 dark:text-gray-500"
+                className="text-gray-400 dark:text-gray-300"
               >
                 <circle cx="8" cy="21" r="1" />
                 <circle cx="19" cy="21" r="1" />
@@ -131,7 +135,7 @@ export default function CartPage() {
             </div>
             <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Your cart is empty</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-8">Looks like you haven't added any items to your cart yet.</p>
-            <Button asChild className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-lg">
+            <Button asChild className="bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-lg">
               <Link href="/menu">Browse Menu</Link>
             </Button>
           </div>
@@ -141,7 +145,12 @@ export default function CartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:bg-gray-950 transition-colors duration-500">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-500 relative">
+      {/* Background Elements */}
+      <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
+        <div className="absolute -top-1/2 -right-1/2 w-96 h-96 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-full blur-3xl" />
+      </div>
       {/* Header */}
       <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="container mx-auto px-4 py-4">

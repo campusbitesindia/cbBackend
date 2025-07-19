@@ -12,72 +12,29 @@ export default function AdminCanteenAnalyticsPage() {
   const router = useRouter();
   const canteenId = params.canteenId as string;
   const [canteen, setCanteen] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [payouts, setPayouts] = useState<any[]>([]);
-  const [payoutsLoading, setPayoutsLoading] = useState(true);
-  const [payoutsError, setPayoutsError] = useState("");
 
   useEffect(() => {
-    async function fetchCanteen() {
+    async function fetchCanteens() {
       setLoading(true);
       setError("");
       try {
-        const res = await api.get(`/api/v1/admin/vendors/${canteenId}/details`);
-        setCanteen(res.data.data.canteen);
-        setStats(res.data.data.statistics);
+        const res = await api.get(`/api/v1/canteens/${canteenId}`);
+        if (!res.data || !res.data.canteen) setError("Canteen not found");
+        setCanteen(res.data.canteen);
       } catch (err: any) {
         setError(err.message || "Failed to load canteen details");
       } finally {
         setLoading(false);
       }
     }
-    async function fetchPayouts() {
-      setPayoutsLoading(true);
-      setPayoutsError("");
-      try {
-        const res = await api.get(`/api/v1/admin/payouts/canteen/${canteenId}`);
-        setPayouts(res.data.payouts || []);
-      } catch (err: any) {
-        setPayoutsError(err.message || "Failed to load payouts");
-      } finally {
-        setPayoutsLoading(false);
-      }
-    }
-    if (canteenId) {
-      fetchCanteen();
-      fetchPayouts();
-    }
+    if (canteenId) fetchCanteens();
   }, [canteenId]);
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="text-slate-300 py-12 text-center">Loading canteen details...</div>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="text-red-400 py-12 text-center">{error}</div>
-        <Button onClick={() => router.back()} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
-        </Button>
-      </div>
-    );
-  }
-  if (!canteen) {
-    return (
-      <div className="max-w-4xl mx-auto p-8">
-        <div className="text-slate-400 py-12 text-center">Canteen not found</div>
-        <Button onClick={() => router.back()} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Go Back
-        </Button>
-      </div>
-    );
-  }
+  if (loading) return <div className="max-w-4xl mx-auto p-8"><div className="text-slate-300 py-12 text-center">Loading canteen details...</div></div>;
+  if (error) return <div className="max-w-4xl mx-auto p-8"><div className="text-red-400 py-12 text-center">{error}</div><Button onClick={() => router.back()} className="mt-4"><ArrowLeft className="w-4 h-4 mr-2" /> Go Back</Button></div>;
+  if (!canteen) return <div className="max-w-4xl mx-auto p-8"><div className="text-slate-400 py-12 text-center">Canteen not found</div><Button onClick={() => router.back()} className="mt-4"><ArrowLeft className="w-4 h-4 mr-2" /> Go Back</Button></div>;
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8">
       {/* Header */}
@@ -112,7 +69,7 @@ export default function AdminCanteenAnalyticsPage() {
             <CardTitle className="text-white text-lg flex items-center gap-2"><Users className="w-5 h-5 text-blue-400" />Total Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats?.totalOrders || 0}</div>
+            <div className="text-2xl font-bold text-white">{canteen.statistics?.totalOrders || 0}</div>
           </CardContent>
         </Card>
         <Card className="bg-white/10 border-white/20">
@@ -120,7 +77,7 @@ export default function AdminCanteenAnalyticsPage() {
             <CardTitle className="text-white text-lg flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-400" />Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">₹{stats?.totalRevenue || 0}</div>
+            <div className="text-2xl font-bold text-white">₹{canteen.statistics?.totalRevenue || 0}</div>
           </CardContent>
         </Card>
         <Card className="bg-white/10 border-white/20">
@@ -128,7 +85,7 @@ export default function AdminCanteenAnalyticsPage() {
             <CardTitle className="text-white text-lg flex items-center gap-2"><Star className="w-5 h-5 text-yellow-400" />Completed Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{stats?.completedOrders || 0}</div>
+            <div className="text-2xl font-bold text-white">{canteen.statistics?.completedOrders || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -182,36 +139,7 @@ export default function AdminCanteenAnalyticsPage() {
             <CardTitle>Payouts</CardTitle>
           </CardHeader>
           <CardContent>
-            {payoutsLoading ? (
-              <div className="text-slate-400">Loading payouts...</div>
-            ) : payoutsError ? (
-              <div className="text-red-400">{payoutsError}</div>
-            ) : payouts.length === 0 ? (
-              <div className="text-slate-400">No payouts found for this canteen.</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white/5 rounded-xl overflow-hidden border border-white/10 text-white">
-                  <thead>
-                    <tr className="bg-white/10">
-                      <th className="px-4 py-2 font-semibold">Transaction ID</th>
-                      <th className="px-4 py-2 font-semibold">Date</th>
-                      <th className="px-4 py-2 font-semibold">Amount</th>
-                      <th className="px-4 py-2 font-semibold">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payouts.map((p: any) => (
-                      <tr key={p._id} className="border-b border-white/10 hover:bg-white/10 transition group">
-                        <td className="px-4 py-2">{p.trnId}</td>
-                        <td className="px-4 py-2">{p.date ? new Date(p.date).toLocaleDateString() : "-"}</td>
-                        <td className="px-4 py-2">₹{p.amount}</td>
-                        <td className="px-4 py-2">{p.notes || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {/* Payouts section removed as per local HEAD version */}
           </CardContent>
         </Card>
       </section>

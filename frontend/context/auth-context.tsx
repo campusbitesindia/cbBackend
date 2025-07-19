@@ -34,7 +34,8 @@ type AuthContextType = {
     email: string,
     password: string,
     role?: string,
-    campus?: string
+    campus?: string,
+    phone?: string
   ) => Promise<void>;
   loginWithToken: (token: string) => void;
   logout: () => void;
@@ -187,7 +188,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: string,
       password: string,
       role: string = 'student',
-      campus: string = 'Main Campus'
+      campus: string = 'Main Campus',
+      phone: string = ''
     ) => {
       try {
         const response = await fetch(
@@ -203,6 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               password,
               role,
               campus,
+              phone,
             }),
           }
         );
@@ -308,3 +311,4 @@ export function useAuth() {
   }
   return context;
 }
+
