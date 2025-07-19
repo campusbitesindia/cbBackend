@@ -19,7 +19,7 @@ exports.getItems = async (req, res) => {
         message: 'caneen not found',
       });
     }
-    const Items = await Item.find({ canteen: canteen._id });
+    const Items = await Item.find({ canteen: canteen._id,isDeleted:false });
     return res.status(200).json({
       success: true,
       message: 'Items Fetched SuccessFully',
@@ -83,7 +83,8 @@ exports.createItem = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const data = req.body;
-
+    console.log("...........................update...........item");
+    console.log(data);
     const { id: itemId } = req.params;
     const file = req.file;
     const item = await Item.findById(itemId);
