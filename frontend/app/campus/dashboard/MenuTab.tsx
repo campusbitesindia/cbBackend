@@ -23,6 +23,8 @@ interface MenuItemFormData {
   isVeg: boolean;
   available: boolean;
   image: string;
+  portion: string;
+  quantity: string;
 }
 
 interface MenuTabProps {
@@ -41,7 +43,7 @@ interface MenuTabProps {
   isEditItemOpen: boolean;
   setIsEditItemOpen: (open: boolean) => void;
   formData: MenuItemFormData;
-  setFormData: (data: MenuItemFormData) => void;
+  setFormData: React.Dispatch<React.SetStateAction<MenuItemFormData>>;
   imageUploading: boolean;
   imagePreview: string;
   editingItem: MenuItem | null;
@@ -99,7 +101,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 Add New Item
               </Button>
             </DialogTrigger>
-            <DialogContent className='max-w-md bg-white text-black'>
+            <DialogContent className='max-w-md bg-white text-black max-h-[90vh] overflow-y-auto scrollbar-hide'>
               <DialogHeader>
                 <DialogTitle>Add New Menu Item</DialogTitle>
                 <DialogDescription>
@@ -111,8 +113,6 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 setFormData={setFormData}
                 onSubmit={onSubmit}
                 isEditing={false}
-                imageUploading={imageUploading}
-                imagePreview={imagePreview}
                 onImageUpload={onImageUpload}
               />
             </DialogContent>
@@ -230,7 +230,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
 
       {/* Edit Item Dialog */}
       <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
-        <DialogContent className='max-w-md bg-white border border-gray-200 text-black'>
+        <DialogContent className='max-w-md bg-white border border-gray-200 text-black max-h-[90vh] overflow-y-auto scrollbar-hide'>
           <DialogHeader>
             <DialogTitle className='text-black'>Edit Menu Item</DialogTitle>
             <DialogDescription className='text-black'>
@@ -242,8 +242,6 @@ export const MenuTab: React.FC<MenuTabProps> = ({
             setFormData={setFormData}
             onSubmit={onSubmit}
             isEditing={true}
-            imageUploading={imageUploading}
-            imagePreview={imagePreview}
             onImageUpload={onImageUpload}
           />
         </DialogContent>

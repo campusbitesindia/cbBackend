@@ -34,6 +34,7 @@ interface MenuItemFormProps {
   setFormData: (data: MenuItemFormData) => void;
   onSubmit: (e: React.FormEvent) => void;
   isEditing: boolean;
+  onImageUpload?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const MenuItemForm: React.FC<MenuItemFormProps> = ({
@@ -41,9 +42,11 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   setFormData,
   onSubmit,
   isEditing,
+  onImageUpload,
 }) => {
   const [imageUploading, setImageUploading] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,33 +59,28 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
       // Validate the image
       validateImage(file);
 
-      // Create immediate local preview
-      const previewUrl = await createImagePreview(file);
-      setFormData({ ...formData, image: previewUrl });
+      // Create base64 data URL for preview and storage
+      const base64Data = await createImagePreview(file);
 
-      try {
-        // Try to upload to server
-        const uploadResult = await uploadImageViaProfile(file);
-        setFormData({ ...formData, image: uploadResult.url });
+      // Store the base64 data URL in form data
+      setFormData({ ...formData, image: base64Data });
 
-        toast({
-          title: 'Success',
-          description: 'Image uploaded successfully!',
-        });
-      } catch (uploadError) {
-        console.warn('Server upload failed, using local preview:', uploadError);
+      // Store the original file for potential use
+      setSelectedFile(file);
 
-        // Keep the local preview but show a warning
-        toast({
-          title: 'Upload Warning',
-          description:
-            'Using local preview. Image will be uploaded when you save the item.',
-          variant: 'default',
-        });
+      // Call the parent's onImageUpload if provided
+      if (onImageUpload) {
+        onImageUpload(e);
       }
+
+      toast({
+        title: 'Success',
+        description: 'Image selected successfully!',
+      });
     } catch (error) {
       console.error('File handling error:', error);
       setFormData({ ...formData, image: '' });
+      setSelectedFile(null);
       toast({
         title: 'Error',
         description:

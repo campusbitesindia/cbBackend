@@ -76,6 +76,8 @@ export default function Dashboard() {
     isVeg: false,
     available: true,
     image: '',
+    portion: '',
+    quantity: '',
   });
 
   // Add search state
@@ -290,7 +292,7 @@ export default function Dashboard() {
         setMenuLoading(true);
         console.log(`Fetching menu items for canteen: ${canteenIdToUse}`);
         const menuData = await axios.get(
-          `http://localhost:8080/api/v1/menu/${canteenIdToUse}`,
+          `http://localhost:8080/api/v1/items/getItems/${canteenIdToUse}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -388,43 +390,13 @@ export default function Dashboard() {
         const previewUrl = URL.createObjectURL(file);
         setImagePreview(previewUrl);
 
-        try {
-          // Attempt to upload the image to the server
-          const uploadResult = await uploadImage(file);
+        // Store the file for later use in form submission
+        // The image will be uploaded when the form is submitted
 
-          // Update form data with the uploaded image URL
-          setFormData({ ...formData, image: uploadResult.url });
-
-          toast({
-            title: 'Success',
-            description: 'Image uploaded successfully!',
-          });
-        } catch (uploadError) {
-          console.warn('Image upload failed, using fallback:', uploadError);
-
-          // If upload fails, create a data URL as fallback
-          try {
-            const dataUrl = await createImagePreview(file);
-            setFormData({ ...formData, image: dataUrl });
-
-            toast({
-              title: 'Upload Failed',
-              description:
-                'Using local image preview. Image may not be saved permanently.',
-              variant: 'destructive',
-            });
-          } catch (previewError) {
-            // If both upload and preview fail, use placeholder
-            setFormData({ ...formData, image: '/placeholder.svg' });
-
-            toast({
-              title: 'Error',
-              description:
-                'Failed to process image. Using placeholder instead.',
-              variant: 'destructive',
-            });
-          }
-        }
+        toast({
+          title: 'Success',
+          description: 'Image selected successfully!',
+        });
       } catch (validationError) {
         console.error('Image validation error:', validationError);
         setSelectedImage(null);
@@ -482,28 +454,47 @@ export default function Dashboard() {
 
       console.log('Submitting menu item with canteenId:', canteenId);
 
-      // Use the image URL from formData.image (could be uploaded URL, data URL, or placeholder)
-      const imageUrl = formData.image || '/placeholder.svg';
+      // Handle image data - pass base64 data directly
+      let imageData = null;
 
-      // Log image source type for debugging
-      if (imageUrl.startsWith('data:')) {
-        console.log('Using local image data URL (upload may have failed)');
-      } else if (imageUrl.startsWith('http')) {
-        console.log('Using uploaded image URL');
-      } else {
-        console.log('Using placeholder image');
+      if (formData.image) {
+        if (formData.image.startsWith('data:')) {
+          // Pass base64 data URL directly
+          imageData = formData.image;
+        } else if (formData.image.startsWith('blob:')) {
+          // Convert blob URL to base64
+          const response = await fetch(formData.image);
+          const blob = await response.blob();
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+          imageData = base64;
+        } else if (selectedImage) {
+          // Convert File to base64
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(selectedImage);
+          });
+          imageData = base64;
+        }
       }
 
       // Create menu item data with dynamic canteenId
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
+        canteenId: canteenId,
         description: formData.description,
         category: formData.category,
         canteen: canteenId, // Using dynamic canteenId
         isVeg: formData.isVeg,
         available: formData.available,
-        image: imageUrl,
+        portion: formData.portion,
+        quantity: formData.quantity,
+        image: imageData || undefined,
       };
 
       console.log('Submitting item data:', itemData);
@@ -552,10 +543,12 @@ export default function Dashboard() {
       name: item.name,
       price: item.price.toString(),
       description: item.description || '',
-      category: item.category,
-      isVeg: item.isVeg,
+      category: item.category || '',
+      isVeg: item.isVeg || false,
       available: item.available !== false,
       image: item.image || '',
+      portion: item.portion || '',
+      quantity: item.quantity || '',
     });
     setImagePreview(item.image || '');
     setIsEditItemOpen(true);
@@ -594,6 +587,8 @@ export default function Dashboard() {
       isVeg: false,
       available: true,
       image: '',
+      portion: '',
+      quantity: '',
     });
     setSelectedImage(null);
     setImagePreview('');
@@ -717,7 +712,7 @@ export default function Dashboard() {
       <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Content */}
-      <div className='flex-1 overflow-auto'>
+      <div className='flex-1 overflow-auto scrollbar-hide'>
         <div className='p-8 max-w-7xl mx-auto'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
