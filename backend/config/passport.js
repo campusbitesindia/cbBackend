@@ -24,8 +24,9 @@ passport.use(new GoogleStrategy(
         });
       }
       // Issue JWT
-      const payload = { id: user._id, name: user.name, email: user.email, role: user.role };
+      const payload = { id: user._id, email: user.email, role: user.role };
       const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+      console.log(token);
       done(null, token);
     } catch (err) {
       done(err, null);

@@ -129,7 +129,6 @@ exports.deleteItem = async (req, res) => {
         messaeg: 'ItemId not Found',
       });
     }
-
     const item = await Item.findByIdAndUpdate(
       ItemId,
       { isDeleted: true },
@@ -145,3 +144,125 @@ exports.deleteItem = async (req, res) => {
   }
 };
 // works
+exports.getItemsUnder99 = async (req, res) => {
+    try {
+        const { id: canteenId } = req.params;
+        if (!canteenId) {
+            return res.status(400).json({
+                success: false,
+                message: "CanteenId not found"
+            });
+        }
+        const canteen = await Canteen.findById(canteenId);
+        if (!canteen) {
+            return res.status(400).json({
+                success: false,
+                message: "Canteen not found"
+            });
+        }
+        const items = await Item.find({ canteen: canteen._id, price: { $lte: 99 } });
+        return res.status(200).json({
+            success: true,
+            message: "Items under 99 fetched successfully",
+            data: items
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getItemsByPriceRange = async (req, res) => {
+    try {
+        const { id: canteenId } = req.params;
+        const { minPrice, maxPrice } = req.body;
+
+        if (!canteenId) {
+            return res.status(400).json({
+                success: false,
+                message: "CanteenId not found"
+            });
+        }
+        if (!minPrice || !maxPrice) {
+            return res.status(400).json({
+                success: false,
+                message: "Min price and max price are required"
+            });
+        }
+
+        const canteen = await Canteen.findById(canteenId);
+        if (!canteen) {
+            return res.status(400).json({
+                success: false,
+                message: "Canteen not found"
+            });
+        }
+
+        const items = await Item.find({
+            canteen: canteen._id,
+            price: { $gte: Number(minPrice), $lte: Number(maxPrice) },
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Items fetched successfully within price range",
+            data: items
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getReadyItems = async (req, res) => {
+    try {
+        const { id: canteenId } = req.params;
+        if (!canteenId) {
+            return res.status(400).json({
+                success: false,
+                message: "CanteenId not found"
+            });
+        }
+        const canteen = await Canteen.findById(canteenId);
+        if (!canteen) {
+            return res.status(400).json({
+                success: false,
+                message: "Canteen not found"
+            });
+        }
+        const items = await Item.find({ canteen: canteen._id, isReady: true });
+        return res.status(200).json({
+            success: true,
+            message: "Ready items fetched successfully",
+            data: items
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.toggleItemReadyStatus = async (req, res) => {
+    try {
+        const { id: itemId } = req.params;
+        if (!itemId) {
+            return res.status(400).json({
+                success: false,
+                message: "ItemId not found"
+            });
+        }
+        const item = await Item.findById(itemId);
+        if (!item) {
+            return res.status(400).json({
+                success: false,
+                message: "Item not found"
+            });
+        }
+        item.isReady = !item.isReady;
+        await item.save();
+        return res.status(200).json({
+            success: true,
+            message: `Item ${item.isReady ? 'marked as ready' : 'marked as not ready'}`,
+            data: item
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
