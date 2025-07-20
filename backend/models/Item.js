@@ -8,6 +8,7 @@ const ItemSchema = new mongoose.Schema({
   available: { type: Boolean, default: true },
   image: { type: String },
   isDeleted: { type: Boolean, default: false },
+  isReady: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Item", ItemSchema);

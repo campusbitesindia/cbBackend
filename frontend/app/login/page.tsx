@@ -407,7 +407,7 @@ export default function LoginPage() {
                       className='w-full bg-white/10 border-white/20 hover:bg-white/20 text-white rounded-xl h-14 text-lg backdrop-blur-sm transition-all'
                       onClick={() =>
                         (window.location.href =
-                          'http://localhost:8080/api/auth/google')
+                          'http://localhost:8080/api/v1/users/auth/google')
                       }>
                       <svg className='w-6 h-6 mr-3' viewBox='0 0 48 48'>
                         <path
