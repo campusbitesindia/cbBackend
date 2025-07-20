@@ -33,7 +33,7 @@ exports.registerUser = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Mobile number must be exactly 10 digits and positive.",
-      });
+      })
     }
 
     // Handle both campus ID and campus name
@@ -108,6 +108,12 @@ exports.registerUser = async (req, res) => {
         owner: user._id,
         isApproved: false, // Add approval status
         approvalStatus: "pending", // Add approval status
+        // Add placeholder business details that will be updated later
+        adhaarNumber: "000000000000", // Placeholder
+        panNumber: "AAAAA0000A", // Placeholder
+        gstNumber: "00AAAAA0000A1Z5", // Placeholder
+        fssaiLicense: null, // Optional field
+        contactPersonName: name,
       })
       user.canteenId = newCanteen._id
       await user.save()
