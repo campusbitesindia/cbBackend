@@ -17,8 +17,8 @@ const PayoutRequestSchema = new mongoose.Schema(
     requestedAmount: {
       type: Number,
       required: true,
-      min: 100, // Minimum payout amount
-      max: 100000, // Maximum payout amount
+      min: 100,
+      max: 100000,
     },
     availableBalance: { type: Number, required: true },
 
@@ -37,7 +37,7 @@ const PayoutRequestSchema = new mongoose.Schema(
     // Processing Details
     processedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     processedAt: { type: Date },
-    transactionId: { type: String }, // Bank transaction ID
+    transactionId: { type: String },
 
     // Rejection/Failure Details
     rejectionReason: { type: String },
@@ -60,11 +60,11 @@ const PayoutRequestSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Indexes
+// Consolidated indexes - avoid duplicates
 PayoutRequestSchema.index({ canteen: 1 })
 PayoutRequestSchema.index({ vendor: 1 })
 PayoutRequestSchema.index({ status: 1 })
 PayoutRequestSchema.index({ createdAt: -1 })
+PayoutRequestSchema.index({ isDeleted: 1 })
 
 module.exports = mongoose.model("PayoutRequest", PayoutRequestSchema)
- 
