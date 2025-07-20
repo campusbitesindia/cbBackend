@@ -10,7 +10,7 @@ const UserSchema = new mongoose.Schema({
   campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus", required: function() { return !this.googleId; } }, // Only required if not Google OAuth
   canteenId: { type: mongoose.Schema.Types.ObjectId, ref: "Canteen" },
   profileImage: { type: String },
-  phone: { type: String },
+  phone: { type: String, required: true }, // Now required
   bio: { type: String },
   address: { type: String },
   dateOfBirth: { type: Date },
@@ -18,6 +18,7 @@ const UserSchema = new mongoose.Schema({
   isBanned: { type: Boolean, default: false },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  is_verified: { type: Boolean, default: false }, 
 
   subscription:{
     type:String,

@@ -35,6 +35,7 @@ type AuthContextType = {
     password: string,
     role?: string,
     campus?: string,
+    phone?: string,
     businessDetails?: {
       vendorName?: string;
       adhaarNumber?: string;
@@ -200,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string,
       role: string = 'student',
       campus: string = 'Main Campus',
+      phone: string = '',
       businessDetails?: {
         vendorName?: string;
         adhaarNumber?: string;
@@ -234,7 +236,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              name,
+              email,
+              password,
+              role,
+              campus,
+              phone,
+            }),
           }
         );
 

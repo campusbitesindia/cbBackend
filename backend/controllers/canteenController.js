@@ -4,7 +4,17 @@ const cloudinary = require("../utils/cloudinary")
 // Create Canteen with image support and business details
 exports.createCanteen = async (req, res) => {
   try {
-    const { name, campus, adhaarNumber, panNumber, gstNumber, contactPersonName, contactPhone, description } = req.body
+    const {
+      name,
+      campus,
+      adhaarNumber,
+      panNumber,
+      gstNumber,
+      fssaiLicense,
+      contactPersonName,
+      contactPhone,
+      description,
+    } = req.body
     const userRole = req.user.role
 
     // Only canteen owners can create canteens
@@ -71,6 +81,16 @@ exports.createCanteen = async (req, res) => {
       })
     }
 
+    if (fssaiLicense) {
+      const duplicateFSSAI = await Canteen.findOne({ fssaiLicense, isDeleted: false })
+      if (duplicateFSSAI) {
+        return res.status(400).json({
+          success: false,
+          message: "FSSAI license is already registered with another canteen",
+        })
+      }
+    }
+
     // Validate image requirements (min 1, max 3)
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
@@ -128,6 +148,7 @@ exports.createCanteen = async (req, res) => {
       adhaarNumber,
       panNumber,
       gstNumber,
+      fssaiLicense,
       contactPersonName,
       contactPhone,
       description,
@@ -154,6 +175,7 @@ exports.createCanteen = async (req, res) => {
           adhaarNumber: newCanteen.adhaarNumber,
           panNumber: newCanteen.panNumber,
           gstNumber: newCanteen.gstNumber,
+          fssaiLicense: newCanteen.fssaiLicense,
           contactPersonName: newCanteen.contactPersonName,
         },
       },

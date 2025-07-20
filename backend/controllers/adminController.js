@@ -561,21 +561,17 @@ exports.banUser = async (req, res) => {
 
 exports.suspendCanteen = async (req, res) => {
   try {
-    const { canteenId, suspend } = req.body;
-    const canteen = await Canteen.findByIdAndUpdate(
-      canteenId,
-      { isSuspended: suspend },
-      { new: true }
-    );
+    const { canteenId, suspend } = req.body
+    const canteen = await Canteen.findByIdAndUpdate(canteenId, { isSuspended: suspend }, { new: true })
     if (canteen?.owner) {
-      await User.findByIdAndUpdate(canteen.owner, { isBanned: suspend });
+      await User.findByIdAndUpdate(canteen.owner, { isBanned: suspend })
     }
-    res.json({ message: suspend ? "Canteen suspended and owner banned." : "Canteen unsuspended and owner unbanned." });
+    res.json({ message: suspend ? "Canteen suspended and owner banned." : "Canteen unsuspended and owner unbanned." })
   } catch (error) {
-    console.error("Error suspending/unsuspending canteen:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error suspending/unsuspending canteen:", error)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
 
 exports.adminRateVendor = async (req, res) => {
   try {
@@ -866,7 +862,10 @@ exports.approveVendor = async (req, res) => {
   try {
     const { canteenId } = req.params
     const { approved, rejectionReason } = req.body
-    const adminId = req.user._id
+    const adminId = req.user && req.user._id ? req.user._id : null
+    if (!adminId) {
+      return res.status(401).json({ success: false, message: "Admin not authenticated" })
+    }
 
     if (typeof approved !== "boolean") {
       return res.status(400).json({
@@ -881,6 +880,11 @@ exports.approveVendor = async (req, res) => {
         success: false,
         message: "Canteen not found",
       })
+    }
+
+    // Optional: Add FSSAI validation for food businesses
+    if (!canteen.fssaiLicense) {
+      console.log(`Warning: Canteen ${canteen.name} approved without FSSAI license`)
     }
 
     if (canteen.approvalStatus !== "pending") {
@@ -906,11 +910,10 @@ exports.approveVendor = async (req, res) => {
 
     // Update user status if needed
     const owner = canteen.owner
-    if (approved) {
-      // Vendor is now fully approved
-      owner.isApproved = true
+    if (owner) {
+      if (approved) owner.isApproved = true
+      await owner.save()
     }
-    await owner.save()
 
     res.status(200).json({
       success: true,
@@ -998,22 +1001,22 @@ exports.getVendorDetails = async (req, res) => {
 // Create a payout record (admin to vendor)
 exports.createPayout = async (req, res) => {
   try {
-    const { canteenId, trnId, date, amount, notes } = req.body;
-    const adminId = req.user._id;
+    const { canteenId, trnId, date, amount, notes } = req.body
+    const adminId = req.user._id
     if (!canteenId || !trnId || !date || !amount) {
-      return res.status(400).json({ success: false, message: "All fields except notes are required." });
+      return res.status(400).json({ success: false, message: "All fields except notes are required." })
     }
     // Backend validation for amount
-    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: "Amount must be a positive number." });
+    if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Amount must be a positive number." })
     }
     // Backend validation for date
-    const payoutDate = new Date(date);
-    const today = new Date();
-    payoutDate.setHours(0,0,0,0);
-    today.setHours(0,0,0,0);
+    const payoutDate = new Date(date)
+    const today = new Date()
+    payoutDate.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
     if (payoutDate > today) {
-      return res.status(400).json({ success: false, message: "Date cannot be in the future." });
+      return res.status(400).json({ success: false, message: "Date cannot be in the future." })
     }
     const payout = await Payout.create({
       canteen: canteenId,
@@ -1022,33 +1025,33 @@ exports.createPayout = async (req, res) => {
       date,
       amount,
       notes,
-    });
-    res.status(201).json({ success: true, message: "Payout recorded successfully", payout });
+    })
+    res.status(201).json({ success: true, message: "Payout recorded successfully", payout })
   } catch (error) {
-    console.error("Error creating payout:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error("Error creating payout:", error)
+    res.status(500).json({ success: false, message: "Server error", error: error.message })
   }
-};
+}
 
 // Get all payouts (admin view)
 exports.getPayouts = async (req, res) => {
   try {
-    const payouts = await Payout.find().populate("canteen", "name").populate("admin", "name email").sort({ date: -1 });
-    res.status(200).json({ success: true, payouts });
+    const payouts = await Payout.find().populate("canteen", "name").populate("admin", "name email").sort({ date: -1 })
+    res.status(200).json({ success: true, payouts })
   } catch (error) {
-    console.error("Error fetching payouts:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error("Error fetching payouts:", error)
+    res.status(500).json({ success: false, message: "Server error", error: error.message })
   }
-};
+}
 
 // Get payouts for a specific canteen (vendor detail view)
 exports.getPayoutsByCanteen = async (req, res) => {
   try {
-    const { canteenId } = req.params;
-    const payouts = await Payout.find({ canteen: canteenId }).populate("admin", "name email").sort({ date: -1 });
-    res.status(200).json({ success: true, payouts });
+    const { canteenId } = req.params
+    const payouts = await Payout.find({ canteen: canteenId }).populate("admin", "name email").sort({ date: -1 })
+    res.status(200).json({ success: true, payouts })
   } catch (error) {
-    console.error("Error fetching payouts by canteen:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error("Error fetching payouts by canteen:", error)
+    res.status(500).json({ success: false, message: "Server error", error: error.message })
   }
-};
+}

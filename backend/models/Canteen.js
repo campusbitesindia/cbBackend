@@ -60,6 +60,16 @@ const CanteenSchema = new mongoose.Schema(
         message: "Invalid GST number format",
       },
     },
+    fssaiLicense: {
+      type: String,
+      validate: {
+        validator: (v) => {
+          if (!v) return true // Optional field
+          return /^[0-9]{14}$/.test(v) // 14 digit FSSAI license validation
+        },
+        message: "FSSAI license must be 14 digits",
+      },
+    },
     contactPersonName: {
       type: String,
       required: true,
@@ -88,5 +98,6 @@ CanteenSchema.index({ adhaarNumber: 1 })
 CanteenSchema.index({ panNumber: 1 })
 CanteenSchema.index({ gstNumber: 1 })
 CanteenSchema.index({ owner: 1 })
+CanteenSchema.index({ fssaiLicense: 1 })
 
 module.exports = mongoose.model("Canteen", CanteenSchema)
