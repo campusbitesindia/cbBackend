@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -9,17 +9,26 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/context/auth-context"
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Gift, LogIn, RefreshCw } from "lucide-react"
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Gift, LogIn, RefreshCw, MapPin } from "lucide-react"
+import { getAllCampuses, Campus } from "@/services/campusService"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import api from "@/lib/axios"
 
 const registerSchema = z
   .object({
     name: z.string().min(2, { message: "Name must be at least 2 characters" }),
     email: z.string().email({ message: "Please enter a valid email address" }),
+    phone: z.string()
+      .regex(/^\d{10}$/, { message: "Mobile number must be exactly 10 digits" })
+      .refine((val) => Number(val) > 0, { message: "Mobile number must be positive" }),
     password: z.string().min(6, { message: "Password must be at least 6 characters" }),
     confirmPassword: z.string(),
+    role: z.enum(['student', 'canteen'], { message: 'Please select a valid role' }),
+    campus: z.string().min(1, { message: 'Please select a campus' }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
@@ -33,6 +42,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [campuses, setCampuses] = useState<Campus[]>([])
+  const [isLoadingCampuses, setIsLoadingCampuses] = useState(true)
   const [existingUserDialog, setExistingUserDialog] = useState<{
     open: boolean
     message: string
@@ -47,6 +58,23 @@ export default function RegisterPage() {
     message: "",
     suggestions: [],
   })
+  const [campusInput, setCampusInput] = useState('');
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [requestForm, setRequestForm] = useState({ name: '', email: '', mobile: '', collegeName: '', city: '', message: '' });
+  const [requestLoading, setRequestLoading] = useState(false);
+  // Add a new state to track if a campus is selected
+  const [campusSelected, setCampusSelected] = useState(false);
+  const [showOtpDialog, setShowOtpDialog] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [otpError, setOtpError] = useState("");
+  const [otpSuccess, setOtpSuccess] = useState("");
+
+  // Autocomplete filter
+  const filteredCampuses = campusInput
+    ? campuses.filter((c) => c.name.toLowerCase().includes(campusInput.toLowerCase()))
+    : campuses;
 
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
@@ -55,18 +83,48 @@ export default function RegisterPage() {
       email: "",
       password: "",
       confirmPassword: "",
+      role: "student",
+      campus: "",
+      phone: "",
     },
   })
+
+  // Fetch campuses on component mount
+  useEffect(() => {
+    const fetchCampuses = async () => {
+      try {
+        setIsLoadingCampuses(true)
+        const response = await getAllCampuses()
+        setCampuses(response.campuses)
+      } catch (error) {
+        console.error('Error fetching campuses:', error)
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Failed to load campuses. Please refresh the page.',
+        })
+      } finally {
+        setIsLoadingCampuses(false)
+      }
+    }
+
+    fetchCampuses()
+  }, [toast])
+
+  useEffect(() => {
+    form.setValue('role', 'student');
+  }, [form]);
 
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true)
     try {
-      await register(values.name, values.email, values.password, 'student', 'Main Campus')
+      await register(values.name, values.email, values.password, values.role, values.campus, values.phone); // <-- pass campus _id and phone
+      setPendingEmail(values.email);
+      setShowOtpDialog(true);
       toast({
-        title: "Welcome to Campus Bites! 🎉",
-        description: "Your account has been created successfully",
+        title: "Almost done!",
+        description: "Please verify your email with the OTP sent to your inbox.",
       }) 
-      router.push("/menu")
     } catch (error) {
       // Handle existing user professionally
       if (error instanceof Error) {
@@ -104,6 +162,54 @@ export default function RegisterPage() {
   const handleGoToSignIn = () => {
     setExistingUserDialog(prev => ({ ...prev, open: false }))
     router.push('/login')
+  }
+
+  async function handleRequestCampus() {
+    setRequestLoading(true);
+    try {
+      // Get the role from the registration form (default to 'student' if not set)
+      const role = form.getValues('role') || 'student';
+      // Use the campus input as collegeName
+      const collegeName = requestForm.collegeName || campusInput;
+      await api.post('/api/v1/admin/campus-request', {
+        name: requestForm.name,
+        email: requestForm.email,
+        mobile: requestForm.mobile,
+        role,
+        collegeName,
+        city: requestForm.city,
+        message: requestForm.message,
+      });
+      toast({ title: 'Campus request submitted!', description: 'Our team will review it.' });
+      setShowRequestDialog(false);
+      setRequestForm({ name: '', email: '', mobile: '', collegeName: '', city: '', message: '' });
+    } catch (err: any) {
+      toast({ title: 'Failed to submit campus request', description: err.message, variant: 'destructive' });
+    } finally {
+      setRequestLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    setIsVerifyingOtp(true);
+    setOtpError("");
+    setOtpSuccess("");
+    try {
+      const res = await api.post("/api/v1/users/verify-email", { email: pendingEmail, otp });
+      if (res.data.success) {
+        setOtpSuccess("Email verified successfully! You can now log in.");
+        setTimeout(() => {
+          setShowOtpDialog(false);
+          router.push("/login");
+        }, 1500);
+      } else {
+        setOtpError(res.data.message || "Invalid OTP");
+      }
+    } catch (err: any) {
+      setOtpError(err.response?.data?.message || "Invalid OTP or server error");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   }
 
   return (
@@ -195,6 +301,133 @@ export default function RegisterPage() {
                     )}
                   />
 
+                  {/* Remove the role dropdown and display only 'Student' */}
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">I am a</FormLabel>
+                        <FormControl>
+                          <div className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-xl h-12 flex items-center font-semibold">
+                            Student
+                          </div>
+                        </FormControl>
+                        <input type="hidden" value="student" name="role" />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="campus"
+                    render={({ field }) => {
+                      const selectedCampusObj = campuses.find(c => c._id === field.value);
+                      return (
+                        <FormItem>
+                          <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Campus</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 pointer-events-none flex items-center justify-center">
+                                <MapPin className="w-5 h-5" />
+                              </span>
+                              {/* Hidden input for form value (campus _id) */}
+                              <input type="hidden" value={field.value} name="campus" />
+                              {/* Display input for user (campus name/city) */}
+                              <Input
+                                placeholder="Type your campus name"
+                                value={campusSelected && selectedCampusObj ? (selectedCampusObj.name + (selectedCampusObj.city ? ` (${selectedCampusObj.city})` : '')) : campusInput}
+                                readOnly={campusSelected}
+                                onChange={e => {
+                                  setCampusInput(e.target.value);
+                                  setCampusSelected(false);
+                                  field.onChange('');
+                                }}
+                                className="pl-10 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
+                                style={{ lineHeight: '1.5', height: '48px' }}
+                              />
+                              {/* Clear button */}
+                              {campusSelected && (
+                                <button
+                                  type="button"
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                                  onClick={() => {
+                                    setCampusInput('');
+                                    setCampusSelected(false);
+                                    field.onChange('');
+                                  }}
+                                  tabIndex={-1}
+                                  aria-label="Clear campus selection"
+                                >
+                                  ×
+                                </button>
+                              )}
+                              {/* Autocomplete dropdown */}
+                              {!campusSelected && campusInput && filteredCampuses.length > 0 && (
+                                <div className="absolute z-10 bg-white border border-gray-200 rounded shadow w-full mt-1 max-h-48 overflow-y-auto">
+                                  {filteredCampuses.map((campus) => (
+                                    <div
+                                      key={campus._id}
+                                      className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-black"
+                                      onClick={() => {
+                                        setCampusInput(campus.name + (campus.city ? ` (${campus.city})` : ''));
+                                        field.onChange(campus._id); // <-- always set to _id
+                                        setCampusSelected(true);
+                                      }}
+                                    >
+                                      {campus.name} {campus.city ? <span className="text-gray-400 text-sm">({campus.city})</span> : null}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {/* Request Campus link */}
+                              {!campusSelected && campusInput && filteredCampuses.length === 0 && (
+                                <div className="mt-2 text-blue-400 cursor-pointer underline" onClick={() => setShowRequestDialog(true)}>
+                                  Can’t find your campus? <span className="font-semibold">Request to add it</span>
+                                </div>
+                              )}
+                              {/* Helper message if not selected */}
+                              {!campusSelected && campusInput && !filteredCampuses.some(c => c.name === campusInput) && (
+                                <div className="mt-2 text-red-500 text-xs">Please select a campus from the list.</div>
+                              )}
+                            </div>
+                          </FormControl>
+                          <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
+                        </FormItem>
+                      );
+                    }}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 dark:text-slate-300 transition-colors duration-500">Mobile Number</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              placeholder="Enter your mobile number"
+                              type="tel"
+                              autoComplete="tel"
+                              maxLength={10}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={field.value}
+                              onChange={e => {
+                                // Only allow digits
+                                const val = e.target.value.replace(/[^0-9]/g, "");
+                                field.onChange(val);
+                              }}
+                              className="pl-4 bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-slate-400 rounded-xl h-12 focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm duration-500"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="password"
@@ -257,7 +490,7 @@ export default function RegisterPage() {
 
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !campusSelected || !campuses.some(c => c._id === form.getValues('campus'))}
                     className="w-full bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white font-semibold py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-red-500/25 group"
                   >
                     {isLoading ? (
@@ -435,6 +668,54 @@ export default function RegisterPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Request Campus Dialog */}
+      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request New Campus</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="Your Name" value={requestForm.name} onChange={e => setRequestForm(f => ({ ...f, name: e.target.value }))} />
+            <Input placeholder="Email" value={requestForm.email} onChange={e => setRequestForm(f => ({ ...f, email: e.target.value }))} />
+            <Input placeholder="Mobile" value={requestForm.mobile} onChange={e => setRequestForm(f => ({ ...f, mobile: e.target.value }))} />
+            <Input placeholder="College Name" value={requestForm.collegeName} onChange={e => setRequestForm(f => ({ ...f, collegeName: e.target.value }))} />
+            <Input placeholder="City" value={requestForm.city} onChange={e => setRequestForm(f => ({ ...f, city: e.target.value }))} />
+            <Input placeholder="Message (optional)" value={requestForm.message} onChange={e => setRequestForm(f => ({ ...f, message: e.target.value }))} />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleRequestCampus} disabled={requestLoading} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold w-full">
+              {requestLoading ? 'Submitting...' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Verification Dialog */}
+      <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Email Verification</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-700 dark:text-gray-200">Enter the OTP sent to <span className="font-semibold">{pendingEmail}</span></p>
+            <Input
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={e => setOtp(e.target.value)}
+              maxLength={6}
+              className="text-center text-lg tracking-widest font-mono"
+            />
+            {otpError && <div className="text-red-500 text-sm">{otpError}</div>}
+            {otpSuccess && <div className="text-green-600 text-sm">{otpSuccess}</div>}
+          </div>
+          <DialogFooter>
+            <Button onClick={handleVerifyOtp} disabled={isVerifyingOtp || !otp} className="bg-red-600 hover:bg-red-700 text-white font-semibold w-full">
+              {isVerifyingOtp ? 'Verifying...' : 'Verify OTP'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

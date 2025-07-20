@@ -2,6 +2,7 @@ const Order=require("../models/Order");
 const User =require("../models/User");
 const Transaction=require("../models/Transaction");
 const Penalty=require("../models/penaltySchema");
+const  SendNotification  = require("../utils/sendNotification");
 
 exports.CreateCODTransaction=async(req,res)=>{
     try{
@@ -13,7 +14,7 @@ exports.CreateCODTransaction=async(req,res)=>{
                 message:"Please provide all necessary fields"
             })
         }
-        const order=await Order.findById(orderId);
+        const order=await Order.findById(orderId).populate("student");
         const ExistingTransaction=await Transaction.findOne({orderId:order._id});
         if(ExistingTransaction){
             return res.status(400).json({
@@ -29,6 +30,9 @@ exports.CreateCODTransaction=async(req,res)=>{
         }
         const UpdatedOrder=await Order.findByIdAndUpdate(orderId,{paymentStatus:"COD",status:"placed"},{new:true});
         const transaction=await Transaction.create({orderId:order._id,userId:order.student,amount:order.total,paymentMethod:"COD",currency:"INR"})
+        
+       
+        await SendNotification(order.student._id,"Order Placed","Your Order has been Placed")
         return res.status(200).json({
             success:true,
             message:"Transaction Made SuccessFully",

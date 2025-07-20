@@ -1,6 +1,8 @@
 const sendNotification = require('../utils/notify');
 const Notification = require('../models/Notification');
+const SendNotification=require("../utils/sendNotification")
 
+const User =require("../models/User")
 // POST /api/notifications/user
 exports.sendNotificationToUser = async (req, res) => {
   try {
@@ -47,3 +49,62 @@ exports.getUserNotifications = async (req, res) => {
   }
 };
 // works
+
+
+exports.sendPublicKey=async(req,res)=>{
+  try{
+      return res.status(200).json({
+        success:true,
+        publicKey:process.env.publicKey
+      })
+  }
+  catch(err){
+    return res.status(500).json({
+      success:false,
+      message:"internal server error"
+    })
+  }
+}
+
+// POST /api/v1/notifications/subscribe
+exports.saveSubscription = async (req, res) => {
+  try {
+    
+    const { userId,subscription} = req.body;
+    
+   console.log(userId,subscription);
+    const user = await User.findById(userId);
+    console.log(user);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "User not found", 
+      });
+    }
+
+    if (user.subscription === subscription) {
+      return res.status(200).json({
+        success: true,
+        message: "Subscription already up-to-date",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { subscription },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Data saved successfully",
+      
+    });
+  } catch (err) {
+    console.error("Error saving subscription:", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};

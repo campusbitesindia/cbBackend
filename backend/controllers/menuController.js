@@ -1,20 +1,19 @@
 const Menu = require('../models/Menu');
-
+const Canteen=require('../models/Canteen')
 // Get menu items by canteen ID
 exports.getMenuByCanteenId = async (req, res) => {
     try {
         const { canteenId } = req.params;
 
-        // const canteen = await require('../models/Canteen').findById(canteenId);
-        // if (!canteen || canteen.isBanned || !canteen.is_verified) {
-        //     return res.status(403).json({ message: 'Canteen is not available.' });
-        // }
-
+        const canteen = await Canteen.findById(canteenId);
+        if (!canteen || !canteen.isApproved) {
+            return res.status(403).json({ message: 'Canteen is not available.' });
+        }
         // Find menu items associated with the canteen
         const menuItems = await Menu.find({ canteen: canteenId })
             .populate("canteen", "name")
             .select("-__v");
-
+            console.log(menuItems)
         res.status(200).json({ 
             success: true,
             data: menuItems,

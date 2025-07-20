@@ -15,6 +15,6 @@ export interface CampusResponse {
 }
 
 export const getAllCampuses = async (): Promise<CampusResponse> => {
-  const response = await api.get('/api/campuses/');
+  const response = await api.get<CampusResponse>('/api/v1/campuses');
   return response.data;
 }; 

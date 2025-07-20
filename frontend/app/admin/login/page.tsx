@@ -1,24 +1,32 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { adminLogin } from "@/services/authService";
+import { useAdminAuth } from "@/context/admin-auth-context";
 
 export default function AdminLoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login: setAdminAuth } = useAdminAuth();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
-    // Placeholder: Replace with real API call
-    if (email === "admin@campusbites.com" && password === "admin123") {
-      localStorage.setItem("isAdmin", "true");
-      router.push("/admin/dashboard");
-    } else {
-      setError("Invalid credentials");
+    try {
+      const data = await adminLogin({ username, password });
+      if (data && data.token) {
+        localStorage.setItem("isAdmin", "true");
+        setAdminAuth();
+        router.push("/admin/dashboard");
+      } else {
+        setError("Invalid admin credentials");
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || err?.message || "Login failed");
     }
     setLoading(false);
   }
@@ -28,10 +36,10 @@ export default function AdminLoginPage() {
       <form onSubmit={handleLogin} className="bg-white/10 p-8 rounded-xl shadow-xl w-full max-w-md flex flex-col gap-6">
         <h1 className="text-3xl font-bold text-white text-center">Admin Login</h1>
         <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
           className="p-3 rounded bg-white/20 text-white placeholder:text-slate-300 focus:outline-none"
           required
         />
@@ -51,6 +59,9 @@ export default function AdminLoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        <div className="mt-2 text-center">
+          <span className="text-gray-300">username: admin, password: admin123</span>
+        </div>
       </form>
     </div>
   );

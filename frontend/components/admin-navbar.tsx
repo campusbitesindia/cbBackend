@@ -7,6 +7,7 @@ const navItems = [
   { name: "Users", href: "/admin/users" },
   { name: "Vendors", href: "/admin/vendors" },
   { name: "Campuses", href: "/admin/campuses" },
+  { name: "Payouts", href: "/admin/payouts" }, 
 ];
 
 export default function AdminNavbar() {

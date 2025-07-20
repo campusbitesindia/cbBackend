@@ -1,6 +1,7 @@
 const dotenv = require("dotenv");
 const app = require("./app");
 const {connectDB} = require("./config/database");
+const {  setupewebPush } = require("./config/webPush");
 const http = require('http');
 const { Server } = require('socket.io');
 
@@ -38,6 +39,5 @@ io.on('connection', (socket) => {
 app.listen(process.env.PORT, ()=>{
     console.log(`Server is up on port: ${process.env.PORT}`);
 })
-
-// DB connection
 connectDB();
+setupewebPush() 

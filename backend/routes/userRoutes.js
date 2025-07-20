@@ -1,7 +1,7 @@
 const express = require("express");
 const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail, getProfile, updateProfile, uploadProfileImage } = require("../controllers/userController");
 const { isAuthenticated } = require("../middleware/auth");
-const upload = require("../middlewares/uploadMiddleware");
+const upload = require("../middleware/uploadMiddleware");
 const passport = require("passport");
 const { smartLoginMonitoring } = require("../middleware/smartSecurity");
 

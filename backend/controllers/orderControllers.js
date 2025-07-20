@@ -3,21 +3,22 @@ const User =require("../models/User");
 const Item=require("../models/Item")
 const Canteen =require("../models/Canteen");
 const Campus = require("../models/Campus");
-const sendNotification = require("../utils/notify")
+const SendNotification=require("../utils/sendNotification")
 const Penalty = require("../models/penaltySchema");
 const Transaction   =require("../models/Transaction");
+const Counter=require("../models/CounterSchema")
 exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:_items,pickUpTime}=req.body; 
+        const {items:Items,pickUpTime,canteenId}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        const Items=JSON.parse(_items); //converting _items to an Json array;
+        // const Items=JSON.parse(_items); //converting _items to an Json array;
 
 
         //If all field are not found;
-        if(!UserId || !campusId  || Items.length===0 ){
+        if(!UserId || !campusId || !canteenId || Items.length===0 ){
             return res.status(400).json({
                 success:false,
                 message:"Please provide all the fields"
@@ -35,7 +36,7 @@ exports.CreateOrder=async(req,res)=>{
         }
         // search canteen with given Id
         console.log(campusId)
-         const canteen=await Canteen.findOne({campus:campusId})
+         const canteen=await Canteen.findOne({_id:canteenId,campus:campusId})
         //if canteen not found 
         if(!canteen){
             return res.status(400).json({
@@ -76,7 +77,7 @@ exports.CreateOrder=async(req,res)=>{
 
         //checking or valid pickup time and the difference will be in mircoseconds
         const isValidPickUpTime=new Date(pickUpTime) -Date.now()>=10 *60*1000?true:false;
-
+        
         // if pickup time is less than 10 minutes return erro
         if(!isValidPickUpTime){
             return res.status(400).json({
@@ -84,14 +85,18 @@ exports.CreateOrder=async(req,res)=>{
                 message:"PickUp time Can't Be less than 10 minutes"
             })
         }
-        
+
+        //generate the Order Number for the Order
+        const customid=await Counter.findByIdAndUpdate("order#",{$inc:{seq:1}},{new:true,upsert:true});
+        const OrderNumber= customid._id+customid.seq;
         //create the order with penalty amount if applicable
-        const penalty=await Penalty.find({deviceId,isPaid:false});
+        const penalty=await Penalty.find({deviceId,canteen:canteen._id,isPaid:false});
         for(const data of penalty){
             Total+=data.Amount;
         }
 
         const order=await Order.create({
+            OrderNumber:OrderNumber,
             student:student._id,
             canteen:canteen._id,
             items:OrderItem,
@@ -99,13 +104,7 @@ exports.CreateOrder=async(req,res)=>{
             pickupTime:pickUpTime
         });
 
-       // Notify Vendor (socket room: vendor_<vendorId>)
-        sendNotification(`vendor_${canteen._id}`, {
-            title: "New Order",
-            message: `Hey! ${student.name} just placed an order.`,
-            type: "new_order",
-            timestamp: new Date()
-        });
+       // Notify Vendor (socket room: vendor_<vendorId>
 
         return res.status(200).json({
             success:true,
@@ -169,7 +168,7 @@ exports.UpdateOrderStatus = async (req, res) => {
         const deviceId = req.deviceInfo?.deviceId;
 
         await Penalty.create({
-          deviceId,
+          deviceId,canteen:order.canteen,
           user: order.student,
           Order: order._id,
           Amount: penaltyAmount,
@@ -178,6 +177,10 @@ exports.UpdateOrderStatus = async (req, res) => {
         });
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
         order.status = "cancelled";
+
+         await SendNotification(order.student._id,"Order Status Updated","Your order has been cancelled and penaly applied for next order")
+
+
         await order.save();
 
         return res.status(200).json({
@@ -189,7 +192,8 @@ exports.UpdateOrderStatus = async (req, res) => {
         order.status = "cancelled";
         await order.save();
         await Transaction.findOneAndUpdate({orderId:order._id},{status:"cancelled"});
-
+        
+         await SendNotification(order.student._id,"Order Status Updated","Your order has been cancelled")
         return res.status(200).json({
           success: true,
           message: "Order cancelled with no penalty",
@@ -201,7 +205,7 @@ exports.UpdateOrderStatus = async (req, res) => {
     if(status==="completed"){
        // update the penalty and transaction status for cod as user had paid  them
         const deviceId = req.deviceInfo?.deviceId;
-        await Penalty.updateMany({deviceId,isPaid:false},{isPaid:true});
+        await Penalty.updateMany({deviceId,canteen:order.canteen,isPaid:false},{isPaid:true});
         await Transaction.findOneAndUpdate({orderId:OrderId},{status:"paid",paidAt:new Date(Date.now())});
     }
 
@@ -214,13 +218,10 @@ exports.UpdateOrderStatus = async (req, res) => {
       .populate({ path: "student", select: "name" })
       .populate({ path: "canteen", select: "name" });
 
-    // Notify user (socket room: user_<userId>)
-    sendNotification(`user_${order.student}`, {
-        title: "Order Update",
-        message: `Your order is now marked as "${status}"`,
-        type: "order_status_update",
-        timestamp: new Date()
-    });
+
+    // After updating order status, notify student
+    await SendNotification(order.student._id,"Order Status Changes",`Your Order is ${status}`)
+
     return res.status(200).json({
       success: true,
       message: "Order status updated successfully",

@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  Filter, 
+  Filter,
   Star,
   Clock,
   MapPin,
   Heart,
   Utensils,
-  ChefHat, 
+  ChefHat,
   Sparkles,
   Badge as BadgeIcon,
   Users,
@@ -18,12 +18,18 @@ import {
   Award,
   Zap,
   Shield,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
@@ -36,27 +42,36 @@ interface Campus {
   city: string;
 }
 
+interface Owner {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 interface Canteen {
   _id: string;
   name: string;
   campus: Campus;
-  owner: string;
+  owner: Owner | null;
   isOpen: boolean;
   items: any[];
   images: string[];
   isDeleted: boolean;
-  is_verified: boolean;
-  isBanned: boolean;
+  isApproved: boolean;
+  isBanned?: boolean;
   isSuspended: boolean;
-  cuisine: string;
-  rating: number;
-  deliveryTime: string;
-  distance: string;
-  featured: boolean;
-  discount: string | null;
-  description: string;
+  cuisine?: string;
+  rating?: number;
+  deliveryTime?: string;
+  distance?: string;
+  featured?: boolean;
+  discount?: string | null;
+  description?: string;
   createdAt: string;
   updatedAt: string;
+  approvalStatus: string;
+  approvedAt?: string;
+  approvedBy?: string;
 }
 
 const CUISINE_FILTERS = [
@@ -88,31 +103,37 @@ export default function MenuPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
-    const fetchCanteens = async () => {
-      try {
+  const fetchCanteens = async () => {
+    try {
       setLoading(true);
-        console.log('🔍 Fetching canteens from:', API_ENDPOINTS.CANTEENS);
-        const response = await fetch(API_ENDPOINTS.CANTEENS);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch canteens: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('📋 Received data:', data);
-        
-      const visibleCanteens = (data.canteens || []).filter(
-        (c: Canteen) => c.is_verified === true && c.isBanned === false && c.isDeleted === false
+      console.log('🔍 Fetching canteens from:', API_ENDPOINTS.CANTEENS);
+      const response = await fetch(API_ENDPOINTS.CANTEENS);
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch canteens: ${response.status} ${response.statusText}`
         );
-      
-        setCanteens(visibleCanteens);
-        setFilteredCanteens(visibleCanteens);
-      } catch (error) {
-        console.error('❌ Error fetching canteens:', error);
-      } finally {
-        setLoading(false);
       }
-    };
+
+      const data = await response.json();
+      console.log('📋 Received data:', data);
+
+      const visibleCanteens = (data.canteens || []).filter(
+        (c: Canteen) =>
+          c.isApproved === true &&
+          c.isBanned !== true &&
+          c.isSuspended !== true &&
+          c.isDeleted === false
+      );
+      console.log('📋 Visible canteens:', visibleCanteens);
+      setCanteens(visibleCanteens);
+      setFilteredCanteens(visibleCanteens);
+    } catch (error) {
+      console.error('❌ Error fetching canteens:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchCanteens();
@@ -120,14 +141,20 @@ export default function MenuPage() {
 
   useEffect(() => {
     let filtered = canteens.filter((canteen) => {
-      const matchesSearch = 
+      const matchesSearch =
         canteen.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        canteen.cuisine.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        canteen.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (canteen.cuisine || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        (canteen.description || '')
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
         canteen.campus?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCuisine = selectedCuisine === 'all' || canteen.cuisine === selectedCuisine;
-      
+
+      const matchesCuisine =
+        selectedCuisine === 'all' ||
+        (canteen.cuisine || 'Multi-Cuisine') === selectedCuisine;
+
       return matchesSearch && matchesCuisine;
     });
 
@@ -135,13 +162,15 @@ export default function MenuPage() {
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'featured':
-          if (a.featured !== b.featured) return b.featured ? 1 : -1;
-          return b.rating - a.rating;
+          const aFeatured = a.featured || false;
+          const bFeatured = b.featured || false;
+          if (aFeatured !== bFeatured) return bFeatured ? 1 : -1;
+          return (b.rating || 0) - (a.rating || 0);
         case 'rating':
-          return b.rating - a.rating;
+          return (b.rating || 0) - (a.rating || 0);
         case 'delivery':
-          const aTime = parseInt(a.deliveryTime.split('-')[0]);
-          const bTime = parseInt(b.deliveryTime.split('-')[0]);
+          const aTime = parseInt((a.deliveryTime || '30-40 min').split('-')[0]);
+          const bTime = parseInt((b.deliveryTime || '30-40 min').split('-')[0]);
           return aTime - bTime;
         case 'discount':
           if (a.discount && !b.discount) return -1;
@@ -156,7 +185,7 @@ export default function MenuPage() {
   }, [searchQuery, selectedCuisine, sortBy, canteens]);
 
   const toggleFavorite = (canteenId: string) => {
-    setFavorites(prev => {
+    setFavorites((prev) => {
       const newFavorites = new Set(prev);
       if (newFavorites.has(canteenId)) {
         newFavorites.delete(canteenId);
@@ -168,20 +197,24 @@ export default function MenuPage() {
   };
 
   const getCanteenImage = (canteen: Canteen) => {
-    if (canteen.images && canteen.images.length > 0 && canteen.images[0] !== '/placeholder.jpg') {
+    if (
+      canteen.images &&
+      canteen.images.length > 0 &&
+      canteen.images[0] !== '/placeholder.jpg'
+    ) {
       return canteen.images[0];
     }
     // Return cuisine-specific placeholder
     const cuisineImages: { [key: string]: string } = {
       'Multi-Cuisine': '🍽️',
-      'Indian': '🍛',
-      'Italian': '🍕',
+      Indian: '🍛',
+      Italian: '🍕',
       'Fast Food': '🍔',
-      'Healthy': '🥗',
-      'Beverages': '☕',
-      'Mixed': '🍜'
+      Healthy: '🥗',
+      Beverages: '☕',
+      Mixed: '🍜',
     };
-    return cuisineImages[canteen.cuisine] || '🍽️';
+    return cuisineImages[canteen.cuisine || 'Multi-Cuisine'] || '🍽️';
   };
 
   const containerVariants = {
@@ -202,7 +235,7 @@ export default function MenuPage() {
       y: 0,
       scale: 1,
       transition: {
-        type: "spring" as const,
+        type: 'spring' as const,
         stiffness: 100,
         damping: 15,
         duration: 0.6,
@@ -239,31 +272,31 @@ export default function MenuPage() {
       {/* Hero Section */}
       <section className='relative pt-24 pb-12 px-6 overflow-hidden'>
         {/* Background Elements */}
-      <div className='absolute inset-0 overflow-hidden'>
+        <div className='absolute inset-0 overflow-hidden'>
           <motion.div
-            animate={{ 
+            animate={{
               scale: [1, 1.1, 1],
-              rotate: [0, 180, 360]
+              rotate: [0, 180, 360],
             }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
             className='absolute -top-1/2 -right-1/2 w-96 h-96 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 rounded-full blur-3xl'
           />
           <motion.div
-            animate={{ 
+            animate={{
               scale: [1.1, 1, 1.1],
-              rotate: [360, 180, 0]
+              rotate: [360, 180, 0],
             }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
             className='absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-full blur-3xl'
           />
         </div>
 
         <div className='relative z-10 max-w-7xl mx-auto text-center'>
-            <motion.div
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
+          <motion.div
+            initial={{ opacity: 0, y: -30 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-              className='mb-8'>
+            className='mb-8'>
             <h1 className='text-5xl md:text-7xl lg:text-8xl font-bold mb-6'>
               <span className='bg-gradient-to-r from-slate-900 via-red-600 to-rose-600 dark:from-white dark:via-red-300 dark:to-rose-300 bg-clip-text text-transparent'>
                 Campus
@@ -272,17 +305,19 @@ export default function MenuPage() {
               <span className='bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 dark:from-red-300 dark:via-rose-300 dark:to-pink-300 bg-clip-text text-transparent'>
                 Delicacies
               </span>
-              </h1>
-              <motion.div
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: 0.5, duration: 0.8 }}
+            </h1>
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.5, duration: 0.8 }}
               className='w-32 h-1 bg-gradient-to-r from-red-500 to-rose-500 mx-auto mb-6'
-              />
+            />
             <p className='text-xl md:text-2xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto font-light leading-relaxed'>
-              Discover exceptional dining experiences across campus. From local favorites to international cuisines, all delivered fresh to your doorstep.
-              </p>
-            </motion.div>
+              Discover exceptional dining experiences across campus. From local
+              favorites to international cuisines, all delivered fresh to your
+              doorstep.
+            </p>
+          </motion.div>
 
           {/* Stats Bar */}
           <motion.div
@@ -291,31 +326,49 @@ export default function MenuPage() {
             transition={{ delay: 0.6, duration: 0.8 }}
             className='flex flex-wrap justify-center gap-8 mb-12'>
             <div className='text-center'>
-              <div className='text-3xl font-bold text-slate-900 dark:text-white'>{canteens.length}</div>
-              <div className='text-slate-600 dark:text-slate-400 text-sm'>Active Canteens</div>
+              <div className='text-3xl font-bold text-slate-900 dark:text-white'>
+                {canteens.length}
+              </div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>
+                Active Canteens
+              </div>
             </div>
             <div className='text-center'>
               <div className='text-3xl font-bold text-slate-900 dark:text-white'>
-                {canteens.filter(c => c.isOpen).length}
+                {canteens.filter((c) => c.isOpen).length}
               </div>
-              <div className='text-slate-600 dark:text-slate-400 text-sm'>Open Now</div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>
+                Open Now
+              </div>
             </div>
             <div className='text-center'>
               <div className='text-3xl font-bold text-slate-900 dark:text-white'>
-                {canteens.filter(c => c.featured).length}
+                {canteens.filter((c) => c.featured).length}
               </div>
-              <div className='text-slate-600 dark:text-slate-400 text-sm'>Featured</div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>
+                Featured
+              </div>
             </div>
             <div className='text-center'>
               <div className='text-3xl font-bold text-slate-900 dark:text-white'>
-                {(canteens.reduce((sum, c) => sum + c.rating, 0) / canteens.length).toFixed(1)}⭐
+                {canteens.length > 0
+                  ? (
+                      canteens
+                        .filter((c) => c.rating)
+                        .reduce((sum, c) => sum + (c.rating || 0), 0) /
+                      canteens.filter((c) => c.rating).length
+                    ).toFixed(1)
+                  : '0.0'}
+                ⭐
               </div>
-              <div className='text-slate-600 dark:text-slate-400 text-sm'>Avg Rating</div>
+              <div className='text-slate-600 dark:text-slate-400 text-sm'>
+                Avg Rating
+              </div>
             </div>
           </motion.div>
 
           {/* Search and Filter Section */}
-            <motion.div
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.8 }}
@@ -344,29 +397,38 @@ export default function MenuPage() {
               {/* Filter Options */}
               <AnimatePresence>
                 {showFilters && (
-                <motion.div
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
                     className='space-y-4'>
                     <Separator />
-                    
+
                     {/* Cuisine Filter */}
                     <div>
-                      <h3 className='font-semibold text-slate-700 dark:text-slate-300 mb-3'>Cuisine Type</h3>
+                      <h3 className='font-semibold text-slate-700 dark:text-slate-300 mb-3'>
+                        Cuisine Type
+                      </h3>
                       <div className='flex flex-wrap gap-2'>
                         {CUISINE_FILTERS.map((cuisine) => (
                           <Button
                             key={cuisine.value}
                             onClick={() => {
                               // Toggle behavior: if already selected, go back to 'all', otherwise select this cuisine
-                              if (selectedCuisine === cuisine.value && cuisine.value !== 'all') {
+                              if (
+                                selectedCuisine === cuisine.value &&
+                                cuisine.value !== 'all'
+                              ) {
                                 setSelectedCuisine('all');
                               } else {
                                 setSelectedCuisine(cuisine.value);
                               }
                             }}
-                            variant={selectedCuisine === cuisine.value ? 'default' : 'outline'}
+                            variant={
+                              selectedCuisine === cuisine.value
+                                ? 'default'
+                                : 'outline'
+                            }
                             size='sm'
                             className={`${
                               selectedCuisine === cuisine.value
@@ -382,20 +444,27 @@ export default function MenuPage() {
 
                     {/* Sort Options */}
                     <div>
-                      <h3 className='font-semibold text-slate-700 dark:text-slate-300 mb-3'>Sort By</h3>
+                      <h3 className='font-semibold text-slate-700 dark:text-slate-300 mb-3'>
+                        Sort By
+                      </h3>
                       <div className='flex flex-wrap gap-2'>
                         {SORT_OPTIONS.map((option) => (
                           <Button
                             key={option.value}
                             onClick={() => {
                               // Toggle behavior: if already selected, go back to 'featured', otherwise select this option
-                              if (sortBy === option.value && option.value !== 'featured') {
+                              if (
+                                sortBy === option.value &&
+                                option.value !== 'featured'
+                              ) {
                                 setSortBy('featured');
                               } else {
                                 setSortBy(option.value);
                               }
                             }}
-                            variant={sortBy === option.value ? 'default' : 'outline'}
+                            variant={
+                              sortBy === option.value ? 'default' : 'outline'
+                            }
                             size='sm'
                             className={`${
                               sortBy === option.value
@@ -407,17 +476,17 @@ export default function MenuPage() {
                         ))}
                       </div>
                     </div>
-                </motion.div>
+                  </motion.div>
                 )}
               </AnimatePresence>
-              </div>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       {/* Results Section */}
       <section className='px-6 pb-24'>
-          <div className='max-w-7xl mx-auto'>
+        <div className='max-w-7xl mx-auto'>
           {/* Results Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -429,194 +498,211 @@ export default function MenuPage() {
               </h2>
               <p className='text-slate-600 dark:text-slate-400'>
                 {filteredCanteens.length} of {canteens.length} canteens
-                {searchQuery && (
-                  <span> matching "{searchQuery}"</span>
-                )}
+                {searchQuery && <span> matching "{searchQuery}"</span>}
               </p>
             </div>
           </motion.div>
 
           {/* Canteen Grid */}
-            <AnimatePresence mode='wait'>
-              {filteredCanteens.length > 0 ? (
-                <motion.div
+          <AnimatePresence mode='wait'>
+            {filteredCanteens.length > 0 ? (
+              <motion.div
                 key='canteens'
                 variants={containerVariants}
                 initial='hidden'
                 animate='visible'
                 className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-                  {filteredCanteens.map((canteen, index) => (
-                    <motion.div
-                      key={canteen._id}
-                      variants={cardVariants}
+                {filteredCanteens.map((canteen, index) => (
+                  <motion.div
+                    key={canteen._id}
+                    variants={cardVariants}
                     whileHover={{ y: -8, scale: 1.02 }}
-                      onHoverStart={() => setHoveredCard(canteen._id)}
-                      onHoverEnd={() => setHoveredCard(null)}
+                    onHoverStart={() => setHoveredCard(canteen._id)}
+                    onHoverEnd={() => setHoveredCard(null)}
                     className='group'>
                     <Card className='bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 h-full'>
                       {/* Image Section */}
                       <div className='relative overflow-hidden h-48'>
-                          <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            transition={{ duration: 0.6 }}
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          transition={{ duration: 0.6 }}
                           className='relative w-full h-full bg-gradient-to-br from-red-100 to-rose-100 dark:from-red-900/20 dark:to-rose-900/20 flex items-center justify-center'>
-                          <span className='text-6xl'>{getCanteenImage(canteen)}</span>
-                          
+                          <span className='text-6xl'>
+                            {getCanteenImage(canteen)}
+                          </span>
+
                           {/* Gradient Overlay */}
                           <div className='absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
-                          </motion.div>
+                        </motion.div>
 
                         {/* Status Badges */}
                         <div className='absolute top-3 left-3 flex flex-col gap-2'>
-                            {canteen.featured && (
-                              <motion.div
+                          {canteen.featured && (
+                            <motion.div
                               initial={{ opacity: 0, scale: 0 }}
                               animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.1 }}>
-                                <Badge className='bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-3 py-1 shadow-lg'>
+                              transition={{ delay: index * 0.1 }}>
+                              <Badge className='bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-3 py-1 shadow-lg'>
                                 <Award className='w-3 h-3 mr-1' />
-                                  Featured
-                                </Badge>
-                              </motion.div>
-                            )}
-                            {canteen.discount && (
-                              <motion.div
+                                Featured
+                              </Badge>
+                            </motion.div>
+                          )}
+                          {canteen.discount && (
+                            <motion.div
                               initial={{ opacity: 0, scale: 0 }}
                               animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.1 + 0.1 }}>
-                                <Badge className='bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-3 py-1 shadow-lg'>
+                              transition={{ delay: index * 0.1 + 0.1 }}>
+                              <Badge className='bg-gradient-to-r from-red-500 to-pink-500 text-white font-bold px-3 py-1 shadow-lg'>
                                 <Zap className='w-3 h-3 mr-1' />
-                                  {canteen.discount}
-                                </Badge>
-                              </motion.div>
-                            )}
-                          {canteen.is_verified && (
+                                {canteen.discount}
+                              </Badge>
+                            </motion.div>
+                          )}
+                          {canteen.isApproved && (
                             <Badge className='bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium px-2 py-1'>
                               <CheckCircle className='w-3 h-3 mr-1' />
                               Verified
                             </Badge>
-                            )}
-                          </div>
+                          )}
+                        </div>
 
                         {/* Favorite Button */}
-                          <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
                           className='absolute top-3 right-3'>
-                            <Button
+                          <Button
                             onClick={() => toggleFavorite(canteen._id)}
-                              size='sm'
-                              variant='outline'
+                            size='sm'
+                            variant='outline'
                             className='bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-white/50 hover:bg-white dark:hover:bg-slate-700 rounded-full w-9 h-9 p-0'>
-                            <Heart className={`w-4 h-4 ${favorites.has(canteen._id) ? 'fill-red-500 text-red-500' : 'text-slate-600 dark:text-slate-400'}`} />
-                            </Button>
-                          </motion.div>
+                            <Heart
+                              className={`w-4 h-4 ${
+                                favorites.has(canteen._id)
+                                  ? 'fill-red-500 text-red-500'
+                                  : 'text-slate-600 dark:text-slate-400'
+                              }`}
+                            />
+                          </Button>
+                        </motion.div>
 
                         {/* Closed Overlay */}
-                          <AnimatePresence>
-                            {!canteen.isOpen && (
-                              <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className='absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center'>
-                              <Badge variant='destructive' className='text-lg px-4 py-2 font-bold'>
+                        <AnimatePresence>
+                          {!canteen.isOpen && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className='absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center'>
+                              <Badge
+                                variant='destructive'
+                                className='text-lg px-4 py-2 font-bold'>
                                 Currently Closed
-                                </Badge>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
+                              </Badge>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
 
                       {/* Content Section */}
                       <CardHeader className='pb-3'>
                         <div className='flex items-start justify-between mb-2'>
                           <CardTitle className='text-lg font-bold text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors leading-tight'>
-                                {canteen.name}
-                              </CardTitle>
+                            {canteen.name}
+                          </CardTitle>
+                          {canteen.rating && (
                             <motion.div
-                            whileHover={{ scale: 1.05 }}
-                            className='flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded-full'>
-                            <Star className='w-3 h-3 text-yellow-500 fill-current' />
-                            <span className='text-sm font-bold text-slate-900 dark:text-white'>
+                              whileHover={{ scale: 1.05 }}
+                              className='flex items-center gap-1 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded-full'>
+                              <Star className='w-3 h-3 text-yellow-500 fill-current' />
+                              <span className='text-sm font-bold text-slate-900 dark:text-white'>
                                 {canteen.rating}
                               </span>
                             </motion.div>
-                          </div>
-                        
+                          )}
+                        </div>
+
                         <div className='space-y-2'>
                           <CardDescription className='flex items-center gap-2 text-slate-600 dark:text-slate-400'>
                             <ChefHat className='w-4 h-4 text-red-500' />
-                            {canteen.cuisine}
+                            {canteen.cuisine || 'Multi-Cuisine'}
                           </CardDescription>
-                          
+
                           {canteen.description && (
                             <p className='text-xs text-slate-500 dark:text-slate-400 line-clamp-2'>
                               {canteen.description}
                             </p>
                           )}
-                          </div>
-                        </CardHeader>
+                        </div>
+                      </CardHeader>
 
                       <CardContent className='pt-0 pb-4'>
                         {/* Info Grid */}
                         <div className='grid grid-cols-2 gap-3 mb-4 text-sm'>
                           <div className='flex items-center gap-2 text-slate-600 dark:text-slate-400'>
                             <Clock className='w-4 h-4 text-red-500' />
-                              <span>{canteen.deliveryTime}</span>
-                            </div>
+                            <span>{canteen.deliveryTime || '30-40 min'}</span>
+                          </div>
                           <div className='flex items-center gap-2 text-slate-600 dark:text-slate-400'>
                             <MapPin className='w-4 h-4 text-red-500' />
-                            <span className='truncate'>{canteen.distance}</span>
+                            <span className='truncate'>
+                              {canteen.distance || 'Campus'}
+                            </span>
                           </div>
                           {canteen.campus && (
                             <div className='col-span-2 flex items-center gap-2 text-slate-600 dark:text-slate-400'>
                               <BadgeIcon className='w-4 h-4 text-red-500' />
-                              <span className='truncate'>{canteen.campus.name}</span>
+                              <span className='truncate'>
+                                {canteen.campus.name}
+                              </span>
                             </div>
                           )}
-                          </div>
+                        </div>
 
                         {/* Action Button */}
-                          <Link href={`/menu/${canteen._id}`}>
-                            <motion.div
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}>
-                              <Button
+                        <Link href={`/menu/${canteen._id}`}>
+                          <motion.div
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}>
+                            <Button
                               className={`w-full font-semibold py-2.5 rounded-lg transition-all duration-300 ${
                                 canteen.isOpen
                                   ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white shadow-lg hover:shadow-red-500/25'
                                   : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
                               }`}
-                                disabled={!canteen.isOpen}>
+                              disabled={!canteen.isOpen}>
                               <Utensils className='w-4 h-4 mr-2' />
-                              {canteen.isOpen ? 'Explore Menu' : 'Currently Closed'}
-                              </Button>
-                            </motion.div>
-                          </Link>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              ) : (
-                <motion.div
-                  key='no-results'
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className='text-center py-20'>
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 100, delay: 0.2 }}
-                    className='w-32 h-32 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-8'>
-                    <Search className='w-16 h-16 text-red-400' />
+                              {canteen.isOpen
+                                ? 'Explore Menu'
+                                : 'Currently Closed'}
+                            </Button>
+                          </motion.div>
+                        </Link>
+                      </CardContent>
+                    </Card>
                   </motion.div>
+                ))}
+              </motion.div>
+            ) : (
+              <motion.div
+                key='no-results'
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='text-center py-20'>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 100, delay: 0.2 }}
+                  className='w-32 h-32 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-8'>
+                  <Search className='w-16 h-16 text-red-400' />
+                </motion.div>
                 <h3 className='text-3xl font-bold text-slate-900 dark:text-white mb-4'>
-                    No canteens found
-                  </h3>
+                  No canteens found
+                </h3>
                 <p className='text-slate-600 dark:text-slate-400 text-lg max-w-md mx-auto mb-6'>
-                  Try adjusting your search criteria or filters to discover amazing campus dining options
+                  Try adjusting your search criteria or filters to discover
+                  amazing campus dining options
                 </p>
                 <Button
                   onClick={() => {
@@ -628,10 +714,10 @@ export default function MenuPage() {
                   className='border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-950'>
                   Clear All Filters
                 </Button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </section>
     </div>
   );

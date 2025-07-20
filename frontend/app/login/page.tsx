@@ -35,13 +35,14 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
+import { jwtDecode } from 'jwt-decode';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters' }),
-  role: z.enum(['student', 'campus'], { message: 'Please select your role' }),
+  role: z.enum(['student', 'campus']).optional(),
 });
 
 type UserRole = 'student' | 'campus';
@@ -50,7 +51,7 @@ export default function LoginPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { loginWithToken } = useAuth();
+  const { loginWithToken, login, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -64,6 +65,53 @@ export default function LoginPage() {
   });
 
   const selectedRole = form.watch('role');
+
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    try {
+      setIsLoading(true);
+      await login(values.email, values.password);
+      // Get the token and decode user role immediately
+      const token = localStorage.getItem('token');
+      let loggedInRole = null;
+      if (token) {
+        try {
+          const decoded: any = jwtDecode(token);
+          loggedInRole = decoded.role;
+        } catch {}
+      }
+      if (loggedInRole === 'admin') {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Admins must log in through the admin portal.',
+        });
+        router.push('/admin/login');
+        return;
+      }
+      // Redirect based on role
+      if (values.role === 'student' || !values.role) {
+        router.push('/student/dashboard');
+      } else if (values.role === 'campus') {
+        router.push('/campus/dashboard');
+      }
+      toast({
+        title: 'Success',
+        description: 'Successfully logged in!',
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to login. Please try again.',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Handle OAuth token from URL and show session expiration message
   useEffect(() => {
@@ -89,53 +137,6 @@ export default function LoginPage() {
       }
     }
   }, [searchParams, loginWithToken, router, toast]);
-
-  async function onSubmit(values: z.infer<typeof loginSchema>) {
-    setIsLoading(true);
-    try {
-      const response = await fetch('http://localhost:8080/api/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(values),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
-      }
-      const { token, user1 } = await response.json();
-      localStorage.setItem('userDetails', JSON.stringify(user1));
-      loginWithToken(token);
-
-      toast({
-        title: 'Welcome back! 🎉',
-        description: `Successfully logged in as ${values.role}`,
-      });
-
-      // Role-based routing
-      switch (values.role) {
-        case 'student':
-          router.push('/student/dashboard');
-          break;
-        case 'campus':
-          router.push('/campus/dashboard');
-          break;
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Login failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Please check your credentials and try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   const getRoleIcon = (role: UserRole) => {
     switch (role) {
@@ -270,36 +271,16 @@ export default function LoginPage() {
                       name='role'
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className='text-slate-300 text-lg font-semibold'>
-                            I am a
-                          </FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}>
-                            <FormControl>
+                          {/* Remove the label for visual consistency */}
+                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                               <SelectTrigger
-                                suppressHydrationWarning
-                                className='bg-white/10 border-white/20 text-white rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent backdrop-blur-sm'>
-                                <SelectValue placeholder='Select your role' />
+                              className="bg-white/10 border-white/20 text-white rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-100 focus:border-transparent w-full"
+                            >
+                              <SelectValue placeholder="Select your role" />
                               </SelectTrigger>
-                            </FormControl>
-                            <SelectContent className='bg-slate-800/90 backdrop-blur-xl border-white/20'>
-                              <SelectItem
-                                value='student'
-                                className='text-white hover:bg-gray-700 cursor-pointer'>
-                                <div className='flex items-center gap-3'>
-                                  <GraduationCap className='w-5 h-5 text-blue-400' />
-                                  <span>Student</span>
-                                </div>
-                              </SelectItem>
-                              <SelectItem
-                                value='campus'
-                                className='text-white hover:bg-gray-700 cursor-pointer'>
-                                <div className='flex items-center gap-3'>
-                                  <Users className='w-5 h-5 text-green-400' />
-                                  <span>Campus Partner</span>
-                                </div>
-                              </SelectItem>
+                            <SelectContent>
+                              <SelectItem value="student">Student</SelectItem>
+                              <SelectItem value="campus">Campus Partner</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -323,7 +304,7 @@ export default function LoginPage() {
                                 placeholder='Enter your email'
                                 type='email'
                                 autoComplete='email'
-                                className='pl-12 bg-white/10 border-white/20 text-white placeholder-slate-400 rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm'
+                                className='pl-12 bg-white/10 border-white/20 text-white placeholder-slate-400 rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all'
                                 {...field}
                               />
                             </div>
@@ -356,7 +337,7 @@ export default function LoginPage() {
                                 placeholder='Enter your password'
                                 type={showPassword ? 'text' : 'password'}
                                 autoComplete='current-password'
-                                className='pl-12 pr-12 bg-white/10 border-white/20 text-white placeholder-slate-400 rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all backdrop-blur-sm'
+                                className='pl-12 pr-12 bg-white/10 border-white/20 text-white placeholder-slate-400 rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all'
                                 {...field}
                               />
                               <button
@@ -455,16 +436,14 @@ export default function LoginPage() {
                       Want to partner with us?
                     </h3>
                     <p className='text-gray-400 text-sm mb-4'>
-                      Join as a campus restaurant partner
+                      Join as a campus Vendor partner
                     </p>
                     <Button
                       suppressHydrationWarning
                       asChild
                       variant='outline'
                       className='border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 transition-all duration-300 bg-transparent'>
-                      <Link href='/campus/register'>
-                        Register Your Restaurant
-                      </Link>
+                      <Link href='/campus/register'>Register Your Vendor</Link>
                     </Button>
                   </div>
                 </div>
