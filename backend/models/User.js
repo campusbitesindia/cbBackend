@@ -10,7 +10,7 @@ const UserSchema = new mongoose.Schema({
   campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus", required: function() { return !this.googleId; } }, // Only required if not Google OAuth
   canteenId: { type: mongoose.Schema.Types.ObjectId, ref: "Canteen" },
   profileImage: { type: String },
-  phone: { type: String, required: true }, // Now required
+  // phone: { type: String, required: function() { return this.role !== 'canteen'; } }, // Required for all except canteen
   bio: { type: String },
   address: { type: String },
   dateOfBirth: { type: Date },
@@ -25,6 +25,7 @@ const UserSchema = new mongoose.Schema({
     default:null
   },
   // 🔐 Smart Security Features
+    
   devices: [{
     deviceId: { type: String, required: true },
     deviceName: { type: String, required: true },
@@ -155,6 +156,9 @@ UserSchema.methods.addSecurityEvent = function(eventType, description, deviceInf
     };
     
     this.securityEvents.push(securityEvent);
+    if(eventType==="suspicious_login" || riskLevel === 'high'){
+      this.suspiciousActivityCount+=1;
+    }
     
     // Keep only last 50 events to prevent bloat
     if (this.securityEvents.length > 50) {

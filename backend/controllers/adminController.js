@@ -2,6 +2,7 @@ const User = require("../models/User")
 const Campus = require("../models/Campus")
 const Canteen = require("../models/Canteen")
 const Transaction = require("../models/Transaction")
+const Penalty=require("../models/penaltySchema");
 const CampusRequest = require("../models/campusRequest")
 const Payout = require("../models/Payout")
 
@@ -1051,7 +1052,68 @@ exports.getPayoutsByCanteen = async (req, res) => {
     const payouts = await Payout.find({ canteen: canteenId }).populate("admin", "name email").sort({ date: -1 })
     res.status(200).json({ success: true, payouts })
   } catch (error) {
-    console.error("Error fetching payouts by canteen:", error)
-    res.status(500).json({ success: false, message: "Server error", error: error.message })
+    console.error("Error fetching payouts by canteen:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
+
+exports.getSuspectedUser=async(req,res)=>{
+  try{
+      const AllSuspectedUser= await User.find({role:"student",
+        $or: [
+          { "securityEvents.type": "suspicious_login" },
+          { suspiciousActivityCount: { $gt: 0 } }
+        ]
+      });
+      console.log(AllSuspectedUser)
+      if(AllSuspectedUser.length===0){
+        return res.status(400).json({
+          success:false,
+          message:"No suspected User"
+        })
+      }
+      const penalties=await Penalty.find({isPaid:false}).populate({path:"user",select:"email"}).populate({path:"Order",select:"OrderNumber"}).select("student Amount deviceId  isPaid")
+      console.log(penalties)
+      const UsersWithPenalty = [];
+
+      for (const user of AllSuspectedUser) {
+      const userObj = user.toObject();
+
+      // Check if any deviceId matches with any unpaid penalty
+      const matchingPenalty = penalties.find(penalty => {
+        return userObj.devices?.some(device => device.deviceId === penalty.deviceId);
+      });
+
+      if (matchingPenalty) {
+        UsersWithPenalty.push({
+          name:userObj.name,
+          email:userObj.email,
+          suspiciousCount:userObj.suspiciousActivityCount,
+          penalty:matchingPenalty
+        });
+      }
+    }
+      console.log("userssssss withhhhhhh penaltyyyyy",UsersWithPenalty);
+      if(UsersWithPenalty.length===0){
+        return res.status(400).json({
+          success:false,
+          message:"No suspected User"
+        })
+      }
+
+      return res.status(200).json({
+        success:true,
+        data:UsersWithPenalty
+      })
+  }
+  catch(err){
+    
+    return res.status(500).json({
+      success:false,
+      message:"internal server error",
+      error:err.message
+    })
   }
 }

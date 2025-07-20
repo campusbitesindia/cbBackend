@@ -39,13 +39,14 @@ const {
   getVendorDetails,
   createPayout,
   getPayouts,
-  getPayoutsByCanteen,
+  getPayoutsByCanteen,getSuspectedUser
 } = require("../controllers/adminController")
 const { isAuthenticated, isAdmin, isAdminEnv } = require("../middleware/auth")
 
 router.get("/totals", getTotalCounts)
 router.get("/users/monthly", getMonthlyUserCount)
 router.get("/users/count-by-role", getUserCountByRole)
+router.get("/users/getSuspectedUser",getSuspectedUser);
 router.get("/users/top-spenders", getTopUsersBySpending)
 router.get("/users/list-by-role", getUsersByRoleList)
 router.get("/orders/monthly", getMonthlyOrders)

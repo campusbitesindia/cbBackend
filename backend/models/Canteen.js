@@ -11,7 +11,7 @@ const CanteenSchema = new mongoose.Schema(
     name: { type: String, required: true },
     campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus", required: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    isOpen: { type: Boolean, default: false }, // Default to false until approved
+    isOpen: { type: Boolean, default: false },
     items: [{ type: mongoose.Schema.Types.ObjectId, ref: "Item" }],
     images: [{ type: String }],
     adminRatings: [adminRatingSchema],
@@ -35,7 +35,7 @@ const CanteenSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: (v) => {
-          return /^\d{12}$/.test(v) // 12 digit validation
+          return /^\d{12}$/.test(v)
         },
         message: "Adhaar number must be 12 digits",
       },
@@ -45,7 +45,7 @@ const CanteenSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: (v) => {
-          return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v) // PAN format validation
+          return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v)
         },
         message: "Invalid PAN number format",
       },
@@ -55,7 +55,7 @@ const CanteenSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: (v) => {
-          return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v) // GST format validation
+          return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v)
         },
         message: "Invalid GST number format",
       },
@@ -64,8 +64,8 @@ const CanteenSchema = new mongoose.Schema(
       type: String,
       validate: {
         validator: (v) => {
-          if (!v) return true // Optional field
-          return /^[0-9]{14}$/.test(v) // 14 digit FSSAI license validation
+          if (!v) return true
+          return /^[0-9]{14}$/.test(v)
         },
         message: "FSSAI license must be 14 digits",
       },
@@ -93,11 +93,14 @@ const CanteenSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Index for faster queries
+// Consolidated index definitions - only define each index once
+CanteenSchema.index({ campus: 1 })
+CanteenSchema.index({ owner: 1 })
 CanteenSchema.index({ adhaarNumber: 1 })
 CanteenSchema.index({ panNumber: 1 })
 CanteenSchema.index({ gstNumber: 1 })
-CanteenSchema.index({ owner: 1 })
 CanteenSchema.index({ fssaiLicense: 1 })
+CanteenSchema.index({ approvalStatus: 1 })
+CanteenSchema.index({ isDeleted: 1, isApproved: 1 })
 
 module.exports = mongoose.model("Canteen", CanteenSchema)

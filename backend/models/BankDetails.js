@@ -26,7 +26,7 @@ const BankDetailsSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: (v) => {
-          return /^\d{9,18}$/.test(v) // 9-18 digits for account number
+          return /^\d{9,18}$/.test(v)
         },
         message: "Account number must be 9-18 digits",
       },
@@ -46,7 +46,7 @@ const BankDetailsSchema = new mongoose.Schema(
       required: true,
       validate: {
         validator: (v) => {
-          return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v) // IFSC format validation
+          return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v)
         },
         message: "Invalid IFSC code format",
       },
@@ -69,8 +69,8 @@ const BankDetailsSchema = new mongoose.Schema(
       type: String,
       validate: {
         validator: (v) => {
-          if (!v) return true // Optional field
-          return /^[\w.-]+@[\w.-]+$/.test(v) // Basic UPI format validation
+          if (!v) return true
+          return /^[\w.-]+@[\w.-]+$/.test(v)
         },
         message: "Invalid UPI ID format",
       },
@@ -89,10 +89,12 @@ const BankDetailsSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-// Indexes
-BankDetailsSchema.index({ canteen: 1 })
+// Consolidated indexes - avoid duplicates
+BankDetailsSchema.index({ canteen: 1 }) // This might conflict with unique: true above
 BankDetailsSchema.index({ owner: 1 })
 BankDetailsSchema.index({ accountNumber: 1 })
 BankDetailsSchema.index({ ifscCode: 1 })
+BankDetailsSchema.index({ isVerified: 1 })
+BankDetailsSchema.index({ isDeleted: 1 })
 
 module.exports = mongoose.model("BankDetails", BankDetailsSchema)
