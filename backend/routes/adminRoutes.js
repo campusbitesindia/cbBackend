@@ -80,7 +80,7 @@ router.patch("/campus-requests/:id/review", isAuthenticated, isAdmin, reviewCamp
 
 // Add these routes to adminRoutes.js
 router.get("/vendors/pending", isAuthenticated, isAdmin, getPendingVendors)
-router.post("/vendors/:canteenId/approve", isAuthenticated, isAdmin, approveVendor)
+router.post("/vendors/:canteenId/approve", isAdminEnv, approveVendor)
 router.get("/vendors/:canteenId/details", isAuthenticated, isAdmin, getVendorDetails)
 
 // Payout routes

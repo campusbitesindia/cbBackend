@@ -35,19 +35,8 @@ type AuthContextType = {
     password: string,
     role?: string,
     campus?: string,
-    businessDetails?: {
-      vendorName?: string;
-      adhaarNumber?: string;
-      panNumber?: string;
-      gstNumber?: string;
-      contactPhone?: string;
-      description?: string;
-      operatingHours?: {
-        open: string;
-        close: string;
-      };
-    }
-  ) => Promise<any>;
+    phone?: string
+  ) => Promise<void>;
   loginWithToken: (token: string) => void;
   logout: () => void;
 };
@@ -200,33 +189,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string,
       role: string = 'student',
       campus: string = 'Main Campus',
-      businessDetails?: {
-        vendorName?: string;
-        adhaarNumber?: string;
-        panNumber?: string;
-        gstNumber?: string;
-        contactPhone?: string;
-        description?: string;
-        operatingHours?: {
-          open: string;
-          close: string;
-        };
-      }
-    ): Promise<any> => {
+      phone: string = ''
+    ) => {
       try {
-        const payload: any = {
-          name,
-          email,
-          password,
-          role,
-          campus,
-        };
-
-        // Add business details if provided (for canteen registration)
-        if (businessDetails && role === 'canteen') {
-          Object.assign(payload, businessDetails);
-        }
-
         const response = await fetch(
           'http://localhost:8080/api/v1/users/register',
           {
@@ -234,7 +199,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              name,
+              email,
+              password,
+              role,
+              campus,
+              phone,
+            }),
           }
         );
 
@@ -275,8 +247,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           throw new Error('Invalid response from server');
         }
-
-        return data;
       } catch (error) {
         console.error('Registration error:', error);
         throw error;
@@ -315,7 +285,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [handleSecurityPrompt]);
 
   // Add this after user state is set
-  usePushSubscription(user?.id, user?.role);
+  usePushSubscription(user?.id);
 
   return (
     <AuthContext.Provider

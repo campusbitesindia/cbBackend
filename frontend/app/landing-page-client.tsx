@@ -473,7 +473,7 @@ export default function LandingPageClient() {
 
       {/* Features Section */}
       <motion.section
-        className="py-24 bg-gray-100/50 dark:bg-gray-900/50 transition-colors duration-500"
+        className="py-28 bg-gray-100/50 dark:bg-gray-900/50 transition-colors duration-500"
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.3 }}
@@ -490,12 +490,6 @@ export default function LandingPageClient() {
           </motion.div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              {
-                icon: <Zap className="w-10 h-10 text-red-400" />,
-                title: "Lightning-Fast Delivery",
-                description:
-                  "Get your food in minutes. Our delivery partners are always on the move.",
-              },
               {
                 icon: <Heart className="w-10 h-10 text-red-400" />,
                 title: "Curated for You",
