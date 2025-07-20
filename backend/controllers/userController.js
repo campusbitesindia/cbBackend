@@ -13,11 +13,11 @@ exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, role, campus, phone } = req.body
 
-    if (!name || !email || !password || !role || !campus || !phone) {
+    if (!name || !email || !password || !role || !campus) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
-        required: ["name", "email", "password", "role", "campus", "phone"],
+        required: ["name", "email", "password", "role", "campus"],
         note: "For campus field, send either campus ID or campus name",
       })
     }
@@ -29,7 +29,7 @@ exports.registerUser = async (req, res) => {
       })
     }
 
-    if (!/^\d{10}$/.test(phone) || Number(phone) <= 0) {
+    if (role !== "canteen" && (!phone || !/^\d{10}$/.test(phone) || Number(phone) <= 0)) {
       return res.status(400).json({
         success: false,
         message: "Mobile number must be exactly 10 digits and positive.",
@@ -95,7 +95,7 @@ exports.registerUser = async (req, res) => {
       password: hashedPass,
       role,
       campus: campusDoc._id,
-      phone,
+      ...(role !== "canteen" ? { phone } : {}),
       is_verified: false,
     })
 
@@ -277,8 +277,8 @@ exports.loginUser = async (req, res, next) => {
       })
     }
 
-    // Enforce email verification for all except Google OAuth
-    if (!user1.is_verified) {
+    // Enforce email verification for all except Google OAuth and vendors (canteen role)
+    if (!user1.is_verified && user1.role !== "canteen") {
       return res.status(403).json({
         success: false,
         message: "Please verify your email address before logging in.",
