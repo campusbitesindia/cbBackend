@@ -24,6 +24,7 @@ const UserSchema = new mongoose.Schema({
     default:null
   },
   // 🔐 Smart Security Features
+    
   devices: [{
     deviceId: { type: String, required: true },
     deviceName: { type: String, required: true },
@@ -154,6 +155,9 @@ UserSchema.methods.addSecurityEvent = function(eventType, description, deviceInf
     };
     
     this.securityEvents.push(securityEvent);
+    if(eventType==="suspicious_login" || riskLevel === 'high'){
+      this.suspiciousActivityCount+=1;
+    }
     
     // Keep only last 50 events to prevent bloat
     if (this.securityEvents.length > 50) {

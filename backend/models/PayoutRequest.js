@@ -67,3 +67,4 @@ PayoutRequestSchema.index({ status: 1 })
 PayoutRequestSchema.index({ createdAt: -1 })
 
 module.exports = mongoose.model("PayoutRequest", PayoutRequestSchema)
+ 

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const SendNotification=require("../utils/sendNotification");
 const crypto = require('crypto');
 const UAParser = require('ua-parser-js'); // For parsing user agent
 
@@ -60,6 +61,30 @@ const smartLoginMonitoring = async (req, res, next) => {
           }
           
           // Track new device detection
+          const OtherUserWithSameDevice= await User.find({"devices.deviceId":deviceInfo.deviceId,
+            _id:{
+              $ne:user._id
+            }
+          })
+          if(OtherUserWithSameDevice.length>0){
+            const previousEmails=OtherUserWithSameDevice.map(u=>u.email).join(",");
+              const Admin=await User.findOne({role:"Admin"});
+              if(Admin){
+                  await SendNotification(Admin._id,"Suspected Device Reuse",`User ${user.email} logged in from a device previously used by: ${previousEmails}`);
+              }
+
+              user.addSecurityEvent(
+              'suspicious_login',
+              `Device reused from another account (previously used by: ${previousEmails})`,
+              deviceInfo,
+              'high'
+            );
+
+            req.requiresVerification = true;
+            req.suspiciousReason = 'Device previously used by another user';
+          
+          }
+
           const existingDevice = user.devices.find(d => d.deviceId === deviceInfo.deviceId);
           if (!existingDevice) {
             user.addSecurityEvent(
@@ -71,6 +96,10 @@ const smartLoginMonitoring = async (req, res, next) => {
             
             req.isNewDevice = true;
           }
+          // else{
+          //   const Admin=await User.findOne({role:"Admin"});
+          //   await SendNotification(Admin._id,"Suspected User",`User Loggedin with new Id ${user.email}`);
+          // }
           
           await user.save();
         }
