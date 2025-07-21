@@ -34,6 +34,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import axios from '@/lib/axios';
 import GlobalSearchDropdown from './global-search-dropdown';
+import NotificationList from './notification-list';
 
 interface UserProfile {
   name: string;
@@ -48,12 +49,13 @@ function Navbar() {
   const { cart } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [notificationCount, setNotificationCount] = useState(3); // Example notification count
+  const [notificationCount, setNotificationCount] = useState(0); // Example notification count
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const [NotificationListShow,setNotificationList]=useState(false);
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
-
+ 
   // Fetch fresh user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -134,9 +136,10 @@ function Navbar() {
             {/* Right side actions for hideNavbar */}
             <div className='flex items-center space-x-4'>
               {/* Notification Icon */}
-              <Button
+             <div className='realtive'>
+                 <Button
                 variant='ghost'
-                size='icon'
+                size='icon' onClick={()=>setNotificationList(!NotificationListShow)}
                 className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
                 <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
                 {notificationCount > 0 && (
@@ -144,7 +147,10 @@ function Navbar() {
                     {notificationCount}
                   </Badge>
                 )}
+                
               </Button>
+              {NotificationListShow && user?.id && <NotificationList userId={user.id}  />}
+             </div>
 
               {/* Profile Icon */}
               {isAuthenticated ? (

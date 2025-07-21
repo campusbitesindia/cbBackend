@@ -99,7 +99,7 @@ export const getCanteenStats = async (
         Authorization: `Bearer ${token}`,
       },
     });
-
+    console.log(response)
     const allOrders = response.data.data || [];
     const canteenOrders = allOrders.filter(
       (order: Order) => order.canteen._id === canteenId
