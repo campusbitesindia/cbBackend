@@ -39,14 +39,14 @@ const NotificationList: React.FC<NotificationListProps> = ({ userId }) => {
     <div className="bg-white border p-3 rounded shadow absolute right-[1rem] w-fit  h-[15rem] overflow-y-scroll">
       <h2 className="text-lg font-bold mb-2 text-black">Your Notifications</h2>
       <ul className="space-y-2">
-        {notifs.map((n) => (
+        { notifs.length!==0? notifs.map((n) => (
           <li key={n._id} className="border-b pb-2">
             <div className="font-medium text-black">{n.message}</div>
             <div className="text-xs text-gray-500">
               {new Date(n.createdAt).toLocaleString()}
             </div>
           </li>
-        ))}
+        )):<p className="text-black">No Notification yet</p>}
       </ul>
     </div>
   );
