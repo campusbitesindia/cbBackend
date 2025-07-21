@@ -33,6 +33,7 @@ exports.CreateCODTransaction=async(req,res)=>{
         
        
         await SendNotification(order.student._id,"Order Placed","Your Order has been Placed")
+        await SendNotification(order.canteen,"New Order",`New Order has Arrived with Order Id ${order.OrderNumber}`)
         return res.status(200).json({
             success:true,
             message:"Transaction Made SuccessFully",
