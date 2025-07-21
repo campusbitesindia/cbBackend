@@ -101,20 +101,49 @@ exports.registerUser = async (req, res) => {
 
     // For vendors (canteen role), create a pending canteen that needs admin approval
     if (role === "canteen") {
+      // Extract additional fields for canteen creation
+      const {
+        canteenName,
+        mobile: canteenMobile,
+        canteenEmail,
+        address: canteenAddress,
+        openingHours,
+        closingHours,
+        operatingDays,
+      } = req.body
+
+      // For registration, we'll create a basic canteen record
+      // The vendor will need to complete the full onboarding process later
       const newCanteen = await Canteen.create({
-        name: `${name}'s Canteen`,
+        name: canteenName || `${name}'s Canteen`,
         campus: campusDoc._id,
         isOpen: false, // Closed until approved
         owner: user._id,
-        isApproved: false, // Add approval status
-        approvalStatus: "pending", // Add approval status
-        // Add placeholder business details that will be updated later
-        adhaarNumber: "000000000000", // Placeholder
-        panNumber: "AAAAA0000A", // Placeholder
-        gstNumber: "00AAAAA0000A1Z5", // Placeholder
-        fssaiLicense: null, // Optional field
+        isApproved: false,
+        approvalStatus: "pending",
+
+        // Basic required fields with placeholders
+        adhaarNumber: "000000000000", // Will be updated during onboarding
+        panNumber: "AAAAA0000A", // Will be updated during onboarding
+        gstNumber: "00AAAAA0000A1Z5", // Will be updated during onboarding
+        fssaiLicense: null,
         contactPersonName: name,
+
+        // New required fields
+        mobile: canteenMobile || phone || "0000000000", // Use provided mobile or phone
+        email: canteenEmail || email, // Use canteen email or user email
+        address: canteenAddress || "Address to be updated", // Placeholder address
+
+        // Default operating hours
+        operatingHours: {
+          opening: openingHours || "09:00",
+          closing: closingHours || "21:00",
+        },
+        operatingDays: operatingDays || ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+
+        images: [], // Will be added during onboarding
       })
+
       user.canteenId = newCanteen._id
       await user.save()
     }

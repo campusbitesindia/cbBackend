@@ -12,7 +12,12 @@ exports.createCanteen = async (req, res) => {
       gstNumber,
       fssaiLicense,
       contactPersonName,
-      contactPhone,
+      mobile,
+      email,
+      address,
+      openingHours,
+      closingHours,
+      operatingDays,
       description,
     } = req.body
     const userRole = req.user.role
@@ -26,11 +31,57 @@ exports.createCanteen = async (req, res) => {
     }
 
     // Validate required fields
-    if (!name || !campus || !adhaarNumber || !panNumber || !gstNumber || !contactPersonName) {
+    if (
+      !name ||
+      !campus ||
+      !adhaarNumber ||
+      !panNumber ||
+      !gstNumber ||
+      !contactPersonName ||
+      !mobile ||
+      !email ||
+      !address ||
+      !openingHours ||
+      !closingHours
+    ) {
       return res.status(400).json({
         success: false,
         message: "All required fields must be provided",
-        required: ["name", "campus", "adhaarNumber", "panNumber", "gstNumber", "contactPersonName"],
+        required: [
+          "name",
+          "campus",
+          "adhaarNumber",
+          "panNumber",
+          "gstNumber",
+          "contactPersonName",
+          "mobile",
+          "email",
+          "address",
+          "openingHours",
+          "closingHours",
+        ],
+      })
+    }
+
+    // Validate time format
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+    if (!timeRegex.test(openingHours) || !timeRegex.test(closingHours)) {
+      return res.status(400).json({
+        success: false,
+        message: "Opening and closing hours must be in HH:MM format (24-hour)",
+      })
+    }
+
+    // Validate that closing time is after opening time
+    const [openHour, openMin] = openingHours.split(":").map(Number)
+    const [closeHour, closeMin] = closingHours.split(":").map(Number)
+    const openMinutes = openHour * 60 + openMin
+    const closeMinutes = closeHour * 60 + closeMin
+
+    if (closeMinutes <= openMinutes) {
+      return res.status(400).json({
+        success: false,
+        message: "Closing time must be after opening time",
       })
     }
 
@@ -78,6 +129,23 @@ exports.createCanteen = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "GST number is already registered with another canteen",
+      })
+    }
+
+    // Check for duplicate mobile and email
+    const duplicateMobile = await Canteen.findOne({ mobile, isDeleted: false })
+    if (duplicateMobile) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number is already registered with another canteen",
+      })
+    }
+
+    const duplicateEmail = await Canteen.findOne({ email, isDeleted: false })
+    if (duplicateEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Email address is already registered with another canteen",
       })
     }
 
@@ -140,6 +208,19 @@ exports.createCanteen = async (req, res) => {
       })
     }
 
+    // Parse operating days if provided
+    let parsedOperatingDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    if (operatingDays) {
+      try {
+        parsedOperatingDays = Array.isArray(operatingDays) ? operatingDays : JSON.parse(operatingDays)
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid operating days format",
+        })
+      }
+    }
+
     const newCanteen = await Canteen.create({
       name,
       campus: campusDoc._id,
@@ -150,7 +231,14 @@ exports.createCanteen = async (req, res) => {
       gstNumber,
       fssaiLicense,
       contactPersonName,
-      contactPhone,
+      mobile,
+      email,
+      address,
+      operatingHours: {
+        opening: openingHours,
+        closing: closingHours,
+      },
+      operatingDays: parsedOperatingDays,
       description,
       isOpen: false, // Closed until approved
       isApproved: false,
@@ -169,6 +257,11 @@ exports.createCanteen = async (req, res) => {
         name: newCanteen.name,
         campus: campusDoc.name,
         images: imageUrls,
+        mobile: newCanteen.mobile,
+        email: newCanteen.email,
+        address: newCanteen.address,
+        operatingHours: newCanteen.operatingHours,
+        operatingDays: newCanteen.operatingDays,
         approvalStatus: newCanteen.approvalStatus,
         imageCount: imageUrls.length,
         businessDetails: {
@@ -183,7 +276,7 @@ exports.createCanteen = async (req, res) => {
         "Wait for admin approval",
         "Set up your bank details for payouts",
         "Once approved, you can start adding menu items",
-        "Set up your canteen operating hours",
+        "Your canteen will operate during the specified hours",
       ],
     })
   } catch (error) {
@@ -304,7 +397,18 @@ exports.deleteCanteen = async (req, res) => {
 exports.updateCanteen = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, isOpen, clearImages } = req.body
+    const {
+      name,
+      isOpen,
+      clearImages,
+      mobile,
+      email,
+      address,
+      openingHours,
+      closingHours,
+      operatingDays,
+      description,
+    } = req.body
     const userRole = req.user.role
 
     // Only canteen owners can update canteens
@@ -329,6 +433,57 @@ exports.updateCanteen = async (req, res) => {
         success: false,
         message: "You can only update your own canteen",
       })
+    }
+
+    // Validate time format if provided
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+    if (openingHours && !timeRegex.test(openingHours)) {
+      return res.status(400).json({
+        success: false,
+        message: "Opening hours must be in HH:MM format (24-hour)",
+      })
+    }
+    if (closingHours && !timeRegex.test(closingHours)) {
+      return res.status(400).json({
+        success: false,
+        message: "Closing hours must be in HH:MM format (24-hour)",
+      })
+    }
+
+    // Validate that closing time is after opening time if both are provided
+    if (openingHours && closingHours) {
+      const [openHour, openMin] = openingHours.split(":").map(Number)
+      const [closeHour, closeMin] = closingHours.split(":").map(Number)
+      const openMinutes = openHour * 60 + openMin
+      const closeMinutes = closeHour * 60 + closeMin
+
+      if (closeMinutes <= openMinutes) {
+        return res.status(400).json({
+          success: false,
+          message: "Closing time must be after opening time",
+        })
+      }
+    }
+
+    // Check for duplicate mobile and email if they're being updated
+    if (mobile && mobile !== canteen.mobile) {
+      const duplicateMobile = await Canteen.findOne({ mobile, isDeleted: false, _id: { $ne: id } })
+      if (duplicateMobile) {
+        return res.status(400).json({
+          success: false,
+          message: "Mobile number is already registered with another canteen",
+        })
+      }
+    }
+
+    if (email && email !== canteen.email) {
+      const duplicateEmail = await Canteen.findOne({ email, isDeleted: false, _id: { $ne: id } })
+      if (duplicateEmail) {
+        return res.status(400).json({
+          success: false,
+          message: "Email address is already registered with another canteen",
+        })
+      }
     }
 
     let currentImageCount = canteen.images.length
@@ -389,8 +544,33 @@ exports.updateCanteen = async (req, res) => {
       })
     }
 
+    // Update fields
     if (name) canteen.name = name
     if (isOpen !== undefined) canteen.isOpen = isOpen
+    if (mobile) canteen.mobile = mobile
+    if (email) canteen.email = email
+    if (address) canteen.address = address
+    if (description !== undefined) canteen.description = description
+
+    // Update operating hours
+    if (openingHours || closingHours) {
+      canteen.operatingHours = {
+        opening: openingHours || canteen.operatingHours.opening,
+        closing: closingHours || canteen.operatingHours.closing,
+      }
+    }
+
+    // Update operating days
+    if (operatingDays) {
+      try {
+        canteen.operatingDays = Array.isArray(operatingDays) ? operatingDays : JSON.parse(operatingDays)
+      } catch (error) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid operating days format",
+        })
+      }
+    }
 
     await canteen.save()
 
@@ -401,9 +581,15 @@ exports.updateCanteen = async (req, res) => {
         id: canteen._id,
         name: canteen.name,
         isOpen: canteen.isOpen,
+        mobile: canteen.mobile,
+        email: canteen.email,
+        address: canteen.address,
+        operatingHours: canteen.operatingHours,
+        operatingDays: canteen.operatingDays,
         images: canteen.images,
         imageCount: canteen.images.length,
         approvalStatus: canteen.approvalStatus,
+        description: canteen.description,
       },
     })
   } catch (error) {
