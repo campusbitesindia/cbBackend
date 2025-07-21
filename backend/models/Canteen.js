@@ -78,11 +78,66 @@ const CanteenSchema = new mongoose.Schema(
       maxlength: 100,
     },
 
-    contactPhone: { type: String },
+    // New fields from the vendor onboarding form
+    mobile: {
+      type: String,
+      required: true,
+      validate: {
+        validator: (v) => {
+          return /^\d{10}$/.test(v)
+        },
+        message: "Mobile number must be 10 digits",
+      },
+    },
+    email: {
+      type: String,
+      required: true,
+      validate: {
+        validator: (v) => {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
+        },
+        message: "Invalid email format",
+      },
+    },
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500,
+    },
+
+    contactPhone: { type: String }, // Keep for backward compatibility
     description: { type: String },
+
+    // Updated operating hours structure
     operatingHours: {
-      open: { type: String },
-      close: { type: String },
+      opening: {
+        type: String,
+        required: true,
+        validate: {
+          validator: (v) => {
+            return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v)
+          },
+          message: "Opening time must be in HH:MM format",
+        },
+      },
+      closing: {
+        type: String,
+        required: true,
+        validate: {
+          validator: (v) => {
+            return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v)
+          },
+          message: "Closing time must be in HH:MM format",
+        },
+      },
+    },
+
+    // Operating days
+    operatingDays: {
+      type: [String],
+      enum: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      default: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     },
 
     // Financial tracking
@@ -100,6 +155,8 @@ CanteenSchema.index({ adhaarNumber: 1 })
 CanteenSchema.index({ panNumber: 1 })
 CanteenSchema.index({ gstNumber: 1 })
 CanteenSchema.index({ fssaiLicense: 1 })
+CanteenSchema.index({ mobile: 1 })
+CanteenSchema.index({ email: 1 })
 CanteenSchema.index({ approvalStatus: 1 })
 CanteenSchema.index({ isDeleted: 1, isApproved: 1 })
 
