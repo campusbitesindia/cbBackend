@@ -52,10 +52,10 @@ function Navbar() {
   const [notificationCount, setNotificationCount] = useState(0); // Example notification count
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
-  const [NotificationListShow,setNotificationList]=useState(false);
+  const [NotificationListShow, setNotificationList] = useState(false);
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
- 
+
   // Fetch fresh user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -70,6 +70,10 @@ function Navbar() {
               profileImage: response.data.user.profileImage,
               role: response.data.user.role,
             };
+            localStorage.setItem(
+              'canteenId',
+              response.data.user.canteenId?._id
+            );
             setUserProfile(freshProfile);
           }
         } catch (error) {
@@ -112,7 +116,11 @@ function Navbar() {
         <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex h-20 items-center justify-between'>
             {/* Logo */}
-            <Link href='/' className='flex items-center group'>
+            <Link
+              href={`${
+                pathname === '/campus/dashboard' ? '/campus/dashboard' : '/'
+              }`}
+              className='flex items-center group'>
               <div className='flex items-center space-x-3'>
                 <Image
                   src='/logo.png'
@@ -136,21 +144,23 @@ function Navbar() {
             {/* Right side actions for hideNavbar */}
             <div className='flex items-center space-x-4'>
               {/* Notification Icon */}
-             <div className='realtive'>
-                 <Button
-                variant='ghost'
-                size='icon' onClick={()=>setNotificationList(!NotificationListShow)}
-                className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
-                {notificationCount > 0 && (
-                  <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
-                    {notificationCount}
-                  </Badge>
+              <div className='realtive'>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => setNotificationList(!NotificationListShow)}
+                  className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                  <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
+                  {notificationCount > 0 && (
+                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
+                      {notificationCount}
+                    </Badge>
+                  )}
+                </Button>
+                {NotificationListShow && user?.id && (
+                  <NotificationList userId={user.id} />
                 )}
-                
-              </Button>
-              {NotificationListShow && user?.id && <NotificationList userId={user.id}  />}
-             </div>
+              </div>
 
               {/* Profile Icon */}
               {isAuthenticated ? (
