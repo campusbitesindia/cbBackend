@@ -65,7 +65,8 @@ export default function Dashboard() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-  const [canteenId, setCanteenId] = useState<string | null>(null);
+
+  const canteenId = localStorage.getItem('canteenId');
 
   // Form state for new/edit item
   const [formData, setFormData] = useState({
@@ -139,7 +140,7 @@ export default function Dashboard() {
         // Update with uploaded URL
         setPersonalData((prev) => ({
           ...prev,
-          profilePic: uploadResult.url,
+          profilePic: uploadResult.imageUrl,
         }));
 
         toast({
@@ -166,20 +167,20 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    console.log('useEffect triggered:', {
-      isAuthenticated,
-      user: user?.id,
-      activeTab,
-    });
-    if (isAuthenticated && user) {
-      console.log('Starting fetchCanteenData...');
-      fetchCanteenData();
-    } else {
-      console.log('Not authenticated or no user, setting loading to false');
-      setLoading(false);
-    }
-  }, [activeTab, isAuthenticated, user]);
+  // useEffect(() => {
+  //   console.log('useEffect triggered:', {
+  //     isAuthenticated,
+  //     user: user?.id,
+  //     activeTab,
+  //   });
+  //   if (isAuthenticated && user) {
+  //     console.log('Starting fetchCanteenData...');
+  //     // fetchCanteenData();
+  //   } else {
+  //     console.log('Not authenticated or no user, setting loading to false');
+  //     setLoading(false);
+  //   }
+  // }, [activeTab, isAuthenticated, user]);
 
   // Additional useEffect to refetch data when canteenId changes
   useEffect(() => {
@@ -191,52 +192,52 @@ export default function Dashboard() {
   }, [canteenId]);
 
   // Fetch canteen data associated with the current user
-  const fetchCanteenData = async () => {
-    try {
-      console.log('fetchCanteenData called for user:', user?.id);
+  // const fetchCanteenData = async () => {
+  //   try {
+  //     console.log('fetchCanteenData called for user:', user?.id);
 
-      if (!user?.id) {
-        console.error('No user ID available');
-        setLoading(false); // Add this line to stop loading
-        toast({
-          title: 'Error',
-          description: 'User session invalid. Please login again.',
-          variant: 'destructive',
-        });
-        return;
-      }
+  //     if (!user?.id) {
+  //       console.error('No user ID available');
+  //       setLoading(false); // Add this line to stop loading
+  //       toast({
+  //         title: 'Error',
+  //         description: 'User session invalid. Please login again.',
+  //         variant: 'destructive',
+  //       });
+  //       return;
+  //     }
 
-      console.log('Fetching canteen data for user:', user.id);
-      const canteenData = await getCanteenByOwner(user.id);
-      console.log('Canteen data received:', canteenData);
+  //     console.log('Fetching canteen data for user:', user.id);
+  //     const canteenData = await getCanteenByOwner(user.id);
+  //     console.log('Canteen data received:', canteenData);
 
-      if (canteenData && canteenData._id) {
-        const dynamicCanteenId = canteenData._id;
-        console.log('Setting canteenId to:', dynamicCanteenId);
-        setCanteenId(dynamicCanteenId);
+  //     if (canteenData && canteenData._id) {
+  //       const dynamicCanteenId = canteenData._id;
+  //       console.log('Setting canteenId to:', dynamicCanteenId);
+  //       setCanteenId(dynamicCanteenId);
 
-        // Don't call fetchData here since the useEffect will handle it
-        console.log('Canteen ID set, useEffect will trigger data fetch');
-      } else {
-        console.error('No canteen data received:', canteenData);
-        setLoading(false); // Add this line to stop loading
-        toast({
-          title: 'Error',
-          description:
-            'No canteen associated with your account. Please contact support.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching canteen data:', error);
-      setLoading(false); // Add this line to stop loading
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch canteen information',
-        variant: 'destructive',
-      });
-    }
-  };
+  //       // Don't call fetchData here since the useEffect will handle it
+  //       console.log('Canteen ID set, useEffect will trigger data fetch');
+  //     } else {
+  //       console.error('No canteen data received:', canteenData);
+  //       setLoading(false); // Add this line to stop loading
+  //       toast({
+  //         title: 'Error',
+  //         description:
+  //           'No canteen associated with your account. Please contact support.',
+  //         variant: 'destructive',
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching canteen data:', error);
+  //     setLoading(false); // Add this line to stop loading
+  //     toast({
+  //       title: 'Error',
+  //       description: 'Failed to fetch canteen information',
+  //       variant: 'destructive',
+  //     });
+  //   }
+  // };
 
   // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
   const fetchData = async (currentCanteenId?: string) => {

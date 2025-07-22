@@ -70,6 +70,10 @@ function Navbar() {
               profileImage: response.data.user.profileImage,
               role: response.data.user.role,
             };
+            localStorage.setItem(
+              'canteenId',
+              response.data.user.canteenId?._id
+            );
             setUserProfile(freshProfile);
           }
         } catch (error) {
