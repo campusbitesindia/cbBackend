@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import axios from "axios"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,14 +20,15 @@ export default function CartPage() {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [discount, setDiscount] = useState(0)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, token } = useAuth()
+  const [pickupTime, setPickupTime] = useState("")
 
+  // Quantity and removal handlers
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity > 0) {
       updateQuantity(id, newQuantity)
     }
   }
-
   const handleRemoveItem = (id: string) => {
     removeFromCart(id)
     toast({
@@ -37,7 +39,6 @@ export default function CartPage() {
 
   const handleApplyPromo = () => {
     setIsApplyingPromo(true)
-    // Simulate API call
     setTimeout(() => {
       if (promoCode.toLowerCase() === "welcome10") {
         const discountAmount = totalPrice * 0.1
@@ -61,26 +62,51 @@ export default function CartPage() {
     setIsPlacingOrder(true)
     try {
       if (cart.length === 0) {
-        throw new Error('Cart is empty');
+        throw new Error("Cart is empty")
+      }
+      // Check canteen consistency
+      const data = cart.map((item) => item.canteenId)
+      const canteenId = data[0]
+      data.forEach((id) => {
+        if (id !== canteenId) {
+          throw new Error("Items From Different Canteens Are not allowed")
+        }
+      })
+
+      if (!pickupTime) {
+        throw new Error("Please select a pickup time")
+      }
+      // Validate pickupTime is at least 10 minutes from now
+      const selectedPickupTime = new Date(pickupTime)
+      if (selectedPickupTime.getTime() - Date.now() < 10 * 60 * 1000) {
+        throw new Error("Pickup time must be at least 10 minutes from now")
       }
 
-      // Calculate final total with discount and delivery fee
-      const finalTotal = totalPrice - discount + 25;
-      
-      // If not logged in, redirect to login first with redirect param
-      if (!isAuthenticated) {
-        const redirectUrl = encodeURIComponent(`/payment?total=${finalTotal.toFixed(2)}`)
-        router.push(`/login?redirect=${redirectUrl}`)
-        return
+      // Prepare backend data
+      const items = JSON.stringify(cart)
+      const Newdata = {
+        items,
+        pickUpTime: selectedPickupTime.toISOString(),
+        canteenId,
       }
 
-      router.push(`/payment?total=${finalTotal.toFixed(2)}`)
-    } catch (error) {
-      console.error(error);
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/order/CreateOrder",
+        Newdata,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      router.push(`/payment?orderId=${response.data.data._id}`)
+    } catch (error: any) {
+      console.error(error)
       toast({
         variant: "destructive",
         title: "Cannot proceed to payment",
-        description: "There was a problem with your cart. Please try again.",
+        description: error.message || "There was a problem with your cart. Please try again.",
       })
     } finally {
       setIsPlacingOrder(false)
@@ -90,12 +116,11 @@ export default function CartPage() {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-500 relative">
-        {/* Background Elements */}
         <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
           <div className="absolute -top-1/2 -right-1/2 w-96 h-96 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-full blur-3xl" />
         </div>
-        {/* Header */}
+
         <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 dark:border-gray-700/50">
           <div className="container mx-auto px-4 py-4">
             <div className="flex items-center justify-between">
@@ -105,14 +130,10 @@ export default function CartPage() {
                 </Button>
                 <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Your Cart</h1>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-              
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Empty Cart Content */}
         <div className="container mx-auto px-4 py-16 text-center">
           <div className="mb-8">
             <div className="w-32 h-32 mx-auto bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
@@ -146,12 +167,11 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-500 relative">
-      {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
         <div className="absolute -top-1/2 -right-1/2 w-96 h-96 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-1/2 -left-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-full blur-3xl" />
       </div>
-      {/* Header */}
+
       <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -161,30 +181,14 @@ export default function CartPage() {
               </Button>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Your Cart</h1>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-300">
-              <MapPin className="h-4 w-4 text-red-500" />
-              <span>Pots campus 2, LDH V</span>
-            </div>
+            
           </div>
         </div>
       </div>
 
       <div className="container mx-auto px-4 py-6 my-20">
-        {/* Delivery Info */}
-        <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 mb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                <Clock className="h-4 w-4 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">Delivery in 25-30 mins</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">To Pots campus 2, LDH V</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">Change</Button>
-          </div>
-        </div>
+        
+      
 
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Cart Items */}
@@ -264,9 +268,9 @@ export default function CartPage() {
                   onChange={(e) => setPromoCode(e.target.value)}
                   className="flex-1"
                 />
-                <Button 
-                  variant="outline" 
-                  onClick={handleApplyPromo} 
+                <Button
+                  variant="outline"
+                  onClick={handleApplyPromo}
                   disabled={isApplyingPromo || !promoCode}
                   className="border-red-500 text-red-500 hover:bg-red-50"
                 >
@@ -277,10 +281,26 @@ export default function CartPage() {
           </div>
 
           {/* Order Summary */}
-          <div className="lg:w-1/3">
+          <div className="lg:w-1/3 space-y-6">
+            {/* Pickup Time Input */}
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4">
+              <label htmlFor="pickupTime" className="block mb-2 font-semibold text-gray-900 dark:text-white">
+                Select Pickup Time
+              </label>
+              <Input
+                id="pickupTime"
+                type="datetime-local"
+                value={pickupTime}
+                onChange={(e) => setPickupTime(e.target.value)}
+                className="w-full"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Pickup time must be at least 10 minutes from now.</p>
+            </div>
+
+            {/* Bill Details */}
             <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-lg shadow-sm border border-gray-200/50 dark:border-gray-700/50 p-4 sticky top-40">
               <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Bill Details</h2>
-              
+
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Item Total</span>
@@ -309,7 +329,7 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <Button 
+              <Button
                 className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white font-bold py-3 text-base rounded-lg"
                 onClick={handleCheckout}
                 disabled={isPlacingOrder}

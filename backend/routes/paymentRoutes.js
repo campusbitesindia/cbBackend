@@ -60,6 +60,6 @@ router.post(
 router.get("/refund/:transactionId", isAuthenticated, getRefundStatus)
 
 // router for cod transaction
-router.post("/COD",CreateCODTransaction)
+router.post("/COD",isAuthenticated,CreateCODTransaction)
 
 module.exports = router

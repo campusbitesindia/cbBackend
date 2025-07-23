@@ -61,9 +61,6 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
       
-      {/* HARDCODED USER - Use it if wanna show user history too */}
-      <NotificationList userId="686e5ed1e3781b0cca2fb3c9"/>
-
       {/* Background Elements */}
       <div className="absolute inset-0 overflow-hidden -z-10">
         <div className="absolute top-20 left-20 w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center animate-float">
