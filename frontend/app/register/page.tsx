@@ -193,22 +193,65 @@ export default function RegisterPage() {
   async function handleVerifyOtp() {
     setIsVerifyingOtp(true);
     setOtpError("");
-    setOtpSuccess("");
-    try {
-      const res = await api.post("/api/v1/users/verify-email", { email: pendingEmail, otp });
-      if (res.data.success) {
-        setOtpSuccess("Email verified successfully! You can now log in.");
-        setTimeout(() => {
-          setShowOtpDialog(false);
-          router.push("/login");
-        }, 1500);
-      } else {
-        setOtpError(res.data.message || "Invalid OTP");
+    const handleVerifyEmail = async () => {
+      try {
+        // Call verify-email with a dummy OTP to trigger the resend logic
+        const response = await fetch('/api/v1/users/verify-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            email: pendingEmail,
+            otp: 'resend' // Special value to trigger resend
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          toast.success('Verification email sent successfully!');
+          setShowOtpDialog(true);
+        } else {
+          // If the error is about invalid OTP but includes a new OTP sent message
+          if (data.message && data.message.includes('new OTP sent')) {
+            toast.success('New verification email sent!');
+            setShowOtpDialog(true);
+          } else {
+            toast.error(data.message || 'Failed to send verification email');
+          }
+        }
+      } catch (error) {
+        console.error('Error sending verification email:', error);
+        toast.error('An error occurred while sending the verification email');
+      } finally {
+        setShowExistingUserDialog(false);
       }
-    } catch (err: any) {
-      setOtpError(err.response?.data?.message || "Invalid OTP or server error");
-    } finally {
-      setIsVerifyingOtp(false);
+    }
+
+    const verifyOtp = async () => {
+      try {
+        const res = await api.post("/api/v1/users/verify-email", { email: pendingEmail, otp });
+        if (res.data.success) {
+          setOtpSuccess("Email verified successfully! You can now log in.");
+          setTimeout(() => {
+            setShowOtpDialog(false);
+            router.push("/login");
+          }, 1500);
+        } else {
+          setOtpError(res.data.message || "Invalid OTP");
+        }
+      } catch (err: any) {
+        setOtpError(err.response?.data?.message || "Invalid OTP or server error");
+      } finally {
+        setIsVerifyingOtp(false);
+      }
+    }
+
+    if (otp === 'resend') {
+      handleVerifyEmail();
+    } else {
+      verifyOtp();
     }
   }
 
@@ -650,12 +693,27 @@ export default function RegisterPage() {
                 </AlertDialogAction>
                 {!existingUserDialog.userInfo?.isVerified && (
                   <AlertDialogAction
-                    onClick={() => {
-                      setExistingUserDialog(prev => ({ ...prev, open: false }))
-                      toast({
-                        title: "Check your email",
-                        description: "Please check your email for the verification link or request a new one from the login page.",
-                      })
+                    onClick={async () => {
+                      try {
+                        setExistingUserDialog(prev => ({ ...prev, open: false }));
+                        // Call the API to resend verification email
+                        await api.post("/api/v1/users/resend-verification", { 
+                          email: existingUserDialog.userInfo?.email 
+                        });
+                        // Show OTP dialog
+                        setPendingEmail(existingUserDialog.userInfo?.email);
+                        setShowOtpDialog(true);
+                        toast({
+                          title: "Verification Email Sent",
+                          description: "A new verification code has been sent to your email.",
+                        });
+                      } catch (error: any) {
+                        toast({
+                          variant: "destructive",
+                          title: "Failed to send verification",
+                          description: error.response?.data?.message || "Please try again later.",
+                        });
+                      }
                     }}
                     className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-300"
                   >

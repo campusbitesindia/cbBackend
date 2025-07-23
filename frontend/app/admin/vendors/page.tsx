@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { UserCheck, UserX, ChevronDown, ChevronUp, CheckCircle2, Ban } from "lucide-react";
+import { UserCheck, UserX, ChevronDown, ChevronUp, CheckCircle2, Ban, Star, StarHalf, StarOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import api from "@/lib/axios";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -21,6 +21,7 @@ export default function AdminVendorsPage() {
   const [payouts, setPayouts] = useState<{ [vendorId: string]: any[] }>({});
   const [payoutsLoading, setPayoutsLoading] = useState<{ [vendorId: string]: boolean }>({});
   const [approveLoading, setApproveLoading] = useState<{ [vendorId: string]: boolean }>({});
+  const [ratingLoading, setRatingLoading] = useState<{ [vendorId: string]: boolean }>({});
   const [owners, setOwners] = useState<any[]>([]); // <-- new
   const { toast } = useToast();
 
@@ -28,12 +29,31 @@ export default function AdminVendorsPage() {
     setLoading(true);
     setError("");
     try {
-      const vendorsRes = await api.get("/api/v1/admin/canteens?includeUnapproved=true");
-      const canteens = vendorsRes.data.canteens || [];
-      setVendors(canteens);
-      setFilteredVendors(canteens);
+      // Fetch all canteens including unapproved ones
+      const vendorsRes = await api.get("/api/v1/admin/canteens");
+      const canteens = Array.isArray(vendorsRes.data?.canteens) ? vendorsRes.data.canteens : [];
+      
+      // Ensure consistent data structure for all vendors
+      const processedVendors = canteens.map((vendor: any) => ({
+        ...vendor,
+        _id: vendor._id?.toString(), // Ensure ID is a string for consistent comparison
+        owner: vendor.owner || null,
+        isSuspended: vendor.isSuspended || false,
+        isBanned: vendor.isBanned || false,
+        approvalStatus: vendor.approvalStatus || 'pending',
+        rating: vendor.rating || {
+          average: vendor.adminRatings?.length > 0 
+            ? vendor.adminRatings.reduce((acc: number, curr: any) => acc + curr.rating, 0) / vendor.adminRatings.length 
+            : 0,
+          count: vendor.adminRatings?.length || 0
+        }
+      }));
+      
+      setVendors(processedVendors);
+      setFilteredVendors(processedVendors);
     } catch (err: any) {
-      setError(err.message || "Unknown error");
+      console.error("Error fetching vendors:", err);
+      setError(err.response?.data?.message || err.message || "Failed to load vendors");
     } finally {
       setLoading(false);
     }
@@ -94,24 +114,212 @@ export default function AdminVendorsPage() {
     }
   }
 
-  async function handleApproveVendor(canteenId: string) {
-    setApproveLoading((l) => ({ ...l, [canteenId]: true }));
+  // Handle vendor rating
+  async function handleRateVendor(canteenId: string, rating: number) {
+    const vendorId = canteenId?.toString();
+    if (!vendorId) {
+      toast({
+        title: "Cannot rate vendor",
+        description: "Invalid vendor ID",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if vendor is approved
+    const vendor = vendors.find(v => v._id === vendorId);
+    if (vendor?.approvalStatus !== 'approved' && !vendor?.isApproved) {
+      toast({
+        title: "Cannot rate vendor",
+        description: "Please approve the vendor before rating.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setRatingLoading((l) => ({ ...l, [vendorId]: true }));
+    
     try {
-      const approveRes = await api.post(`/api/v1/admin/vendors/${canteenId}/approve`, { approved: true });
-      if (approveRes.status === 200) {
-        toast({ title: approveRes.data.message || "Vendor approved" });
-        setVendors((vendors) =>
-          vendors.map((v) =>
-            v._id === canteenId ? { ...v, approvalStatus: "approved" } : v
-          )
+      const rateRes = await api.post(
+        `/api/v1/admin/rateVendors`,
+        {
+          canteenId: vendorId,
+          rating,
+          feedback: `Admin rating: ${rating} stars`
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true // Important for sending cookies with the request
+        }
+      );
+      
+      if (rateRes.status === 200) {
+        // Update the vendor's rating without refreshing the whole list
+        setVendors(prevVendors => 
+          prevVendors.map(vendor => {
+            if (vendor._id === vendorId) {
+              const newAdminRatings = [...(vendor.adminRatings || []), 
+                { rating, feedback: `Admin rating: ${rating} stars`, date: new Date() }
+              ];
+              const totalRatings = newAdminRatings.reduce((sum, r) => sum + r.rating, 0);
+              const avgRating = totalRatings / newAdminRatings.length;
+              
+              return {
+                ...vendor,
+                adminRatings: newAdminRatings,
+                rating: {
+                  average: avgRating,
+                  count: newAdminRatings.length
+                }
+              };
+            }
+            return vendor;
+          })
         );
+        
+        toast({
+          title: "Rating Submitted",
+          description: `Rated vendor ${rating} star${rating !== 1 ? 's' : ''}`,
+          variant: "default"
+        });
       } else {
-        toast({ title: approveRes.data.message || "Failed to approve vendor", variant: "destructive" });
+        throw new Error(rateRes.data?.message || "Failed to submit rating");
       }
     } catch (err: any) {
-      toast({ title: err.message || "Failed to approve vendor", variant: "destructive" });
+      console.error("Error rating vendor:", err);
+      toast({
+        title: "Rating Failed",
+        description: err.response?.data?.message || err.message || "An error occurred while submitting the rating.",
+        variant: "destructive"
+      });
     } finally {
-      setApproveLoading((l) => ({ ...l, [canteenId]: false }));
+      setRatingLoading((l) => ({ ...l, [vendorId]: false }));
+    }
+  }
+
+  // Render star rating component
+  function StarRating({ 
+    rating, 
+    onRate, 
+    loading = false, 
+    size = 4 
+  }: { 
+    rating: number, 
+    onRate?: (rating: number) => void, 
+    loading?: boolean,
+    size?: number
+  }) {
+    const [hover, setHover] = useState(0);
+    
+    if (loading) {
+      return <div className="flex">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star 
+            key={star} 
+            className={`w-${size} h-${size} text-yellow-400 opacity-50`} 
+          />
+        ))}
+      </div>;
+    }
+    
+    return (
+      <div className="flex">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const isFilled = hover ? star <= hover : star <= Math.round(rating || 0);
+          const isHalf = !hover && star - 0.5 <= (rating || 0) && star > (rating || 0);
+          
+          return (
+            <button
+              key={star}
+              type="button"
+              className={`p-1 ${onRate ? 'cursor-pointer' : 'cursor-default'}`}
+              onMouseEnter={() => onRate && setHover(star)}
+              onMouseLeave={() => onRate && setHover(0)}
+              onClick={() => onRate && onRate(star)}
+              disabled={!onRate}
+              aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+            >
+              {isFilled ? (
+                <Star className={`w-${size} h-${size} text-yellow-400 fill-current`} />
+              ) : isHalf ? (
+                <StarHalf className={`w-${size} h-${size} text-yellow-400 fill-current`} />
+              ) : (
+                <Star className={`w-${size} h-${size} text-gray-400`} />
+              )}
+            </button>
+          );
+        })}
+        {rating > 0 && (
+          <span className="text-xs text-gray-400 ml-1">
+            ({rating.toFixed(1)})
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  async function handleApproveVendor(canteenId: string) {
+    const vendorId = canteenId?.toString();
+    if (!vendorId) {
+      toast({
+        title: "Cannot approve vendor",
+        description: "Invalid vendor ID",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setApproveLoading((l) => ({ ...l, [vendorId]: true }));
+    
+    try {
+      const approveRes = await api.post(
+        `/api/v1/admin/vendors/${vendorId}/approve`,
+        { 
+          approved: true,
+          rejectionReason: ""
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          withCredentials: true
+        }
+      );
+      
+      if (approveRes.status === 200) {
+        // Update the vendor's approval status without refreshing the whole list
+        setVendors(prevVendors => 
+          prevVendors.map(vendor => 
+            vendor._id === vendorId 
+              ? { 
+                  ...vendor, 
+                  approvalStatus: 'approved',
+                  isApproved: true,
+                  approvedAt: new Date().toISOString()
+                } 
+              : vendor
+          )
+        );
+        
+        toast({ 
+          title: "Vendor Approved",
+          description: "The vendor has been successfully approved.",
+          variant: "default"
+        });
+      } else {
+        throw new Error(approveRes.data?.message || "Failed to approve vendor");
+      }
+    } catch (err: any) {
+      console.error("Error approving vendor:", err);
+      toast({ 
+        title: "Approval Failed",
+        description: err.response?.data?.message || err.message || "An error occurred while approving the vendor.",
+        variant: "destructive" 
+      });
+    } finally {
+      setApproveLoading((l) => ({ ...l, [vendorId]: false }));
     }
   }
 
@@ -170,6 +378,7 @@ export default function AdminVendorsPage() {
                 <th className="px-4 py-2 font-semibold text-black">Name</th>
                 <th className="px-4 py-2 font-semibold text-black">Owner</th>
                 <th className="px-4 py-2 font-semibold text-black">Banned</th>
+                <th className="px-4 py-2 font-semibold text-black">Rating</th>
                 <th className="px-4 py-2 font-semibold text-black">Actions</th>
               </tr>
             </thead>
@@ -194,6 +403,27 @@ export default function AdminVendorsPage() {
                       >
                         {(vendor.isSuspended || vendor.isBanned) ? "Yes" : "No"}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center min-w-[120px]">
+                        {vendor.approvalStatus === "approved" ? (
+                          <div className="flex flex-col items-start">
+                            <StarRating 
+                              rating={vendor.rating?.average || 0} 
+                              onRate={(rating) => handleRateVendor(vendor._id, rating)}
+                              loading={ratingLoading[vendor._id]}
+                              size={5}
+                            />
+                            {vendor.rating?.count > 0 && (
+                              <span className="text-xs text-gray-400 mt-1">
+                                {vendor.rating.count} rating{vendor.rating.count !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">Approve to rate</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-2">
                       <div className="flex gap-2 items-center">
