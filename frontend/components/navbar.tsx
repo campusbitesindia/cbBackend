@@ -265,9 +265,9 @@ function Navbar() {
   }
 
   return (
-    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex h-20 items-center justify-between'>
+    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500 overflow-x-hidden'>
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-x-hidden'>
+        <div className='flex h-20 items-center justify-between w-full max-w-full'>
           {/* Logo */}
           <Link href='/' className='flex items-center group'>
             <div className='flex items-center space-x-3'>

@@ -48,10 +48,21 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useMobile } from '@/hooks/use-mobile';
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { Menu as MenuIcon } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function Dashboard() {
+  // Move all hooks to the top
+  const isMobile = useMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -65,10 +76,7 @@ export default function Dashboard() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-
   const canteenId = localStorage.getItem('canteenId');
-
-  // Form state for new/edit item
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -80,16 +88,10 @@ export default function Dashboard() {
     portion: '',
     quantity: '',
   });
-
-  // Add search state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-
-  // State for order details modal
   const [orderDetails, setOrderDetails] = useState<any | null>(null);
-
-  // Personal details state
   const [personalData, setPersonalData] = useState({
     vendorName: '',
     contactPerson: '',
@@ -102,8 +104,6 @@ export default function Dashboard() {
   const [personalSuccess, setPersonalSuccess] = useState(false);
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState('');
-
-  // Bank details state
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: '',
     accountNumber: '',
@@ -115,6 +115,56 @@ export default function Dashboard() {
   });
   const [bankSubmitting, setBankSubmitting] = useState(false);
   const [bankSuccess, setBankSuccess] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  useNotificationToast();
+
+  // Form state for new/edit item
+  // const [formData, setFormData] = useState({
+  //   name: '',
+  //   price: '',
+  //   description: '',
+  //   category: '',
+  //   isVeg: false,
+  //   available: true,
+  //   image: '',
+  //   portion: '',
+  //   quantity: '',
+  // });
+
+  // Add search state
+  // const [searchTerm, setSearchTerm] = useState('');
+  // const [statusFilter, setStatusFilter] = useState('all');
+  // const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // State for order details modal
+  // const [orderDetails, setOrderDetails] = useState<any | null>(null);
+
+  // Personal details state
+  // const [personalData, setPersonalData] = useState({
+  //   vendorName: '',
+  //   contactPerson: '',
+  //   mobileNumber: '',
+  //   email: '',
+  //   address: '',
+  //   profilePic: '',
+  // });
+  // const [personalSubmitting, setPersonalSubmitting] = useState(false);
+  // const [personalSuccess, setPersonalSuccess] = useState(false);
+  // const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  // const [profilePicPreview, setProfilePicPreview] = useState('');
+
+  // Bank details state
+  // const [bankDetails, setBankDetails] = useState({
+  //   accountHolderName: '',
+  //   accountNumber: '',
+  //   confirmAccountNumber: '',
+  //   ifscCode: '',
+  //   bankName: '',
+  //   branchName: '',
+  //   upiId: '',
+  // });
+  // const [bankSubmitting, setBankSubmitting] = useState(false);
+  // const [bankSuccess, setBankSuccess] = useState(false);
 
   // Handle profile picture upload
   const handleProfilePicUpload = async (
@@ -373,7 +423,7 @@ export default function Dashboard() {
     }
   };
 
-  const [imageUploading, setImageUploading] = useState(false);
+  // const [imageUploading, setImageUploading] = useState(false);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -667,13 +717,13 @@ export default function Dashboard() {
   }
 
   if (!isAuthenticated || !user) {
-    // return (
-    //   <div className='flex items-center justify-center min-h-screen bg-white'>
-    //     <div className='text-gray-600'>
-    //       Please log in to access the dashboard
-    //     </div>
-    //   </div>
-    // );
+    return (
+      <div className='flex items-center justify-center min-h-screen bg-white'>
+        <div className='text-gray-600'>
+          Please log in to access the dashboard
+        </div>
+      </div>
+    );
   }
 
   // Temporarily allow any authenticated user for testing
@@ -722,15 +772,46 @@ export default function Dashboard() {
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
 
-  useNotificationToast();
-
   return (
-    <div className='flex h-screen bg-gray-50'>
-      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
+    <div className='flex flex-col md:flex-row h-screen bg-gray-50 w-full'>
+      {/* Mobile: Hamburger + Drawer */}
+      {isMobile && (
+        <div className='flex md:hidden items-center p-2 bg-white border-b border-gray-200'>
+          <button
+            className='p-2 rounded-md text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            onClick={() => setDrawerOpen(true)}
+            aria-label='Open sidebar menu'>
+            <MenuIcon className='w-6 h-6' />
+          </button>
+          <span className='ml-3 font-bold text-lg text-blue-900'>
+            CampusBites
+          </span>
+        </div>
+      )}
+      {/* Sidebar: Always render both, hide one with display:none */}
+      <div style={{ display: isMobile ? 'block' : 'none' }}>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetContent
+            side='left'
+            className='fixed z-50 inset-y-0 left-0 h-full w-full max-w-xs bg-transparent shadow-none border-none p-0 [&>button]:hidden'>
+            <DashboardSidebar
+              activeTab={activeTab}
+              setActiveTab={(tab) => {
+                setActiveTab(tab);
+                setDrawerOpen(false); // Close drawer on tab select
+              }}
+              onClose={() => setDrawerOpen(false)}
+              isMobile={true}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+      <div style={{ display: isMobile ? 'none' : 'block' }}>
+        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
       {/* Main Content */}
-      <div className='flex-1 overflow-auto scrollbar-hide'>
-        <div className='p-8 max-w-7xl mx-auto'>
+      <div className='flex-1 overflow-auto scrollbar-hide w-full'>
+        <div className='p-4 sm:p-8 max-w-7xl mx-auto w-full'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <OverviewTab canteenStats={canteenStats} menuItems={menuItems} />
