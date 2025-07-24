@@ -29,12 +29,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         </p>
       </div>
 
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full max-w-full'>
         <StatsCard
           title='Total Orders'
           value={canteenStats?.totalOrders ?? 0}
           description='All time orders'
           icon={ShoppingCart}
+          className='max-w-full w-full'
         />
 
         <StatsCard
@@ -42,6 +43,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           value={`₹${canteenStats?.totalRevenue ?? 0}`}
           description='Total revenue'
           icon={DollarSign}
+          className='max-w-full w-full'
         />
 
         <StatsCard
@@ -49,6 +51,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           value={menuItems.length}
           description='Active items'
           icon={Menu}
+          className='max-w-full w-full'
         />
 
         <StatsCard
@@ -56,6 +59,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           value={canteenStats?.pendingOrders ?? 0}
           description='Need attention'
           icon={Clock}
+          className='max-w-full w-full'
         />
       </div>
     </div>
