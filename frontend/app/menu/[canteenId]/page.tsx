@@ -113,6 +113,7 @@ const CanteenMenuPage = () => {
 
   const handleAddToCart = (item: Item) => {
     addToCart({
+      canteenId:item.canteen,
       id: item._id,
       name: item.name,
       price: item.price,
