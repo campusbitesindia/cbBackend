@@ -50,6 +50,8 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     switch (status) {
       case 'placed':
         return 'bg-blue-100 text-blue-800';
+      case 'payment_pending':
+        return 'bg-orange-100 text-orange-800';
       case 'preparing':
         return 'bg-yellow-100 text-yellow-800';
       case 'ready':
@@ -68,6 +70,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     switch (status) {
       case 'placed':
         return <div className={`${iconClass} bg-blue-500 rounded-full`}></div>;
+      case 'payment_pending':
+        return (
+          <div className={`${iconClass} bg-orange-500 rounded-full`}></div>
+        );
       case 'preparing':
         return (
           <div className={`${iconClass} bg-yellow-500 rounded-full`}></div>
@@ -146,6 +152,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           {[
             'all',
             'placed',
+            'payment_pending',
             'preparing',
             'ready',
             'completed',
@@ -241,6 +248,18 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                             handleStatusUpdate(order?._id, 'preparing');
                           }}>
                           Start Preparing
+                        </Button>
+                      )}
+                      {order?.status === 'payment_pending' && (
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='text-xs h-6 px-2 bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusUpdate(order?._id, 'placed');
+                          }}>
+                          Mark as Placed
                         </Button>
                       )}
                     </div>

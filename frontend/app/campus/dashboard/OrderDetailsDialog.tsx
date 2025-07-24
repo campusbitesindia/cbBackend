@@ -15,7 +15,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle, XCircle, Package, Loader2 } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Package,
+  Loader2,
+  Calendar,
+  Users,
+  Receipt,
+} from 'lucide-react';
 import { updateCanteenOrderStatus } from '@/services/canteenOrderService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -29,6 +38,8 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'placed':
       return 'bg-blue-100 text-blue-800';
+    case 'payment_pending':
+      return 'bg-orange-100 text-orange-800';
     case 'preparing':
       return 'bg-yellow-100 text-yellow-800';
     case 'ready':
@@ -46,6 +57,8 @@ const getStatusIcon = (status: string) => {
   switch (status) {
     case 'placed':
       return <Clock className='w-4 h-4' />;
+    case 'payment_pending':
+      return <Receipt className='w-4 h-4' />;
     case 'preparing':
       return <Package className='w-4 h-4' />;
     case 'ready':
@@ -63,6 +76,8 @@ const getNextStatusOptions = (currentStatus: string) => {
   switch (currentStatus) {
     case 'placed':
       return ['preparing', 'cancelled'];
+    case 'payment_pending':
+      return ['placed', 'cancelled'];
     case 'preparing':
       return ['ready', 'cancelled'];
     case 'ready':
@@ -80,6 +95,8 @@ const getStatusLabel = (status: string) => {
   switch (status) {
     case 'placed':
       return 'Order Placed';
+    case 'payment_pending':
+      return 'Payment Pending';
     case 'preparing':
       return 'Preparing';
     case 'ready':
@@ -147,15 +164,18 @@ export const OrderDetailsDialog: React.FC<OrderDetailsDialogProps> = ({
 
   return (
     <Dialog open={!!orderDetails} onOpenChange={() => setOrderDetails(null)}>
-      <DialogContent className='max-w-lg bg-white border border-gray-200 text-black'>
+      <DialogContent className='max-w-2xl bg-white border border-gray-200 text-black max-h-[90vh] overflow-y-auto'>
         <DialogHeader>
-          <DialogTitle className='text-black'>Order Details</DialogTitle>
+          <DialogTitle className='text-black text-xl font-bold'>
+            Order Details
+          </DialogTitle>
           <DialogDescription className='text-black'>
-            Detailed information for Order #{orderDetails._id.slice(-4)}
+            Detailed information for Order #
+            {orderDetails.OrderNumber || orderDetails._id.slice(-4)}
           </DialogDescription>
         </DialogHeader>
 
-        <div className='space-y-4'>
+        <div className='space-y-6'>
           {/* Order Status Section */}
           <div className='bg-gray-50 p-4 rounded-lg'>
             <div className='flex items-center justify-between mb-3'>
@@ -163,7 +183,7 @@ export const OrderDetailsDialog: React.FC<OrderDetailsDialogProps> = ({
               <Badge className={getStatusColor(orderDetails.status)}>
                 {getStatusIcon(orderDetails.status)}
                 <span className='ml-1'>
-                  {orderDetails.status.toUpperCase()}
+                  {getStatusLabel(orderDetails.status).toUpperCase()}
                 </span>
               </Badge>
             </div>
@@ -211,60 +231,171 @@ export const OrderDetailsDialog: React.FC<OrderDetailsDialogProps> = ({
           </div>
 
           {/* Order Information */}
-          <div className='space-y-3'>
-            <div className='flex justify-between'>
-              <span className='font-semibold'>Order ID:</span>
-              <span className='text-sm'>{orderDetails._id}</span>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className='bg-blue-50 p-4 rounded-lg'>
+              <h4 className='font-semibold text-gray-800 mb-3 flex items-center gap-2'>
+                <Receipt className='w-4 h-4' />
+                Order Information
+              </h4>
+              <div className='space-y-2 text-sm'>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Order Number:</span>
+                  <span className='text-blue-600 font-semibold'>
+                    {orderDetails.OrderNumber || 'N/A'}
+                  </span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Order ID:</span>
+                  <span className='text-gray-600'>{orderDetails._id}</span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Total Amount:</span>
+                  <span className='font-bold text-lg'>
+                    ₹{orderDetails.total?.toFixed(2)}
+                  </span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Order Date:</span>
+                  <span>
+                    {new Date(orderDetails.createdAt).toLocaleString()}
+                  </span>
+                </div>
+                {orderDetails.pickupTime && (
+                  <div className='flex justify-between'>
+                    <span className='font-medium'>Pickup Time:</span>
+                    <span>
+                      {new Date(orderDetails.pickupTime).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                {orderDetails.groupOrderId && (
+                  <div className='flex justify-between'>
+                    <span className='font-medium'>Group Order:</span>
+                    <span className='text-green-600 font-semibold'>Yes</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className='flex justify-between'>
-              <span className='font-semibold'>Total:</span>
-              <span>₹{orderDetails.total.toFixed(2)}</span>
-            </div>
-            <div className='flex justify-between'>
-              <span className='font-semibold'>Order Date:</span>
-              <span>{new Date(orderDetails.createdAt).toLocaleString()}</span>
-            </div>
-          </div>
 
-          {/* Customer Details */}
-          <div className='bg-blue-50 p-3 rounded-lg'>
-            <h4 className='font-semibold text-gray-800 mb-2'>
-              Customer Details
-            </h4>
-            <div className='space-y-1 text-sm'>
-              <div>Student ID: {orderDetails.student || 'N/A'}</div>
-              <div>Canteen: {orderDetails.canteen?.name || 'N/A'}</div>
-              <div>
-                Payment Method:{' '}
-                {orderDetails.payment?.method?.toUpperCase() || 'N/A'}
+            {/* Customer Details */}
+            <div className='bg-green-50 p-4 rounded-lg'>
+              <h4 className='font-semibold text-gray-800 mb-3 flex items-center gap-2'>
+                <Users className='w-4 h-4' />
+                Customer Details
+              </h4>
+              <div className='space-y-2 text-sm'>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Student Name:</span>
+                  <span className='font-semibold'>
+                    {typeof orderDetails.student === 'string'
+                      ? orderDetails.student
+                      : orderDetails.student?.name || 'N/A'}
+                  </span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Student ID:</span>
+                  <span className='text-gray-600'>
+                    {typeof orderDetails.student === 'string'
+                      ? 'N/A'
+                      : orderDetails.student?._id || 'N/A'}
+                  </span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Canteen:</span>
+                  <span className='font-semibold'>
+                    {orderDetails.canteen?.name || 'N/A'}
+                  </span>
+                </div>
+                <div className='flex justify-between'>
+                  <span className='font-medium'>Canteen ID:</span>
+                  <span className='text-gray-600'>
+                    {orderDetails.canteen?._id || 'N/A'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Order Items */}
-          <div>
-            <h4 className='font-semibold text-gray-800 mb-2'>Order Items</h4>
-            <div className='space-y-2'>
-              {orderDetails.items.map((item: any, idx: any) => (
+          <div className='bg-white border border-gray-200 p-4 rounded-lg'>
+            <h4 className='font-semibold text-gray-800 mb-4 flex items-center gap-2'>
+              <Package className='w-4 h-4' />
+              Order Items ({orderDetails.items?.length || 0})
+            </h4>
+            <div className='space-y-3'>
+              {orderDetails.items?.map((item: any, idx: any) => (
                 <div
-                  key={idx}
-                  className='flex justify-between items-center p-2 bg-gray-50 rounded'>
-                  <div>
-                    <span className='font-medium'>{item.item.name}</span>
-                    <span className='text-sm text-gray-600 ml-2'>
-                      x{item.quantity}
-                    </span>
+                  key={item._id || idx}
+                  className='flex justify-between items-center p-3 bg-gray-50 rounded-lg border border-gray-100'>
+                  <div className='flex-1'>
+                    <div className='font-semibold text-gray-800'>
+                      {item.nameAtPurchase || 'Unknown Item'}
+                    </div>
+                    <div className='text-sm text-gray-600 mt-1'>
+                      Quantity: {item.quantity} | Price: ₹
+                      {item.priceAtPurchase?.toFixed(2) || '0.00'}
+                    </div>
                   </div>
-                  <span className='font-semibold'>
-                    ₹{(item.item.price * item.quantity).toFixed(2)}
-                  </span>
+                  <div className='text-right'>
+                    <div className='font-bold text-lg text-gray-800'>
+                      ₹
+                      {(
+                        (item.quantity || 0) * (item.priceAtPurchase || 0)
+                      ).toFixed(2)}
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+
+            {/* Order Total */}
+            <div className='mt-4 pt-4 border-t border-gray-200'>
+              <div className='flex justify-between items-center'>
+                <span className='text-lg font-semibold text-gray-800'>
+                  Total Amount:
+                </span>
+                <span className='text-2xl font-bold text-blue-600'>
+                  ₹{orderDetails.total?.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Information */}
+          <div className='bg-gray-50 p-4 rounded-lg'>
+            <h4 className='font-semibold text-gray-800 mb-3 flex items-center gap-2'>
+              <Calendar className='w-4 h-4' />
+              Additional Information
+            </h4>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+              <div>
+                <span className='font-medium'>Created:</span>
+                <span className='ml-2 text-gray-600'>
+                  {new Date(orderDetails.createdAt).toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className='font-medium'>Last Updated:</span>
+                <span className='ml-2 text-gray-600'>
+                  {new Date(orderDetails.updatedAt).toLocaleString()}
+                </span>
+              </div>
+              {orderDetails.isDeleted !== undefined && (
+                <div>
+                  <span className='font-medium'>Deleted:</span>
+                  <span
+                    className={`ml-2 ${
+                      orderDetails.isDeleted ? 'text-red-600' : 'text-green-600'
+                    }`}>
+                    {orderDetails.isDeleted ? 'Yes' : 'No'}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <Button onClick={() => setOrderDetails(null)} className='w-full mt-4'>
+        <Button onClick={() => setOrderDetails(null)} className='w-full mt-6'>
           Close
         </Button>
       </DialogContent>
