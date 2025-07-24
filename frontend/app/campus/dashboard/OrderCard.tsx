@@ -143,14 +143,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       {/* Header: Order number, status, date, total */}
       <div className='flex justify-between items-center'>
         <div className='flex items-center space-x-3'>
-          <span className='font-bold text-lg'>
+          <span className='font-bold text-lg text-black'>
             Order #{order._id.slice(-4)}
           </span>
           <span className='bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full font-semibold'>
             {order.status.toUpperCase()}
           </span>
         </div>
-        <span className='font-bold text-xl'>₹{order.total.toFixed(2)}</span>
+        <span className='font-bold text-xl text-black'>
+          ₹{order.total.toFixed(2)}
+        </span>
       </div>
 
       <div className='text-sm text-gray-500'>
@@ -162,14 +164,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       {/* Customer Details and Address */}
       <div className='flex flex-col md:flex-row md:justify-between md:items-start gap-4'>
         <div>
-          <div className='font-semibold'>Customer Details</div>
-          <div>
+          <div className='font-semibold text-black'>Customer Details</div>
+          <div className='text-gray-500'>
             Student:{' '}
             {typeof order.student === 'string'
               ? order.student
               : order.student?.name || 'N/A'}
           </div>
-          <div>Canteen: {order.canteen?.name || 'N/A'}</div>
+          <div className='text-gray-500'>
+            Canteen: {order.canteen?.name || 'N/A'}
+          </div>
         </div>
         <div className='text-right text-blue-900'>
           Payment: {order.payment?.method?.toUpperCase() || 'N/A'}
@@ -178,20 +182,20 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Order Items */}
       <div>
-        <div className='font-semibold mt-4'>Order Items</div>
+        <div className='font-semibold mt-4 text-black'>Order Items</div>
         {order.items.map((item: any, idx: any) => (
           <div
             key={item._id || idx}
             className='flex justify-between text-sm mt-1'>
             <span>
-              <span className='font-semibold'>
+              <span className='font-semibold text-black'>
                 {item.nameAtPurchase || item.item?.name || 'Unknown Item'}
               </span>
-              <span className='ml-2 text-gray-500'>
+              <span className='ml-2 text-gray-500 '>
                 Quantity: {item.quantity}
               </span>
             </span>
-            <span className='text-right'>
+            <span className='text-right text-black'>
               ₹
               {(
                 (item.quantity || 0) *
