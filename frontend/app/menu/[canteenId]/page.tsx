@@ -113,7 +113,7 @@ const CanteenMenuPage = () => {
 
   const handleAddToCart = (item: Item) => {
     addToCart({
-      canteenId:item.canteen,
+      canteenId: item.canteen,
       id: item._id,
       name: item.name,
       price: item.price,
@@ -142,7 +142,7 @@ const CanteenMenuPage = () => {
 
   if (loading) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:bg-gray-950 transition-colors duration-500 flex justify-center items-center'>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 transition-colors duration-500 flex justify-center items-center'>
         <div className='animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-red-500'></div>
       </div>
     );
@@ -150,7 +150,7 @@ const CanteenMenuPage = () => {
 
   if (!canteen) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:bg-gray-950 transition-colors duration-500 flex justify-center items-center'>
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 transition-colors duration-500 flex justify-center items-center'>
         <div className='text-center py-10 text-gray-900 dark:text-white'>
           Canteen not found.
         </div>
@@ -159,7 +159,7 @@ const CanteenMenuPage = () => {
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:bg-gray-950 transition-colors duration-500'>
+    <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 transition-colors duration-500'>
       <header className='relative h-64 md:h-80'>
         <Image
           src={canteen.image || '/placeholder.svg'}
@@ -168,7 +168,7 @@ const CanteenMenuPage = () => {
           objectFit='cover'
           className='opacity-70'
         />
-        <div className='absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent' />
+        <div className='absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent' />
         <div className='absolute bottom-0 left-0 p-8'>
           <Link
             href='/menu'
@@ -244,7 +244,7 @@ const CanteenMenuPage = () => {
                   return (
                     <Card
                       key={item._id}
-                      className='flex flex-col rounded-2xl shadow-lg overflow-hidden bg-white dark:bg-gray-900 border-0 relative'>
+                      className='flex flex-col rounded-2xl shadow-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 relative'>
                       <div className='relative w-full h-48'>
                         {item.image ? (
                           <Image
@@ -255,7 +255,7 @@ const CanteenMenuPage = () => {
                             className='w-full h-full object-cover'
                           />
                         ) : (
-                          <div className='w-full h-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center'>
+                          <div className='w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center'>
                             <Utensils className='w-12 h-12 text-gray-400' />
                           </div>
                         )}
@@ -282,7 +282,7 @@ const CanteenMenuPage = () => {
                           <span className='font-bold text-lg capitalize text-gray-900 dark:text-white'>
                             {item.name}
                           </span>
-                          <span className='text-gray-500 text-sm dark:text-gray-300'>
+                          <span className='text-gray-600 dark:text-gray-300 text-sm'>
                             {item.description
                               ? item.description
                               : 'No description available'}
@@ -292,7 +292,7 @@ const CanteenMenuPage = () => {
                           <span className='font-bold text-orange-500 text-lg'>
                             ₹{item.price || 'N/A'}
                           </span>
-                          <Badge className='bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium ml-2'>
+                          <Badge className='bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium ml-2'>
                             {item.category || 'Uncategorized'}
                           </Badge>
                         </div>

@@ -180,15 +180,23 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       <div>
         <div className='font-semibold mt-4'>Order Items</div>
         {order.items.map((item: any, idx: any) => (
-          <div key={idx} className='flex justify-between text-sm mt-1'>
+          <div
+            key={item._id || idx}
+            className='flex justify-between text-sm mt-1'>
             <span>
-              <span className='font-semibold'>{item.item.name}</span>
+              <span className='font-semibold'>
+                {item.nameAtPurchase || item.item?.name || 'Unknown Item'}
+              </span>
               <span className='ml-2 text-gray-500'>
                 Quantity: {item.quantity}
               </span>
             </span>
             <span className='text-right'>
-              ₹{(item.item.price * item.quantity).toFixed(2)}
+              ₹
+              {(
+                (item.quantity || 0) *
+                (item.priceAtPurchase || item.item?.price || 0)
+              ).toFixed(2)}
             </span>
           </div>
         ))}

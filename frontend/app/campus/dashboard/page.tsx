@@ -651,8 +651,14 @@ export default function Dashboard() {
       const token = localStorage.getItem('token') || '';
       const response = await getOrderById(orderId, token);
       setOrderDetails(response.data);
-    } catch (error) {
-      // handle error (show toast, etc.)
+    } catch (error: any) {
+      console.error('Error fetching order details:', error);
+      toast({
+        title: 'Error',
+        description:
+          error.response?.data?.message || 'Failed to fetch order details',
+        variant: 'destructive',
+      });
     }
   };
 
