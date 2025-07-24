@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -18,6 +19,7 @@ import {
   Clock,
   Gift,
   Loader2,
+  StickyNote,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
@@ -32,6 +34,7 @@ export default function CartPage() {
   const [discount, setDiscount] = useState(0);
   const { isAuthenticated, token } = useAuth();
   const [pickupTime, setPickupTime] = useState('');
+  const [note, setNote] = useState('');
 
   // Quantity and removal handlers
   const handleQuantityChange = (id: string, newQuantity: number) => {
@@ -307,7 +310,9 @@ export default function CartPage() {
                   id='canteen-note'
                   placeholder='E.g. Please make it less spicy, no onions, etc.'
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setNote(e.target.value)
+                  }
                   className='resize-none min-h-[60px]'
                   maxLength={200}
                 />
