@@ -23,6 +23,8 @@ const getStatusColor = (status: string) => {
   switch (status) {
     case 'placed':
       return 'bg-blue-100 text-blue-800';
+    case 'payment_pending':
+      return 'bg-orange-100 text-orange-800';
     case 'preparing':
       return 'bg-yellow-100 text-yellow-800';
     case 'ready':
@@ -39,6 +41,8 @@ const getStatusColor = (status: string) => {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'placed':
+      return <Clock className='w-4 h-4' />;
+    case 'payment_pending':
       return <Clock className='w-4 h-4' />;
     case 'preparing':
       return <Package className='w-4 h-4' />;
@@ -57,6 +61,8 @@ const getNextStatusOptions = (currentStatus: string) => {
   switch (currentStatus) {
     case 'placed':
       return ['preparing', 'cancelled'];
+    case 'payment_pending':
+      return ['placed', 'cancelled'];
     case 'preparing':
       return ['ready', 'cancelled'];
     case 'ready':
@@ -74,6 +80,8 @@ const getStatusLabel = (status: string) => {
   switch (status) {
     case 'placed':
       return 'Order Placed';
+    case 'payment_pending':
+      return 'Payment Pending';
     case 'preparing':
       return 'Preparing';
     case 'ready':
@@ -155,7 +163,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       <div className='flex flex-col md:flex-row md:justify-between md:items-start gap-4'>
         <div>
           <div className='font-semibold'>Customer Details</div>
-          <div>Student ID: {order.student || 'N/A'}</div>
+          <div>
+            Student:{' '}
+            {typeof order.student === 'string'
+              ? order.student
+              : order.student?.name || 'N/A'}
+          </div>
           <div>Canteen: {order.canteen?.name || 'N/A'}</div>
         </div>
         <div className='text-right text-blue-900'>

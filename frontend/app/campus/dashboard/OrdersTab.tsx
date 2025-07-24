@@ -168,18 +168,21 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
       </div>
 
       <div className='space-y-8'>
-        {orders
-          .filter(
-            (order) => statusFilter === 'all' || order.status === statusFilter
-          )
-          .map((order) => (
-            <OrderCard
-              key={order._id}
-              order={order}
-              onOrderClick={onOrderClick}
-              onStatusUpdate={handleStatusUpdate}
-            />
-          ))}
+        {orders &&
+          orders.length > 0 &&
+          orders
+            .filter(
+              (order) =>
+                statusFilter === 'all' || order?.status === statusFilter
+            )
+            .map((order) => (
+              <OrderCard
+                key={order?._id}
+                order={order || {}}
+                onOrderClick={onOrderClick}
+                onStatusUpdate={handleStatusUpdate}
+              />
+            ))}
       </div>
 
       <div className='mt-10'>
@@ -187,55 +190,55 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
           RECENT ORDERS
         </span>
         <div className='mt-3 flex flex-col gap-2'>
-          {orders && orders.length > 0 ? (
+          {orders && orders?.length > 0 ? (
             orders
-              .slice()
-              .sort(
+              ?.slice()
+              ?.sort(
                 (a, b) =>
-                  new Date(b.createdAt).getTime() -
-                  new Date(a.createdAt).getTime()
+                  new Date(b?.createdAt)?.getTime() -
+                  new Date(a?.createdAt)?.getTime()
               )
-              .slice(0, 5)
-              .map((order) => (
+              ?.slice(0, 5)
+              ?.map((order) => (
                 <div
-                  key={order._id}
+                  key={order?._id}
                   className='flex flex-col bg-gray-50 rounded-lg p-2 border border-gray-100 hover:bg-blue-50 transition cursor-pointer mb-1'
-                  onClick={() => onOrderClick(order._id)}>
+                  onClick={() => onOrderClick(order?._id)}>
                   <div className='flex items-center justify-between'>
                     <span className='font-semibold text-sm text-gray-800'>
-                      #{order._id.slice(-4)}
+                      #{order?._id?.slice(-4)}
                     </span>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${getStatusColor(
-                        order.status
+                        order?.status
                       )}`}
                       style={{ minWidth: 70, textAlign: 'center' }}>
-                      {getStatusIcon(order.status)}
+                      {getStatusIcon(order?.status)}
                       <span className='ml-1'>
-                        {order.status.charAt(0).toUpperCase() +
-                          order.status.slice(1)}
+                        {order?.status?.charAt(0)?.toUpperCase() +
+                          order?.status?.slice(1)}
                       </span>
                     </span>
                   </div>
                   <div className='flex items-center justify-between mt-1'>
                     <span className='text-xs text-gray-500'>
-                      ₹{order.total.toFixed(2)}
+                      ₹{order?.total?.toFixed(2)}
                     </span>
                     <div className='flex items-center space-x-2'>
                       <span className='text-xs text-gray-400'>
-                        {new Date(order.createdAt).toLocaleTimeString([], {
+                        {new Date(order?.createdAt)?.toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
                       </span>
-                      {order.status === 'placed' && (
+                      {order?.status === 'placed' && (
                         <Button
                           size='sm'
                           variant='outline'
                           className='text-xs h-6 px-2 bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleStatusUpdate(order._id, 'preparing');
+                            handleStatusUpdate(order?._id, 'preparing');
                           }}>
                           Start Preparing
                         </Button>
