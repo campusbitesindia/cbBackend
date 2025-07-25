@@ -8,7 +8,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Clock, CheckCircle, XCircle, Package, Loader2 } from 'lucide-react';
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Package,
+  Loader2,
+  User,
+  Store,
+  CreditCard,
+  Calendar,
+  Receipt,
+  Eye,
+} from 'lucide-react';
 import { Order } from '@/types';
 import { updateCanteenOrderStatus } from '@/services/canteenOrderService';
 import { useToast } from '@/hooks/use-toast';
@@ -22,23 +34,27 @@ interface OrderCardProps {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'placed':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'payment_pending':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
     case 'preparing':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-orange-50 text-orange-700 border-orange-200';
     case 'ready':
-      return 'bg-green-100 text-green-800';
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
     case 'completed':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-50 text-green-700 border-green-200';
     case 'cancelled':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-50 text-red-700 border-red-200';
     default:
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-50 text-gray-700 border-gray-200';
   }
 };
 
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'placed':
+      return <Clock className='w-4 h-4' />;
+    case 'payment_pending':
       return <Clock className='w-4 h-4' />;
     case 'preparing':
       return <Package className='w-4 h-4' />;
@@ -57,6 +73,8 @@ const getNextStatusOptions = (currentStatus: string) => {
   switch (currentStatus) {
     case 'placed':
       return ['preparing', 'cancelled'];
+    case 'payment_pending':
+      return ['placed', 'cancelled'];
     case 'preparing':
       return ['ready', 'cancelled'];
     case 'ready':
@@ -74,6 +92,8 @@ const getStatusLabel = (status: string) => {
   switch (status) {
     case 'placed':
       return 'Order Placed';
+    case 'payment_pending':
+      return 'Payment Pending';
     case 'preparing':
       return 'Preparing';
     case 'ready':
@@ -131,117 +151,172 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const canUpdateStatus = nextStatusOptions.length > 0 && !updatingStatus;
 
   return (
-    <div className='bg-white rounded-xl shadow p-6 flex flex-col space-y-4 hover:shadow-lg transition-shadow'>
-      {/* Header: Order number, status, date, total */}
-      <div className='flex justify-between items-center'>
+    <div className='bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200 group'>
+      {/* Header Section */}
+      <div className='flex justify-between items-start mb-6'>
         <div className='flex items-center space-x-3'>
-          <span className='font-bold text-lg'>
-            Order #{order._id.slice(-4)}
-          </span>
-          <span className='bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full font-semibold'>
-            {order.status.toUpperCase()}
-          </span>
+          <div className='bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-3 shadow-sm'>
+            <Receipt className='w-5 h-5' />
+          </div>
+          <div>
+            <h3 className='font-bold text-xl text-gray-900'>
+              Order #{order._id.slice(-6)}
+            </h3>
+            <div className='flex items-center space-x-2 mt-1'>
+              <Calendar className='w-3 h-3 text-gray-400' />
+              <span className='text-sm text-gray-500'>
+                {new Date(order.createdAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+            </div>
+          </div>
         </div>
-        <span className='font-bold text-xl'>₹{order.total.toFixed(2)}</span>
+
+        <div className='text-right'>
+          <div className='text-2xl font-bold text-gray-900'>
+            ₹{order.total.toFixed(2)}
+          </div>
+          <Badge
+            className={`${getStatusColor(order.status)} border font-medium`}>
+            {getStatusIcon(order.status)}
+            <span className='ml-1'>{getStatusLabel(order.status)}</span>
+          </Badge>
+        </div>
       </div>
 
-      <div className='text-sm text-gray-500'>
-        Order Date: {new Date(order.createdAt).toLocaleString()}
+      {/* Customer and Payment Info */}
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-6'>
+        <div className='bg-gray-50 rounded-xl p-4'>
+          <div className='flex items-center space-x-2 mb-2'>
+            <User className='w-4 h-4 text-gray-500' />
+            <span className='font-semibold text-gray-700 text-sm'>
+              Customer
+            </span>
+          </div>
+          <p className='text-gray-900 font-medium'>
+            {typeof order.student === 'string'
+              ? order.student
+              : order.student?.name || 'N/A'}
+          </p>
+        </div>
+
+        <div className='bg-gray-50 rounded-xl p-4'>
+          <div className='flex items-center space-x-2 mb-2'>
+            <Store className='w-4 h-4 text-gray-500' />
+            <span className='font-semibold text-gray-700 text-sm'>Canteen</span>
+          </div>
+          <p className='text-gray-900 font-medium'>
+            {order.canteen?.name || 'N/A'}
+          </p>
+        </div>
       </div>
 
-      <hr className='my-2' />
-
-      {/* Customer Details and Address */}
-      <div className='flex flex-col md:flex-row md:justify-between md:items-start gap-4'>
-        <div>
-          <div className='font-semibold'>Customer Details</div>
-          <div>Student ID: {order.student || 'N/A'}</div>
-          <div>Canteen: {order.canteen?.name || 'N/A'}</div>
+      {/* Payment Method */}
+      <div className='bg-blue-50 rounded-xl p-4 mb-6'>
+        <div className='flex items-center space-x-2 mb-2'>
+          <CreditCard className='w-4 h-4 text-blue-600' />
+          <span className='font-semibold text-blue-700 text-sm'>
+            Payment Method
+          </span>
         </div>
-        <div className='text-right text-blue-900'>
-          Payment: {order.payment?.method?.toUpperCase() || 'N/A'}
-        </div>
+        <p className='text-blue-900 font-medium'>
+          {order.payment?.method?.toUpperCase() || 'N/A'}
+        </p>
       </div>
 
       {/* Order Items */}
-      <div>
-        <div className='font-semibold mt-4'>Order Items</div>
-        {order.items.map((item: any, idx: any) => (
-          <div key={idx} className='flex justify-between text-sm mt-1'>
-            <span>
-              <span className='font-semibold'>{item.item.name}</span>
-              <span className='ml-2 text-gray-500'>
-                Quantity: {item.quantity}
-              </span>
-            </span>
-            <span className='text-right'>
-              ₹{(item.item.price * item.quantity).toFixed(2)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Order Status Update */}
-      <div className='mt-4 pt-4 border-t border-gray-200'>
-        <div className='flex items-center justify-between'>
-          <div className='flex items-center space-x-2'>
-            <span className='text-sm font-medium text-gray-700'>Status:</span>
-            <Badge className={getStatusColor(order.status)}>
-              {getStatusIcon(order.status)}
-              <span className='ml-1'>{order.status.toUpperCase()}</span>
-            </Badge>
-          </div>
-
-          {/* Status Update Controls */}
-          {canUpdateStatus ? (
-            <div className='flex items-center space-x-2'>
-              <Select
-                value={selectedStatus}
-                onValueChange={setSelectedStatus}
-                disabled={updatingStatus}>
-                <SelectTrigger className='w-40'>
-                  <SelectValue placeholder='Update Status' />
-                </SelectTrigger>
-                <SelectContent>
-                  {nextStatusOptions.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {getStatusLabel(status)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {selectedStatus && (
-                <Button
-                  size='sm'
-                  onClick={() => handleStatusUpdate(selectedStatus)}
-                  disabled={updatingStatus}
-                  className='bg-blue-600 hover:bg-blue-700 text-white'>
-                  {updatingStatus ? (
-                    <Loader2 className='w-4 h-4 animate-spin' />
-                  ) : (
-                    'Update'
-                  )}
-                </Button>
-              )}
+      <div className='mb-6'>
+        <h4 className='font-semibold text-gray-900 mb-3 flex items-center'>
+          <Package className='w-4 h-4 mr-2 text-gray-500' />
+          Order Items ({order.items.length})
+        </h4>
+        <div className='space-y-2'>
+          {order.items.map((item: any, idx: any) => (
+            <div
+              key={item._id || idx}
+              className='flex justify-between items-center bg-gray-50 rounded-lg p-3'>
+              <div className='flex-1'>
+                <p className='font-medium text-gray-900'>
+                  {item.nameAtPurchase || item.item?.name || 'Unknown Item'}
+                </p>
+                <p className='text-sm text-gray-500'>
+                  Qty: {item.quantity} × ₹
+                  {(item.priceAtPurchase || item.item?.price || 0).toFixed(2)}
+                </p>
+              </div>
+              <div className='text-right'>
+                <p className='font-semibold text-gray-900'>
+                  ₹
+                  {(
+                    (item.quantity || 0) *
+                    (item.priceAtPurchase || item.item?.price || 0)
+                  ).toFixed(2)}
+                </p>
+              </div>
             </div>
-          ) : (
-            <div className='text-xs text-gray-500 italic'>
-              {order.status === 'completed' || order.status === 'cancelled'
-                ? 'Order finalized'
-                : 'No status updates available'}
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
+      {/* Status Update Section */}
+      {canUpdateStatus && (
+        <div className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-4 border border-blue-100'>
+          <h4 className='font-semibold text-blue-900 mb-3'>
+            Update Order Status
+          </h4>
+          <div className='flex items-center space-x-3'>
+            <Select
+              value={selectedStatus}
+              onValueChange={setSelectedStatus}
+              disabled={updatingStatus}>
+              <SelectTrigger className='w-48 bg-white border-blue-200 text-black'>
+                <SelectValue placeholder='Select new status' />
+              </SelectTrigger>
+              <SelectContent>
+                {nextStatusOptions.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {getStatusLabel(status)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedStatus && (
+              <Button
+                size='sm'
+                onClick={() => handleStatusUpdate(selectedStatus)}
+                disabled={updatingStatus}
+                className='bg-blue-600 hover:bg-blue-700 text-black px-6'>
+                {updatingStatus ? (
+                  <Loader2 className='w-4 h-4 animate-spin' />
+                ) : (
+                  'Update'
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* View Details Button */}
-      <Button
-        variant='outline'
-        onClick={() => onOrderClick(order._id)}
-        className='w-full mt-2'>
-        View Full Details
-      </Button>
+      <div className='border-t border-gray-100 pt-4 mt-4'>
+        <Button
+          variant='outline'
+          onClick={() => onOrderClick(order._id)}
+          className='w-full bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 group-hover:shadow-md font-medium py-3 relative overflow-hidden'>
+          <div className='absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
+          <div className='relative flex items-center justify-center space-x-2'>
+            <Eye className='w-4 h-4' />
+            <span>View Full Details</span>
+            <div className='w-1 h-1 bg-blue-500 rounded-full animate-pulse' />
+          </div>
+        </Button>
+      </div>
     </div>
   );
 };

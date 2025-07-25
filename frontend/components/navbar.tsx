@@ -34,6 +34,7 @@ import Image from 'next/image';
 import { motion } from 'framer-motion';
 import axios from '@/lib/axios';
 import GlobalSearchDropdown from './global-search-dropdown';
+import NotificationList from './notification-list';
 
 interface UserProfile {
   name: string;
@@ -48,9 +49,10 @@ function Navbar() {
   const { cart } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [notificationCount, setNotificationCount] = useState(3); // Example notification count
+  const [notificationCount, setNotificationCount] = useState(0); // Example notification count
   const [searchQuery, setSearchQuery] = useState('');
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
+  const [NotificationListShow, setNotificationList] = useState(false);
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -68,6 +70,10 @@ function Navbar() {
               profileImage: response.data.user.profileImage,
               role: response.data.user.role,
             };
+            localStorage.setItem(
+              'canteenId',
+              response.data.user.canteenId?._id
+            );
             setUserProfile(freshProfile);
           }
         } catch (error) {
@@ -110,7 +116,11 @@ function Navbar() {
         <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex h-20 items-center justify-between'>
             {/* Logo */}
-            <Link href='/' className='flex items-center group'>
+            <Link
+              href={`${
+                pathname === '/campus/dashboard' ? '/campus/dashboard' : '/'
+              }`}
+              className='flex items-center group'>
               <div className='flex items-center space-x-3'>
                 <Image
                   src='/logo.png'
@@ -134,17 +144,23 @@ function Navbar() {
             {/* Right side actions for hideNavbar */}
             <div className='flex items-center space-x-4'>
               {/* Notification Icon */}
-              <Button
-                variant='ghost'
-                size='icon'
-                className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
-                {notificationCount > 0 && (
-                  <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
-                    {notificationCount}
-                  </Badge>
+              <div className='realtive'>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  onClick={() => setNotificationList(!NotificationListShow)}
+                  className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                  <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
+                  {notificationCount > 0 && (
+                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
+                      {notificationCount}
+                    </Badge>
+                  )}
+                </Button>
+                {NotificationListShow && user?.id && (
+                  <NotificationList userId={user.id} />
                 )}
-              </Button>
+              </div>
 
               {/* Profile Icon */}
               {isAuthenticated ? (
@@ -249,9 +265,9 @@ function Navbar() {
   }
 
   return (
-    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex h-20 items-center justify-between'>
+    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500 overflow-x-hidden'>
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-x-hidden'>
+        <div className='flex h-20 items-center justify-between w-full max-w-full'>
           {/* Logo */}
           <Link href='/' className='flex items-center group'>
             <div className='flex items-center space-x-3'>

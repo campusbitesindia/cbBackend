@@ -15,7 +15,7 @@ const transactionSchema = new mongoose.Schema(
     razorpayOrderId: {
       type: String,
       unique: true,
-      sparse:true
+      sparse: true,
     },
     razorpayPaymentId: {
       type: String,
@@ -41,7 +41,7 @@ const transactionSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["upi","COD"],
+      enum: ["upi", "COD"],
       default: "upi",
     },
     failureReason: {
@@ -91,12 +91,14 @@ const transactionSchema = new mongoose.Schema(
   },
 )
 
-// Indexes for better performance
+// Consolidated indexes for better performance - avoid duplicates
 transactionSchema.index({ orderId: 1 })
 transactionSchema.index({ userId: 1 })
+transactionSchema.index({ razorpayOrderId: 1 })
 transactionSchema.index({ razorpayPaymentId: 1 })
 transactionSchema.index({ status: 1 })
 transactionSchema.index({ createdAt: -1 })
+transactionSchema.index({ "refund.refundId": 1 })
 
 // Method to check if transaction is successful
 transactionSchema.methods.isSuccessful = function () {

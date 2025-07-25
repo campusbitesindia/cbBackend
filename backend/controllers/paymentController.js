@@ -2,6 +2,7 @@ const razorpay = require("../config/razorpay")
 const Transaction = require("../models/Transaction")
 const Order = require("../models/Order")
 const User = require("../models/User")
+const SendNotification=require("../utils/sendNotification");
 const crypto = require("crypto")
 const { validationResult } = require("express-validator")
 
@@ -196,7 +197,13 @@ const verifyPayment = async (req, res) => {
     order.paymentStatus = "paid"
     order.paidAt = new Date()
     await order.save()
-
+    await SendNotification(order.student, "Order Placed", "Your Order has been Placed");
+    const canteenOwner=await User.findOne({canteenId:order.canteen})
+     await SendNotification(
+            canteenOwner._id,
+            "New Order",
+            `New Order has arrived with Order ID ${order.OrderNumber}`
+          );
     res.status(200).json({
       success: true,
       message: "UPI payment verified successfully",

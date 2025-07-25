@@ -6,7 +6,7 @@ export interface User {
   bio?: string;
   address?: string;
   dateOfBirth?: string;
-  role: "student" | "campus_store" | "admin";
+  role: 'student' | 'campus_store' | 'admin';
   isVerified: boolean;
   isBanned?: boolean;
   is_verified?: boolean;
@@ -28,6 +28,7 @@ export interface Canteen {
   discount?: string;
   featured?: boolean;
   imageUrl?: string;
+  fssaiLicense?: string;
 }
 
 export interface Item {
@@ -45,7 +46,7 @@ export interface Item {
 
 export interface Order {
   _id: string;
-  student: string;
+  student: string | { _id: string; name: string };
   canteen: {
     _id: string;
     name: string;
@@ -61,10 +62,16 @@ export interface Order {
     quantity: number;
   }>;
   total: number;
-  status: "placed" | "preparing" | "ready" | "completed" | "cancelled";
+  status:
+    | 'placed'
+    | 'preparing'
+    | 'ready'
+    | 'completed'
+    | 'cancelled'
+    | 'payment_pending';
   payment?: {
-    method: "cod" | "upi" | "card";
-    status: "pending" | "completed" | "failed" | "refunded";
+    method: 'cod' | 'upi' | 'card';
+    status: 'pending' | 'completed' | 'failed' | 'refunded';
     transactionId?: string;
     upiDetails?: {
       upiId: string;

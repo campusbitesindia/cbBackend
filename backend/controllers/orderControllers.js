@@ -11,12 +11,12 @@ exports.CreateOrder=async(req,res)=>{
     try{
         const UserId=req.user._id;
         const campusId=req.user.campus;
-        const {items:Items,pickUpTime,canteenId}=req.body; 
+        const {items:_items,pickUpTime,canteenId}=req.body; 
         const deviceId=req.deviceInfo.deviceId;
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
-        // const Items=JSON.parse(_items); //converting _items to an Json array;
+        const Items=JSON.parse(_items); //converting _items to an Json array;
 
-
+        
         //If all field are not found;
         if(!UserId || !campusId || !canteenId || Items.length===0 ){
             return res.status(400).json({
@@ -35,13 +35,14 @@ exports.CreateOrder=async(req,res)=>{
             })
         }
         // search canteen with given Id
-        console.log(campusId)
+        
          const canteen=await Canteen.findOne({_id:canteenId,campus:campusId})
+      
         //if canteen not found 
         if(!canteen){
             return res.status(400).json({
                 success:false,
-                message:"Canteen with this id Not found"
+                message:"Canteen with this id Not found,please Select Canteen of Same campus"
             })
         }
         
@@ -255,7 +256,7 @@ exports.getAllOrdersByStudent=async(req,res)=>{
             })
         }
 
-        const Orders=await Order.find({student:student._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).sort({createdAt:-1});
+        const Orders=await Order.find({student:student._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).populate({path:"items.item",select:"name price image"}).sort({createdAt:-1});
 
         const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false && ele.status!=="pending");
         return res.status(200).json({

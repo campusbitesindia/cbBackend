@@ -48,10 +48,21 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useMobile } from '@/hooks/use-mobile';
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { Menu as MenuIcon } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function Dashboard() {
+  // Move all hooks to the top
+  const isMobile = useMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -65,9 +76,7 @@ export default function Dashboard() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-  const [canteenId, setCanteenId] = useState<string | null>(null);
-
-  // Form state for new/edit item
+  const canteenId = localStorage.getItem('canteenId');
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -79,16 +88,11 @@ export default function Dashboard() {
     portion: '',
     quantity: '',
   });
-
-  // Add search state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-
-  // State for order details modal
+  const [readyFilter, setReadyFilter] = useState('all');
   const [orderDetails, setOrderDetails] = useState<any | null>(null);
-
-  // Personal details state
   const [personalData, setPersonalData] = useState({
     vendorName: '',
     contactPerson: '',
@@ -101,8 +105,6 @@ export default function Dashboard() {
   const [personalSuccess, setPersonalSuccess] = useState(false);
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState('');
-
-  // Bank details state
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: '',
     accountNumber: '',
@@ -114,6 +116,56 @@ export default function Dashboard() {
   });
   const [bankSubmitting, setBankSubmitting] = useState(false);
   const [bankSuccess, setBankSuccess] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+  useNotificationToast();
+
+  // Form state for new/edit item
+  // const [formData, setFormData] = useState({
+  //   name: '',
+  //   price: '',
+  //   description: '',
+  //   category: '',
+  //   isVeg: false,
+  //   available: true,
+  //   image: '',
+  //   portion: '',
+  //   quantity: '',
+  // });
+
+  // Add search state
+  // const [searchTerm, setSearchTerm] = useState('');
+  // const [statusFilter, setStatusFilter] = useState('all');
+  // const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // State for order details modal
+  // const [orderDetails, setOrderDetails] = useState<any | null>(null);
+
+  // Personal details state
+  // const [personalData, setPersonalData] = useState({
+  //   vendorName: '',
+  //   contactPerson: '',
+  //   mobileNumber: '',
+  //   email: '',
+  //   address: '',
+  //   profilePic: '',
+  // });
+  // const [personalSubmitting, setPersonalSubmitting] = useState(false);
+  // const [personalSuccess, setPersonalSuccess] = useState(false);
+  // const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  // const [profilePicPreview, setProfilePicPreview] = useState('');
+
+  // Bank details state
+  // const [bankDetails, setBankDetails] = useState({
+  //   accountHolderName: '',
+  //   accountNumber: '',
+  //   confirmAccountNumber: '',
+  //   ifscCode: '',
+  //   bankName: '',
+  //   branchName: '',
+  //   upiId: '',
+  // });
+  // const [bankSubmitting, setBankSubmitting] = useState(false);
+  // const [bankSuccess, setBankSuccess] = useState(false);
 
   // Handle profile picture upload
   const handleProfilePicUpload = async (
@@ -139,7 +191,7 @@ export default function Dashboard() {
         // Update with uploaded URL
         setPersonalData((prev) => ({
           ...prev,
-          profilePic: uploadResult.url,
+          profilePic: uploadResult.imageUrl,
         }));
 
         toast({
@@ -166,20 +218,20 @@ export default function Dashboard() {
     }
   };
 
-  useEffect(() => {
-    console.log('useEffect triggered:', {
-      isAuthenticated,
-      user: user?.id,
-      activeTab,
-    });
-    if (isAuthenticated && user) {
-      console.log('Starting fetchCanteenData...');
-      fetchCanteenData();
-    } else {
-      console.log('Not authenticated or no user, setting loading to false');
-      setLoading(false);
-    }
-  }, [activeTab, isAuthenticated, user]);
+  // useEffect(() => {
+  //   console.log('useEffect triggered:', {
+  //     isAuthenticated,
+  //     user: user?.id,
+  //     activeTab,
+  //   });
+  //   if (isAuthenticated && user) {
+  //     console.log('Starting fetchCanteenData...');
+  //     // fetchCanteenData();
+  //   } else {
+  //     console.log('Not authenticated or no user, setting loading to false');
+  //     setLoading(false);
+  //   }
+  // }, [activeTab, isAuthenticated, user]);
 
   // Additional useEffect to refetch data when canteenId changes
   useEffect(() => {
@@ -191,52 +243,52 @@ export default function Dashboard() {
   }, [canteenId]);
 
   // Fetch canteen data associated with the current user
-  const fetchCanteenData = async () => {
-    try {
-      console.log('fetchCanteenData called for user:', user?.id);
+  // const fetchCanteenData = async () => {
+  //   try {
+  //     console.log('fetchCanteenData called for user:', user?.id);
 
-      if (!user?.id) {
-        console.error('No user ID available');
-        setLoading(false); // Add this line to stop loading
-        toast({
-          title: 'Error',
-          description: 'User session invalid. Please login again.',
-          variant: 'destructive',
-        });
-        return;
-      }
+  //     if (!user?.id) {
+  //       console.error('No user ID available');
+  //       setLoading(false); // Add this line to stop loading
+  //       toast({
+  //         title: 'Error',
+  //         description: 'User session invalid. Please login again.',
+  //         variant: 'destructive',
+  //       });
+  //       return;
+  //     }
 
-      console.log('Fetching canteen data for user:', user.id);
-      const canteenData = await getCanteenByOwner(user.id);
-      console.log('Canteen data received:', canteenData);
+  //     console.log('Fetching canteen data for user:', user.id);
+  //     const canteenData = await getCanteenByOwner(user.id);
+  //     console.log('Canteen data received:', canteenData);
 
-      if (canteenData && canteenData._id) {
-        const dynamicCanteenId = canteenData._id;
-        console.log('Setting canteenId to:', dynamicCanteenId);
-        setCanteenId(dynamicCanteenId);
+  //     if (canteenData && canteenData._id) {
+  //       const dynamicCanteenId = canteenData._id;
+  //       console.log('Setting canteenId to:', dynamicCanteenId);
+  //       setCanteenId(dynamicCanteenId);
 
-        // Don't call fetchData here since the useEffect will handle it
-        console.log('Canteen ID set, useEffect will trigger data fetch');
-      } else {
-        console.error('No canteen data received:', canteenData);
-        setLoading(false); // Add this line to stop loading
-        toast({
-          title: 'Error',
-          description:
-            'No canteen associated with your account. Please contact support.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching canteen data:', error);
-      setLoading(false); // Add this line to stop loading
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch canteen information',
-        variant: 'destructive',
-      });
-    }
-  };
+  //       // Don't call fetchData here since the useEffect will handle it
+  //       console.log('Canteen ID set, useEffect will trigger data fetch');
+  //     } else {
+  //       console.error('No canteen data received:', canteenData);
+  //       setLoading(false); // Add this line to stop loading
+  //       toast({
+  //         title: 'Error',
+  //         description:
+  //           'No canteen associated with your account. Please contact support.',
+  //         variant: 'destructive',
+  //       });
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching canteen data:', error);
+  //     setLoading(false); // Add this line to stop loading
+  //     toast({
+  //       title: 'Error',
+  //       description: 'Failed to fetch canteen information',
+  //       variant: 'destructive',
+  //     });
+  //   }
+  // };
 
   // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
   const fetchData = async (currentCanteenId?: string) => {
@@ -372,7 +424,7 @@ export default function Dashboard() {
     }
   };
 
-  const [imageUploading, setImageUploading] = useState(false);
+  // const [imageUploading, setImageUploading] = useState(false);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -573,6 +625,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleToggleReady = (itemId: string, isReady: boolean) => {
+    // Update the menu item in the local state
+    setMenuItems((prevItems) =>
+      prevItems.map((item) =>
+        item._id === itemId ? { ...item, isReady } : item
+      )
+    );
+  };
+
   const resetForm = () => {
     // Clear any object URLs to prevent memory leaks
     if (imagePreview && imagePreview.startsWith('blob:')) {
@@ -600,8 +661,14 @@ export default function Dashboard() {
       const token = localStorage.getItem('token') || '';
       const response = await getOrderById(orderId, token);
       setOrderDetails(response.data);
-    } catch (error) {
-      // handle error (show toast, etc.)
+    } catch (error: any) {
+      console.error('Error fetching order details:', error);
+      toast({
+        title: 'Error',
+        description:
+          error.response?.data?.message || 'Failed to fetch order details',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -666,13 +733,13 @@ export default function Dashboard() {
   }
 
   if (!isAuthenticated || !user) {
-    // return (
-    //   <div className='flex items-center justify-center min-h-screen bg-white'>
-    //     <div className='text-gray-600'>
-    //       Please log in to access the dashboard
-    //     </div>
-    //   </div>
-    // );
+    return (
+      <div className='flex items-center justify-center min-h-screen bg-white'>
+        <div className='text-gray-600'>
+          Please log in to access the dashboard
+        </div>
+      </div>
+    );
   }
 
   // Temporarily allow any authenticated user for testing
@@ -712,7 +779,13 @@ export default function Dashboard() {
       categoryFilter === 'all' ||
       (item.category && item.category.toLowerCase() === categoryFilter);
 
-    return matchesSearch && matchesStatus && matchesCategory;
+    // Ready filter
+    const matchesReady =
+      readyFilter === 'all' ||
+      (readyFilter === 'ready' && item.isReady === true) ||
+      (readyFilter === 'not-ready' && item.isReady === false);
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesReady;
   });
 
   console.log('Filtered items for rendering:', filteredItems);
@@ -721,15 +794,46 @@ export default function Dashboard() {
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
 
-  useNotificationToast();
-
   return (
-    <div className='flex h-screen bg-gray-50'>
-      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
+    <div className='flex flex-col md:flex-row h-screen bg-gray-50 w-full'>
+      {/* Mobile: Hamburger + Drawer */}
+      {isMobile && (
+        <div className='flex md:hidden items-center p-2 bg-white border-b border-gray-200'>
+          <button
+            className='p-2 rounded-md text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            onClick={() => setDrawerOpen(true)}
+            aria-label='Open sidebar menu'>
+            <MenuIcon className='w-6 h-6' />
+          </button>
+          <span className='ml-3 font-bold text-lg text-blue-900'>
+            CampusBites
+          </span>
+        </div>
+      )}
+      {/* Sidebar: Always render both, hide one with display:none */}
+      <div style={{ display: isMobile ? 'block' : 'none' }}>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetContent
+            side='left'
+            className='fixed z-50 inset-y-0 left-0 h-full w-full max-w-xs bg-transparent shadow-none border-none p-0 [&>button]:hidden'>
+            <DashboardSidebar
+              activeTab={activeTab}
+              setActiveTab={(tab) => {
+                setActiveTab(tab);
+                setDrawerOpen(false); // Close drawer on tab select
+              }}
+              onClose={() => setDrawerOpen(false)}
+              isMobile={true}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+      <div style={{ display: isMobile ? 'none' : 'block' }}>
+        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
       {/* Main Content */}
-      <div className='flex-1 overflow-auto scrollbar-hide'>
-        <div className='p-8 max-w-7xl mx-auto'>
+      <div className='flex-1 overflow-auto scrollbar-hide w-full'>
+        <div className='p-4 sm:p-8 max-w-7xl mx-auto w-full'>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <OverviewTab canteenStats={canteenStats} menuItems={menuItems} />
@@ -748,6 +852,8 @@ export default function Dashboard() {
               setStatusFilter={setStatusFilter}
               categoryFilter={categoryFilter}
               setCategoryFilter={setCategoryFilter}
+              readyFilter={readyFilter}
+              setReadyFilter={setReadyFilter}
               isAddItemOpen={isAddItemOpen}
               setIsAddItemOpen={setIsAddItemOpen}
               isEditItemOpen={isEditItemOpen}
@@ -764,6 +870,7 @@ export default function Dashboard() {
               onRefresh={() => canteenId && fetchData(canteenId)}
               resetForm={resetForm}
               canteenId={canteenId}
+              onToggleReady={handleToggleReady}
             />
           )}
 

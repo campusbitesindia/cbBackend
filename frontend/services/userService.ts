@@ -29,28 +29,267 @@ const handleAuthError = (error: any) => {
   throw error;
 };
 
-export interface PersonalDetailsPayload {
-  vendorName: string;
-  contactPerson: string;
-  mobileNumber: string;
+// User registration interface
+export interface RegisterUserPayload {
+  name: string;
   email: string;
-  address: string;
+  password: string;
+  role: 'student' | 'canteen' | 'admin';
+  campus: string; // Can be campus ID or campus name
+  phone: string;
 }
 
-// Removed BankDetailsPayload interface since endpoint doesn't exist
+// User login interface
+export interface LoginUserPayload {
+  email: string;
+  password: string;
+}
 
+// Email verification interface
+export interface VerifyEmailPayload {
+  email: string;
+  otp: string;
+}
+
+// Password reset interface
+export interface ResetPasswordPayload {
+  password: string;
+  confirmPass: string;
+}
+
+// Forgot password interface
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+// Profile update interface
+export interface UpdateProfilePayload {
+  name?: string;
+  phone?: string;
+  bio?: string;
+  address?: string;
+  dateOfBirth?: string;
+}
+
+// User response interface
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+  campus: {
+    _id: string;
+    name: string;
+    code: string;
+    city: string;
+  };
+  canteenId?: {
+    _id: string;
+    name: string;
+  };
+  phone: string;
+  bio?: string;
+  address?: string;
+  dateOfBirth?: string;
+  profileImage?: string;
+  is_verified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Registration response interface
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  user: {
+    id: string;
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    campus: {
+      id: string;
+      name: string;
+      code: string;
+    };
+    canteenId: string | null;
+    isVerified: boolean;
+    approvalStatus: string;
+  };
+  token: string;
+  nextSteps: string[];
+}
+
+// Login response interface
+export interface LoginResponse {
+  success: boolean;
+  user1: {
+    _id: string;
+    name: string;
+    email: string;
+    role: string;
+    campus: any;
+    profileImage?: string;
+  };
+  token: string;
+  security: {
+    score: number;
+    deviceRegistered: boolean;
+    isNewDevice: boolean;
+    requiresVerification: boolean;
+    prompt?: any;
+  };
+}
+
+// Profile image upload result
 export interface ProfileImageUploadResult {
-  url: string;
-  filename: string;
+  success: boolean;
+  message: string;
+  user: User;
+  imageUrl: string;
 }
 
-// Update personal profile details
-export const updateProfile = async (
-  profileData: PersonalDetailsPayload,
-  token: string
-): Promise<{ success: boolean; data: any }> => {
+// Register new user
+export const registerUser = async (
+  userData: RegisterUserPayload
+): Promise<RegisterResponse> => {
   try {
-    const response = await api.patch('/api/v1/users/profile', profileData, {
+    const response = await api.post('/api/v1/users/register', userData);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 409) {
+      // Handle existing user case
+      throw new Error(error.response.data.message);
+    }
+    throw error;
+  }
+};
+
+// Login user
+export const loginUser = async (
+  loginData: LoginUserPayload
+): Promise<LoginResponse> => {
+  try {
+    const response = await api.post('/api/v1/users/login', loginData);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 403) {
+      throw new Error('Please verify your email address before logging in.');
+    }
+    if (error.response?.status === 400) {
+      throw new Error('Invalid email or password');
+    }
+    throw error;
+  }
+};
+
+// Logout user
+export const logoutUser = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  try {
+    const response = await api.post('/api/v1/users/logout');
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Verify email with OTP
+export const verifyEmail = async (
+  verificationData: VerifyEmailPayload
+): Promise<{ success: boolean; message: string; user1: any }> => {
+  try {
+    const response = await api.post(
+      '/api/v1/users/verify-email',
+      verificationData
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 400) {
+      throw new Error(error.response.data.message);
+    }
+    throw error;
+  }
+};
+
+// Forgot password
+export const forgotPassword = async (
+  emailData: ForgotPasswordPayload
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await api.post('/api/v1/users/forgotPass', emailData);
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 404) {
+      throw new Error('User not found');
+    }
+    throw error;
+  }
+};
+
+// Reset password with token
+export const resetPassword = async (
+  token: string,
+  passwordData: ResetPasswordPayload
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await api.post(
+      `/api/v1/users/resetPass/${token}`,
+      passwordData
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error.response?.status === 400) {
+      throw new Error(error.response.data.message);
+    }
+    throw error;
+  }
+};
+
+// Get current user profile
+export const getProfile = async (
+  token: string
+): Promise<{ success: boolean; user: User }> => {
+  try {
+    const response = await api.get('/api/v1/users/profile', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Get current user (load user)
+export const loadUser = async (
+  token: string
+): Promise<{ success: boolean; user1: any }> => {
+  try {
+    const response = await api.get('/api/v1/users/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  } catch (error) {
+    handleAuthError(error);
+    return Promise.reject(error);
+  }
+};
+
+// Update user profile
+export const updateProfile = async (
+  profileData: UpdateProfilePayload,
+  token: string
+): Promise<{ success: boolean; message: string; user: User }> => {
+  try {
+    const response = await api.put('/api/v1/users/profile', profileData, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -62,8 +301,6 @@ export const updateProfile = async (
     return Promise.reject(error);
   }
 };
-
-// Removed updateBankDetails function since endpoint doesn't exist in backend
 
 // Upload profile image
 export const uploadProfileImage = async (
@@ -97,20 +334,7 @@ export const uploadProfileImage = async (
       timeout: 30000, // 30 second timeout
     });
 
-    // Handle the response based on the API structure
-    if (response.data && response.data.url) {
-      return {
-        url: response.data.url,
-        filename: response.data.filename || file.name,
-      };
-    } else if (response.data && response.data.data && response.data.data.url) {
-      return {
-        url: response.data.data.url,
-        filename: response.data.data.filename || file.name,
-      };
-    } else {
-      throw new Error('Invalid response from upload API');
-    }
+    return response.data;
   } catch (error: any) {
     handleAuthError(error);
 

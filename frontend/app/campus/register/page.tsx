@@ -92,6 +92,9 @@ const vendorSchema = z
     collegeName: z.string().min(1, 'Please select a college'),
     openingHours: z.string().min(1, 'Please select opening hours'),
     closingHours: z.string().min(1, 'Please select closing hours'),
+    operatingDays: z
+      .array(z.string())
+      .min(1, 'Please select at least one operating day'),
     adhaarNumber: z
       .string()
       .regex(
@@ -110,6 +113,10 @@ const vendorSchema = z
         /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
         'GST number must be 15 characters in valid GST format'
       ),
+    fssaiLicense: z
+      .string()
+      .regex(/^[0-9]{14}$/, 'FSSAI license must be 14 digits')
+      .optional(),
     termsAccepted: z
       .boolean()
       .refine(
@@ -181,6 +188,8 @@ export default function VendorOnboardingForm() {
     message: '',
     suggestions: [],
   });
+  const [notApprovedDialog, setNotApprovedDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Section refs for scrolling
   const basicInfoRef = useRef<HTMLDivElement>(null);
@@ -209,6 +218,7 @@ export default function VendorOnboardingForm() {
       adhaarNumber: '',
       panNumber: '',
       gstNumber: '',
+      fssaiLicense: '',
     },
   });
 
@@ -293,9 +303,6 @@ export default function VendorOnboardingForm() {
   };
 
   const onSubmit = async (data: any) => {
-    console.log('Form submission started...');
-    console.log('Form data:', data);
-
     // Validate that at least one image is selected
     if (selectedImages.length === 0) {
       toast({
@@ -309,96 +316,145 @@ export default function VendorOnboardingForm() {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Register the user with canteen role and business details
+      // Step 1: Register the user (role: canteen)
       const userRegistrationPayload = {
         name: data.contactPerson, // Contact person name
         email: data.email,
         password: data.password,
         role: 'canteen' as const,
         campus: data.collegeName, // Campus ID
-        // Business details for canteen creation
-        vendorName: data.vendorName,
-        adhaarNumber: data.adhaarNumber,
-        panNumber: data.panNumber,
-        gstNumber: data.gstNumber,
-        contactPhone: data.mobileNumber,
-        contactPersonName: data.contactPerson,
-        description: data.address,
-        operatingHours: {
-          open: data.openingHours,
-          close: data.closingHours,
-        },
       };
-
-      console.log('Registering user with payload:', userRegistrationPayload);
 
       const userResponse = await registerUser(userRegistrationPayload);
 
-      if (!userResponse.success) {
+      if (!userResponse.success || !userResponse.token) {
         throw new Error(userResponse.message || 'User registration failed');
       }
 
-      console.log('User registration successful:', userResponse);
-
-      // Set user and token in auth context
+      // Store token in localStorage and context for subsequent requests
+      localStorage.setItem('token', userResponse.token);
       if (userResponse.token) {
         loginWithToken(userResponse.token);
       }
 
-      // Step 2: Update the canteen with business details and images
-      if (userResponse.user?.canteenId) {
-        console.log('Updating canteen with name and images...');
+      // Step 2: Create the canteen with all business details and images
+      const canteenPayload = {
+        name: data.vendorName,
+        campus: data.collegeName,
+        adhaarNumber: data.adhaarNumber,
+        panNumber: data.panNumber,
+        gstNumber: data.gstNumber,
+        fssaiLicense: data.fssaiLicense || undefined,
+        contactPersonName: data.contactPerson,
+        mobile: data.mobileNumber,
+        email: data.email,
+        address: data.address,
+        openingHours: data.openingHours,
+        closingHours: data.closingHours,
+        operatingDays: data.operatingDays,
+        images: selectedImages,
+      };
 
-        const canteenResponse = await updateCanteen(
-          userResponse.user.canteenId,
-          {
-            name: data.vendorName, // Update canteen name
-            images: selectedImages, // Add images
-          }
-        );
+      // Map payload to backend expected fields
+      const backendPayload: any = {
+        name: canteenPayload.name,
+        campus: canteenPayload.campus,
+        adhaarNumber: canteenPayload.adhaarNumber,
+        panNumber: canteenPayload.panNumber,
+        gstNumber: canteenPayload.gstNumber,
+        fssaiLicense: canteenPayload.fssaiLicense,
+        contactPersonName: canteenPayload.contactPersonName,
+        mobile: canteenPayload.mobile,
+        email: canteenPayload.email,
+        address: canteenPayload.address,
+        openingHours: canteenPayload.openingHours,
+        closingHours: canteenPayload.closingHours,
+        operatingDays: canteenPayload.operatingDays,
+        images: canteenPayload.images,
+      };
 
-        if (!canteenResponse.success) {
-          console.warn(
-            'Canteen update failed, but user registration was successful:',
-            canteenResponse.message
-          );
-          // Don't throw error here as user registration was successful
-        } else {
-          console.log('Canteen update successful:', canteenResponse);
+      const canteenResponse = await createCanteen(backendPayload);
+
+      if (!canteenResponse.success) {
+        // Check for not approved error from backend
+        if (
+          canteenResponse.message &&
+          canteenResponse.message.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          return;
         }
+        throw new Error(canteenResponse.message || 'Canteen creation failed');
       }
 
       toast({
         title: 'Registration Successful! 🎉',
         description:
-          'Your vendor account has been created and is pending admin approval. Business details will be verified during the approval process.',
+          'Your vendor account and canteen have been created and are pending admin approval. Business details will be verified during the approval process.',
       });
 
+      setSuccessMessage(null); // Use default message
       setSubmitSuccess(true);
 
-      // Redirect to dashboard after a short delay
+      // Show a popup for 2 seconds, then redirect
       setTimeout(() => {
+        setSubmitSuccess(false);
         router.push('/campus/dashboard');
       }, 2000);
     } catch (error: any) {
       console.error('Registration error:', error);
 
-      // Handle existing user error
-      if (error.message) {
+      // Improved 409 Conflict (user exists) handling
+      let isUserExists = false;
+      let message = 'An account with this email or mobile already exists.';
+      let suggestions: string[] = [
+        'Try signing in instead.',
+        'Use a different email/mobile to register.',
+      ];
+      let userInfo;
+
+      // Check for 409 status in error response (axios or fetch)
+      if (error?.response?.status === 409) {
+        isUserExists = true;
+        if (error.response.data?.message) message = error.response.data.message;
+        if (error.response.data?.suggestions)
+          suggestions = error.response.data.suggestions;
+        if (error.response.data?.userInfo)
+          userInfo = error.response.data.userInfo;
+      } else if (error?.response?.status === 403) {
+        // Handle forbidden as registration success but pending approval
+        setSuccessMessage(
+          'Registration successful! Please wait for your canteen to be approved. It will be verified within 24 hours.'
+        );
+        setSubmitSuccess(true);
+        setTimeout(() => {
+          setSubmitSuccess(false);
+          router.push('/campus/dashboard');
+        }, 2000);
+        return;
+      } else if (error.message) {
+        // Try to parse JSON error message
         try {
           const errorData = JSON.parse(error.message);
           if (errorData.userExists) {
-            setExistingUserDialog({
-              open: true,
-              message: errorData.message,
-              suggestions: errorData.suggestions || [],
-              userInfo: errorData.userInfo,
-            });
-            return;
+            isUserExists = true;
+            message = errorData.message || message;
+            suggestions = errorData.suggestions || suggestions;
+            userInfo = errorData.userInfo;
           }
         } catch {
-          // Not a JSON error, fall through to regular error handling
+          // Not a JSON error, fall through
         }
+      }
+
+      if (isUserExists) {
+        setExistingUserDialog({
+          open: true,
+          message,
+          suggestions,
+          userInfo,
+        });
+        return;
       }
 
       // Regular error handling
@@ -416,7 +472,7 @@ export default function VendorOnboardingForm() {
 
   const handleGoToSignIn = () => {
     setExistingUserDialog((prev) => ({ ...prev, open: false }));
-    router.push('/login');
+    router.push('/campus/dashboard');
   };
 
   // Cleanup preview URLs on unmount
@@ -459,7 +515,33 @@ export default function VendorOnboardingForm() {
             <Button
               className='w-full bg-orange-600 hover:bg-orange-700'
               onClick={handleGoToSignIn}>
-              Go to Sign In
+              Go to dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Not Approved Dialog */}
+      <Dialog
+        open={notApprovedDialog}
+        onOpenChange={(open) => {
+          if (!open) setNotApprovedDialog(false);
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Canteen Not Approved</DialogTitle>
+            <DialogDescription>
+              Your canteen is not approved yet. Please wait for admin approval.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              className='w-full bg-orange-600 hover:bg-orange-700'
+              onClick={() => {
+                setNotApprovedDialog(false);
+                router.push('/campus/dashboard');
+              }}>
+              Go to Dashboard
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -477,17 +559,8 @@ export default function VendorOnboardingForm() {
           <DialogHeader>
             <DialogTitle>Registration Complete!</DialogTitle>
             <DialogDescription>
-              Your vendor account and canteen have been created successfully.
-              <br />
-              Your canteen is now pending admin approval.
-              <br />
-              <strong>Note:</strong> Your business details (Aadhar, PAN, GST)
-              will be verified during the approval process.
-              <br />
-              Once approved, you'll be able to manage your shop and receive
-              orders.
-              <br />
-              Thank you for joining CampusBites!
+              {successMessage ||
+                'Registration successful! Please wait for 24 hours for admin\n              verification.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -782,6 +855,61 @@ export default function VendorOnboardingForm() {
                 )}
               </div>
             </div>
+
+            <div>
+              <Label>Operating Days *</Label>
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-2'>
+                {[
+                  'Monday',
+                  'Tuesday',
+                  'Wednesday',
+                  'Thursday',
+                  'Friday',
+                  'Saturday',
+                  'Sunday',
+                ].map((day) => (
+                  <div key={day} className='flex items-center space-x-2'>
+                    <Controller
+                      name='operatingDays'
+                      control={control}
+                      defaultValue={[
+                        'Monday',
+                        'Tuesday',
+                        'Wednesday',
+                        'Thursday',
+                        'Friday',
+                        'Saturday',
+                      ]}
+                      render={({ field }) => (
+                        <Checkbox
+                          id={day}
+                          checked={field.value?.includes(day)}
+                          onCheckedChange={(checked) => {
+                            const currentDays = field.value || [];
+                            if (checked) {
+                              field.onChange([...currentDays, day]);
+                            } else {
+                              field.onChange(
+                                currentDays.filter((d) => d !== day)
+                              );
+                            }
+                          }}
+                          className='border-black data-[state=checked]:bg-white data-[state=checked]:border-black data-[state=checked]:text-black'
+                        />
+                      )}
+                    />
+                    <Label htmlFor={day} className='text-sm font-normal'>
+                      {day}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {errors.operatingDays && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.operatingDays.message}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -842,15 +970,6 @@ export default function VendorOnboardingForm() {
                 ))}
               </div>
             )}
-
-            {selectedImages.length === 0 && (
-              <p className='text-sm text-red-500 mt-1'>
-                At least 1 image is required for canteen registration
-              </p>
-            )}
-            <p className='text-xs text-gray-500'>
-              Note: At least 1 image is required for canteen approval.
-            </p>
           </CardContent>
         </Card>
 
@@ -947,13 +1066,41 @@ export default function VendorOnboardingForm() {
                 )}
               </div>
             </div>
+
+            <div>
+              <Label htmlFor='fssaiLicense'>FSSAI License (Optional)</Label>
+              <Input
+                id='fssaiLicense'
+                placeholder='12345678901234'
+                {...register('fssaiLicense')}
+                className='bg-white'
+                maxLength={14}
+                inputMode='numeric'
+                pattern='\d*'
+                onInput={(e) => {
+                  // @ts-ignore
+                  e.target.value = e.target.value
+                    .replace(/[^0-9]/g, '')
+                    .slice(0, 14);
+                }}
+              />
+              <p className='text-xs text-gray-500 mt-1'>
+                Enter your 14-digit FSSAI license number (optional for small
+                food businesses)
+              </p>
+              {errors.fssaiLicense && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.fssaiLicense.message}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Terms & Conditions */}
         <Card className='bg-gray-50 shadow-sm border border-gray-100'>
           <CardContent className='pt-6 text-gray-700'>
-            <div className='flex items-start space-x-3'>
+            <div className='flex items-center space-x-3'>
               <Controller
                 name='termsAccepted'
                 control={control}
@@ -962,12 +1109,16 @@ export default function VendorOnboardingForm() {
                     id='termsAccepted'
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className={errors.termsAccepted ? 'border-red-500' : ''}
+                    className={`mt-0.5 bg-white ${
+                      errors.termsAccepted ? 'border-red-500' : 'border-black'
+                    } data-[state=checked]:bg-white data-[state=checked]:border-black data-[state=checked]:text-black`}
                   />
                 )}
               />
               <div className='flex-1'>
-                <Label htmlFor='termsAccepted' className='text-sm'>
+                <Label
+                  htmlFor='termsAccepted'
+                  className='text-sm leading-relaxed'>
                   I agree to the{' '}
                   <a href='#' className='text-orange-600 hover:underline'>
                     Terms and Conditions

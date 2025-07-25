@@ -1,236 +1,267 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
-import { useCart } from "@/context/cart-context"
-import { useAuth } from "@/context/auth-context"
-import { ArrowLeft, CreditCard, Smartphone, Truck, Loader2, Shield, CheckCircle } from "lucide-react"
-import Image from "next/image"
-import { createOrder } from "@/services/orderService"
-import { User } from "@/types";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowLeft,
+  Smartphone,
+  Truck,
+  Loader2,
+  Shield,
+  CheckCircle,
+} from "lucide-react";
+import axios from "axios";
+import { useAuth } from "@/context/auth-context";
 
-interface PaymentData {
-  method: "cod" | "upi" | "card"
-  upiDetails?: {
-    upiId: string
-    paymentApp: string
-  }
-  cardDetails?: {
-    cardNumber: string
-    expiryMonth: string
-    expiryYear: string
-    cvv: string
-    holderName: string
-  }
+interface OrderDetailsType {
+  id: string;
+  total: number;
+  // add more fields as required
 }
 
 export default function PaymentPage() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const { cart, clearCart, totalPrice } = useCart()
-  const { toast } = useToast()
-  const { isAuthenticated, token, user } = useAuth();
-  const [latestUser, setLatestUser] = useState<User | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+  const { token } = useAuth();
 
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "upi" | "card">("cod")
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [orderTotal, setOrderTotal] = useState(0)
+  // State
+  const [orderDetails, setOrderDetails] = useState<OrderDetailsType | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "upi">("cod");
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  // UPI Form State
-  const [upiId, setUpiId] = useState("")
-  const [selectedUpiApp, setSelectedUpiApp] = useState("gpay")
+  // Added: allow user or backend to set a custom transaction ID
+  const customTransactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
-  // Card Form State
-  const [cardNumber, setCardNumber] = useState("")
-  const [expiryMonth, setExpiryMonth] = useState("")
-  const [expiryYear, setExpiryYear] = useState("")
-  const [cvv, setCvv] = useState("")
-  const [holderName, setHolderName] = useState("")
+  // Query param
+  const orderId = searchParams.get("orderId");
 
+  // Fetch order details
   useEffect(() => {
-    // Auth guard
-    if (!isAuthenticated) {
-      const redirect = encodeURIComponent(window.location.pathname + window.location.search)
-      router.replace(`/login?redirect=${redirect}`)
-      return
-    }
-
-    // Fetch latest user info
-    const fetchUser = async () => {
-      if (!token) return;
+    async function getOrderDetails() {
+      if (!orderId) return;
       try {
-        const res = await fetch("http://localhost:8080/api/users/me", {
-          headers: { Authorization: `Bearer ${token}` }
+        const response = await axios.get(
+          `http://localhost:8080/api/v1/order/getOrderDetails/${orderId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.data.success) {
+          throw new Error(response.data.message || "Failed to get order details");
+        }
+        const filteredData = {
+          id: response.data.data._id,
+          total: response.data.data.total,
+        };
+        setOrderDetails(filteredData);
+      } catch (err: any) {
+        console.error(err);
+        toast({
+          variant: "destructive",
+          title: "Error fetching order",
+          description: err.message ?? "Failed to load order details.",
         });
-        if (res.ok) {
-          const data = await res.json();
-          setLatestUser(data.user || null);
-        }
-      } catch (e) { /* ignore */ }
-    };
-    fetchUser();
+      }
+    }
+    getOrderDetails();
+  }, [orderId, token, toast]);
 
-    // Get order total from URL params or calculate from cart
-    const total = searchParams.get('total')
-    setOrderTotal(total ? parseFloat(total) : totalPrice + 25)
-  }, [searchParams, totalPrice, isAuthenticated, token])
+  // Loading state
+  if (!orderId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-red-600 font-semibold">
+          Order ID is missing. Please access from the valid link.
+        </p>
+      </div>
+    );
+  }
+  const totalAmount = orderDetails?.total ?? 0;
 
-  const handlePayment = async () => {
-    setIsProcessing(true)
+  // --- Payment Handlers ---
 
+  // Cash on Delivery Handler
+  const handleCashOnDelivery = async (paymentData: object) => {
     try {
-      let paymentData: PaymentData = { method: paymentMethod }
-
-      // Validate and prepare payment data based on method
-      if (paymentMethod === "upi") {
-        if (!upiId.trim()) {
-          throw new Error("Please enter a valid UPI ID")
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/payments/COD",
+        paymentData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
-        if (!upiId.includes("@")) {
-          throw new Error("Please enter a valid UPI ID (e.g., user@paytm)")
-        }
-        paymentData.upiDetails = {
-          upiId: upiId.trim(),
-          paymentApp: selectedUpiApp
-        }
-      } else if (paymentMethod === "card") {
-        // Basic card validation
-        if (!cardNumber.replace(/\s/g, "").match(/^\d{16}$/)) {
-          throw new Error("Please enter a valid 16-digit card number")
-        }
-        if (!expiryMonth || !expiryYear) {
-          throw new Error("Please enter card expiry date")
-        }
-        if (!cvv.match(/^\d{3,4}$/)) {
-          throw new Error("Please enter a valid CVV")
-        }
-        if (!holderName.trim()) {
-          throw new Error("Please enter cardholder name")
-        }
-
-        paymentData.cardDetails = {
-          cardNumber: cardNumber.replace(/\s/g, ""),
-          expiryMonth,
-          expiryYear,
-          cvv,
-          holderName: holderName.trim()
-        }
+      );
+      if (!response.data.success) {
+        throw new Error(response.data.message);
       }
 
-      // Process the order with payment information
-      await processOrder(paymentData)
+      toast({
+        title: "Order placed successfully",
+        description: "Your COD order is confirmed.",
+      });
+      router.push("/orders"); // Redirect after success
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Order Failed",
+        description: err.message ?? "There was a problem with your order.",
+      });
+    }
+  };
 
-    } catch (error: any) {
-      console.error("Payment error:", error)
+  // Payment Verification Handler
+  const verifypayment = async (data: object) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/payments/verify",
+        data,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (response.data.success) {
+        toast({
+          title: "Payment Successful",
+          description: "Thank you for your payment!",
+        });
+        router.push("/orders");
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Payment Verification Failed",
+        description: "There was a problem verifying your payment.",
+      });
+    }
+  };
+  const loadRazorpayScript=()=>{
+    return new Promise((resolve)=>{
+      if(document.getElementById("razorpay-script")){
+        resolve(true);
+        return;
+      }
+      const script=document.createElement("script");
+      script.id="razorpay-script";
+      script.src="https://checkout.razorpay.com/v1/checkout.js";
+      script.onload=()=>{
+        resolve(true);
+      }
+      script.onerror=()=>{
+        resolve(false);
+      }
+      document.body.appendChild(script);
+    })
+  }
+  // Razorpay Handler, pass custom transaction ID in 'notes'
+  const openRazorpay = async (paymentData: object) => {
+    await loadRazorpayScript();
+    try {
+      // Pass custom transaction ID to your backend for order creation
+      const response = await axios.post(
+        "http://localhost:8080/api/v1/payments/create-order",paymentData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const OrderData = response.data.data;
+
+      const options = {
+        key: OrderData.key,
+        amount: OrderData.amount,
+        currency: OrderData.currency,
+        order_id: OrderData.razorpayOrderId,
+        // Include custom transactionId via 'notes'
+        notes: {
+
+          orderId: orderId,
+        },
+        handler: function (response: object) {
+          // Optionally, send the transactionId along with verification
+          verifypayment(response);
+        },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: "UPI",
+                instruments: [{ method: "upi" }],
+              },
+            },
+            sequence: ["block.upi"],
+            preferences: {
+              show_default_blocks: false,
+            },
+          },
+        },
+      };
+
+      // @ts-ignore
+    
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Payment Initialization Failed",
+        description: err.message ?? "Failed to initiate payment.",
+      });
+    }
+  };
+
+  // Main Payment Button Handler
+  const handlePayment = async () => {
+    setIsProcessing(true);
+    try {
+      if (!orderId) throw new Error("Missing order ID.");
+
+      const paymentData = {
+        orderId,
+        method: paymentMethod,
+        
+      };
+
+      if (paymentMethod === "cod") {
+        await handleCashOnDelivery(paymentData);
+      } 
+      else {
+        await openRazorpay(paymentData);
+      }
+      toast({
+        title: "Payment submitted",
+        description: `Payment method: ${paymentMethod.toUpperCase()}`,
+      });
+    } 
+    catch (error: any) {
       toast({
         variant: "destructive",
         title: "Payment Failed",
-        description: error.message || "There was an error processing your payment"
-      })
+        description: error.message || "Please check your payment details",
+      });
     } finally {
-      setIsProcessing(false)
+      setIsProcessing(false);
     }
-  }
+  };
 
-  const processOrder = async (paymentData: PaymentData) => {
-    // Simulate payment processing for UPI and Card
-    if (paymentData.method === "upi") {
-      // Simulate UPI payment confirmation
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      // In real implementation, this would integrate with UPI payment gateway
-    } else if (paymentData.method === "card") {
-      // Simulate card payment processing
-      await new Promise(resolve => setTimeout(resolve, 3000))
-      // In real implementation, this would integrate with card payment gateway
-    }
-
-    // Get cart data and canteen information
-    if (cart.length === 0) {
-      throw new Error('Cart is empty')
-    }
-
-    const firstItemId = cart[0].id
-    const itemResponse = await fetch(`http://localhost:8080/api/menu/item/${firstItemId}`)
-    let canteenId
-
-    if (itemResponse.ok) {
-      const itemData = await itemResponse.json()
-      canteenId = itemData.data.canteen
-    } else {
-              const canteensResponse = await fetch('http://localhost:8080/api/v1/canteens')
-      const canteensData = await canteensResponse.json()
-              if (canteensData.canteens && canteensData.canteens.length > 0) {
-          canteenId = canteensData.canteens[0]._id
-      } else {
-        throw new Error('No canteens available')
-      }
-    }
-
-    // Create order with payment information
-    const orderData = {
-      canteen: canteenId,
-      items: cart.map(item => ({ item: item.id, quantity: item.quantity })),
-      total: orderTotal,
-      payment: {
-        method: paymentData.method,
-        status: (paymentData.method === "cod" ? "pending" : "completed") as "pending" | "completed",
-        transactionId: paymentData.method !== "cod" ? `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}` : undefined,
-        upiDetails: paymentData.upiDetails || undefined,
-        cardDetails: paymentData.cardDetails ? {
-          lastFourDigits: paymentData.cardDetails.cardNumber.slice(-4),
-          cardType: getCardType(paymentData.cardDetails.cardNumber),
-          holderName: paymentData.cardDetails.holderName
-        } : undefined,
-        paidAt: paymentData.method !== "cod" ? new Date().toISOString() : undefined
-      }
-    }
-
-    if (!token) {
-      throw new Error('Authentication token not found')
-    }
-
-    const response = await createOrder(orderData, token)
-
-    // Success
-    toast({
-      title: "Order Placed Successfully!",
-      description: `Your order has been placed with ${paymentData.method.toUpperCase()} payment.`
-    })
-
-    clearCart()
-    router.push("/orders")
-  }
-
-  const getCardType = (cardNumber: string): string => {
-    const number = cardNumber.replace(/\s/g, "")
-    if (number.startsWith("4")) return "visa"
-    if (number.startsWith("5") || number.startsWith("2")) return "mastercard"
-    return "other"
-  }
-
-  const formatCardNumber = (value: string): string => {
-    const v = value.replace(/\s+/g, "").replace(/[^0-9]/gi, "")
-    const matches = v.match(/\d{4,16}/g)
-    const match = matches && matches[0] || ""
-    const parts = []
-
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4))
-    }
-
-    if (parts.length) {
-      return parts.join(" ")
-    } else {
-      return v
-    }
-  }
+  // --- Render UI ---
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -256,34 +287,25 @@ export default function PaymentPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Items ({cart.length})</span>
-                <span>₹{totalPrice.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Delivery Fee</span>
-                <span>₹25.00</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total Amount</span>
-                <span>₹{orderTotal.toFixed(2)}</span>
-              </div>
+            <div className="flex justify-between font-bold text-lg">
+              <span>Total Amount</span>
+              <span>₹{totalAmount.toFixed(2)}</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Payment Methods */}
+        {/* Payment Method Selection */}
         <Card>
           <CardHeader>
             <CardTitle>Choose Payment Method</CardTitle>
-            <CardDescription>Select your preferred payment option</CardDescription>
+            <CardDescription>
+              Select your preferred payment option
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <RadioGroup
               value={paymentMethod}
-              onValueChange={(value: "cod" | "upi" | "card") => setPaymentMethod(value)}
+              onValueChange={(value: "cod" | "upi") => setPaymentMethod(value)}
               className="space-y-4"
             >
               {/* Cash on Delivery */}
@@ -296,7 +318,9 @@ export default function PaymentPage() {
                     </div>
                     <div>
                       <div className="font-medium">Cash on Delivery</div>
-                      <div className="text-sm text-gray-500">Pay when your order arrives</div>
+                      <div className="text-sm text-gray-500">
+                        Pay when your order arrives
+                      </div>
                     </div>
                   </div>
                 </Label>
@@ -312,154 +336,22 @@ export default function PaymentPage() {
                     </div>
                     <div>
                       <div className="font-medium">UPI Payment</div>
-                      <div className="text-sm text-gray-500">Pay using GPay, PhonePe, Paytm</div>
-                    </div>
-                  </div>
-                </Label>
-              </div>
-
-              {/* Card Payment */}
-              <div className="flex items-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                <RadioGroupItem value="card" id="card" />
-                <Label htmlFor="card" className="flex-1 cursor-pointer">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Credit/Debit Card</div>
-                      <div className="text-sm text-gray-500">Visa, Mastercard, Rupay</div>
+                      <div className="text-sm text-gray-500">
+                        Pay using your UPI ID (VPA)
+                      </div>
                     </div>
                   </div>
                 </Label>
               </div>
             </RadioGroup>
 
-            {/* UPI Form */}
-            {paymentMethod === "upi" && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border">
-                <h4 className="font-medium mb-4">UPI Payment Details</h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="upiId">UPI ID</Label>
-                    <Input
-                      id="upiId"
-                      placeholder="yourname@paytm"
-                      value={upiId}
-                      onChange={(e) => setUpiId(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label>Preferred UPI App</Label>
-                    <RadioGroup
-                      value={selectedUpiApp}
-                      onValueChange={setSelectedUpiApp}
-                      className="flex flex-wrap gap-4 mt-2"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="gpay" id="gpay" />
-                        <Label htmlFor="gpay">Google Pay</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="phonepe" id="phonepe" />
-                        <Label htmlFor="phonepe">PhonePe</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="paytm" id="paytm" />
-                        <Label htmlFor="paytm">Paytm</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            {/* Card Form */}
-            {paymentMethod === "card" && (
-              <div className="mt-6 p-4 bg-purple-50 rounded-lg border">
-                <h4 className="font-medium mb-4">Card Payment Details</h4>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="cardNumber">Card Number</Label>
-                    <Input
-                      id="cardNumber"
-                      placeholder="1234 5678 9012 3456"
-                      value={cardNumber}
-                      onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                      maxLength={19}
-                      className="mt-1"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="expiryMonth">Month</Label>
-                      <select
-                        id="expiryMonth"
-                        value={expiryMonth}
-                        onChange={(e) => setExpiryMonth(e.target.value)}
-                        className="w-full mt-1 p-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="">MM</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i + 1} value={String(i + 1).padStart(2, '0')}>
-                            {String(i + 1).padStart(2, '0')}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="expiryYear">Year</Label>
-                      <select
-                        id="expiryYear"
-                        value={expiryYear}
-                        onChange={(e) => setExpiryYear(e.target.value)}
-                        className="w-full mt-1 p-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="">YY</option>
-                        {Array.from({ length: 10 }, (_, i) => (
-                          <option key={i} value={String(new Date().getFullYear() + i).slice(-2)}>
-                            {String(new Date().getFullYear() + i).slice(-2)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <Label htmlFor="cvv">CVV</Label>
-                      <Input
-                        id="cvv"
-                        placeholder="123"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value.replace(/\D/g, ""))}
-                        maxLength={4}
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="holderName">Cardholder Name</Label>
-                    <Input
-                      id="holderName"
-                      placeholder="John Doe"
-                      value={holderName}
-                      onChange={(e) => setHolderName(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
+           
             {/* Payment Button */}
-            {latestUser?.isBanned && (
-              <div className="w-full mt-4 p-3 bg-red-100 border border-red-300 rounded-lg text-red-700 font-semibold text-center">
-                You are banned by admin and cannot place orders.
-              </div>
-            )}
             <Button
               onClick={handlePayment}
-              disabled={isProcessing || latestUser?.isBanned}
-              className={`w-full mt-6 bg-red-600 hover:bg-red-700 text-white font-bold py-3 text-base ${latestUser?.isBanned ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isProcessing}
+              className="w-full mt-6 bg-red-600 hover:bg-red-700 text-white font-bold py-3 text-base"
             >
               {isProcessing ? (
                 <>
@@ -469,7 +361,9 @@ export default function PaymentPage() {
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  {paymentMethod === "cod" ? "Place Order" : `Pay ₹${orderTotal.toFixed(2)}`}
+                  {paymentMethod === "cod"
+                    ? "Place Order"
+                    : `Pay ₹${totalAmount.toFixed(2)}`}
                 </>
               )}
             </Button>
@@ -485,5 +379,5 @@ export default function PaymentPage() {
         </Card>
       </div>
     </div>
-  )
-} 
+  );
+}

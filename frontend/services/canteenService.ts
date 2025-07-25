@@ -4,6 +4,7 @@ export interface CanteenBusinessDetails {
   adhaarNumber: string;
   panNumber: string;
   gstNumber: string;
+  fssaiLicense?: string;
   contactPersonName: string;
   contactPhone?: string;
   description?: string;
@@ -19,6 +20,7 @@ export interface CreateCanteenPayload {
   adhaarNumber: string;
   panNumber: string;
   gstNumber: string;
+  fssaiLicense?: string;
   contactPersonName: string;
   contactPhone?: string;
   description?: string;
@@ -55,6 +57,7 @@ export interface Canteen {
   adhaarNumber: string;
   panNumber: string;
   gstNumber: string;
+  fssaiLicense?: string;
   contactPersonName: string;
   contactPhone?: string;
   description?: string;
@@ -88,6 +91,9 @@ export const createCanteen = async (
   formData.append('adhaarNumber', payload.adhaarNumber);
   formData.append('panNumber', payload.panNumber);
   formData.append('gstNumber', payload.gstNumber);
+  if (payload.fssaiLicense) {
+    formData.append('fssaiLicense', payload.fssaiLicense);
+  }
   formData.append('contactPersonName', payload.contactPersonName);
 
   if (payload.contactPhone) {

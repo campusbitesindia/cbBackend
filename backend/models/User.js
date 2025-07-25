@@ -5,12 +5,12 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: function() { return !this.googleId; } }, // Only required if not Google OAuth
-  googleId: { type: String, sparse: true }, // For Google OAuth users
+  googleId: { type: String,unique:true, sparse: true }, // For Google OAuth users
   role: { type: String, enum: ["student", "canteen", "campus", "admin"], required: true },
   campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus", required: function() { return !this.googleId; } }, // Only required if not Google OAuth
   canteenId: { type: mongoose.Schema.Types.ObjectId, ref: "Canteen" },
   profileImage: { type: String },
-  phone: { type: String, required: function() { return this.role !== 'canteen'; } }, // Required for all except canteen
+  // phone: { type: String, required: function() { return this.role !== 'canteen'; } }, // Required for all except canteen
   bio: { type: String },
   address: { type: String },
   dateOfBirth: { type: Date },

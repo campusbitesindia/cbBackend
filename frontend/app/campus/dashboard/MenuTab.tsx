@@ -38,6 +38,8 @@ interface MenuTabProps {
   setStatusFilter: (status: string) => void;
   categoryFilter: string;
   setCategoryFilter: (category: string) => void;
+  readyFilter: string;
+  setReadyFilter: (ready: string) => void;
   isAddItemOpen: boolean;
   setIsAddItemOpen: (open: boolean) => void;
   isEditItemOpen: boolean;
@@ -54,6 +56,7 @@ interface MenuTabProps {
   onRefresh: () => void;
   resetForm: () => void;
   canteenId: string | null;
+  onToggleReady?: (itemId: string, isReady: boolean) => void;
 }
 
 export const MenuTab: React.FC<MenuTabProps> = ({
@@ -67,6 +70,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   setStatusFilter,
   categoryFilter,
   setCategoryFilter,
+  readyFilter,
+  setReadyFilter,
   isAddItemOpen,
   setIsAddItemOpen,
   isEditItemOpen,
@@ -83,6 +88,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
   onRefresh,
   resetForm,
   canteenId,
+  onToggleReady,
 }) => {
   return (
     <div className='space-y-10'>
@@ -139,6 +145,8 @@ export const MenuTab: React.FC<MenuTabProps> = ({
         setCategoryFilter={setCategoryFilter}
         menuItems={menuItems}
         categories={categories}
+        readyFilter={readyFilter}
+        setReadyFilter={setReadyFilter}
       />
 
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
@@ -161,6 +169,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
               item={item}
               onEdit={onEdit}
               onDelete={onDelete}
+              onToggleReady={onToggleReady}
             />
           ))
         ) : (
@@ -208,6 +217,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                         setSearchTerm('');
                         setStatusFilter('all');
                         setCategoryFilter('all');
+                        setReadyFilter('all');
                       }}
                       className='border-gray-300 text-gray-700 hover:bg-gray-50'>
                       <XCircle className='w-4 h-4 mr-2' />
