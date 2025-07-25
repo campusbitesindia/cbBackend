@@ -1,15 +1,13 @@
-import { Providers } from '@/components/providers'; // ✅ you'll create this file
-import type React from 'react';
-import { Inter } from 'next/font/google';
-import { Toaster } from '@/components/ui/toaster';
-import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/context/auth-context';
-import { CartProvider } from '@/context/cart-context';
-import { SecurityProvider } from '@/context/security-context';
-import { SecurityNotification } from '@/components/security/SecurityNotification';
-import Navbar from '@/components/navbar';
-import Footer from '@/components/footer';
-import './globals.css';
+import { Providers } from "@/components/providers"; // ✅ you'll create this file
+import type React from "react"
+import { Inter } from "next/font/google"
+import { Toaster } from "@/components/ui/toaster"
+import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/context/auth-context"
+import { CartProvider } from "@/context/cart-context"
+import Navbar from "@/components/navbar"
+import Footer from "@/components/footer"
+import "./globals.css"
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,7 +26,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute='class' defaultTheme='system' enableSystem>
           <AuthProvider>
-            <SecurityProvider>
               <CartProvider>
                 <div className='relative z-10 flex flex-col'>
                   <div className='absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out -z-10'>
@@ -54,12 +51,10 @@ export default function RootLayout({
                   <Footer />
                 </div>
                 {/* Security System Components */}
-                <SecurityNotification />
                 <Providers>
                   <Toaster />
                 </Providers>
               </CartProvider>
-            </SecurityProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

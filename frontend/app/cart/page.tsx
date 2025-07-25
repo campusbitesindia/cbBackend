@@ -80,6 +80,7 @@ export default function CartPage() {
       // Check canteen consistency
       const data = cart.map((item) => item.canteenId);
       const canteenId = data[0];
+     
       data.forEach((id) => {
         if (id !== canteenId) {
           throw new Error('Items From Different Canteens Are not allowed');
@@ -102,7 +103,7 @@ export default function CartPage() {
         pickUpTime: selectedPickupTime.toISOString(),
         canteenId,
       };
-
+      console.log(Newdata)
       const response = await axios.post(
         'http://localhost:8080/api/v1/order/CreateOrder',
         Newdata,
