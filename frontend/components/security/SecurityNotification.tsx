@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Shield, ShieldCheck, Smartphone, Mail, X, AlertTriangle, Info, CheckCircle, Eye, EyeOff } from "lucide-react"
-import { useSecurity } from "@/context/security-context"
 
 export function SecurityNotification() {
   const { currentPrompt, dismissPrompt, sendVerification, verifyCode, manageDevice } = useSecurity()
