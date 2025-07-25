@@ -15,6 +15,7 @@ export interface MenuItem {
   isVeg?: boolean;
   portion?: string;
   quantity?: string;
+  isReady?: boolean;
 }
 
 export interface CreateMenuItemRequest {
@@ -158,4 +159,50 @@ export async function deleteMenuItem(id: string): Promise<void> {
   });
 }
 
-// Removed toggleMenuItemStatus function since endpoint doesn't exist in backend
+export async function toggleMenuItemReadyStatus(id: string): Promise<MenuItem> {
+  const res = await axios.put(
+    `/api/v1/items/toggle-ready/${id}`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    }
+  );
+  return res.data.data;
+}
+
+export async function getItemsUnder99(canteenId: string): Promise<MenuItem[]> {
+  const res = await axios.get(`/api/v1/items/under99/${canteenId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  return res.data.data;
+}
+
+export async function getItemsByPriceRange(
+  canteenId: string,
+  minPrice: number,
+  maxPrice: number
+): Promise<MenuItem[]> {
+  const res = await axios.post(
+    `/api/v1/items/range/${canteenId}`,
+    { minPrice, maxPrice },
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    }
+  );
+  return res.data.data;
+}
+
+export async function getReadyItems(canteenId: string): Promise<MenuItem[]> {
+  const res = await axios.get(`/api/v1/items/ready/${canteenId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  return res.data.data;
+}

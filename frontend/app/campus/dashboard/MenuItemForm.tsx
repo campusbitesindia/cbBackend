@@ -45,7 +45,6 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
   onImageUpload,
 }) => {
   const [imageUploading, setImageUploading] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<'url' | 'file'>('url');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const { toast } = useToast();
 
@@ -202,64 +201,15 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
 
       <div>
         <Label>Image</Label>
-
-        {/* Upload Method Selector */}
-        <div className='flex space-x-4 mb-3'>
-          <button
-            type='button'
-            onClick={() => setUploadMethod('file')}
-            className={`px-3 py-1 text-xs rounded ${
-              uploadMethod === 'file'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700'
-            }`}>
-            Upload File
-          </button>
-          <button
-            type='button'
-            onClick={() => setUploadMethod('url')}
-            className={`px-3 py-1 text-xs rounded ${
-              uploadMethod === 'url'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700'
-            }`}>
-            Enter URL
-          </button>
-        </div>
-
-        {/* File Upload */}
-        {uploadMethod === 'file' && (
-          <div>
-            <input
-              type='file'
-              accept='image/jpeg,image/jpg,image/png,image/webp'
-              onChange={handleFileUpload}
-              disabled={imageUploading}
-              className='mb-2 w-full p-2 border border-gray-300 rounded bg-white text-black file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
-            />
-            {imageUploading && (
-              <p className='text-xs text-blue-600'>Processing image...</p>
-            )}
-          </div>
-        )}
-
-        {/* URL Input */}
-        {uploadMethod === 'url' && (
-          <div>
-            <Input
-              id='image'
-              type='url'
-              value={formData.image}
-              onChange={(e) =>
-                setFormData({ ...formData, image: e.target.value })
-              }
-              placeholder='https://example.com/image.jpg'
-              className='bg-white text-black placeholder:text-gray-400'
-            />
-            <p className='text-xs text-gray-500 mt-1'>
-              Enter a valid image URL (JPEG, PNG, WebP formats recommended)
-            </p>
-          </div>
+        <input
+          type='file'
+          accept='image/jpeg,image/jpg,image/png,image/webp'
+          onChange={handleFileUpload}
+          disabled={imageUploading}
+          className='mb-2 w-full p-2 border border-gray-300 rounded bg-white text-black file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100'
+        />
+        {imageUploading && (
+          <p className='text-xs text-blue-600'>Processing image...</p>
         )}
 
         {/* Image Preview */}
@@ -282,38 +232,36 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
         )}
       </div>
 
-      {isEditing && (
-        <div className='flex items-center space-x-4'>
-          <div className='flex items-center space-x-2'>
-            <input
-              type='checkbox'
-              id='isVeg'
-              checked={formData.isVeg}
-              onChange={(e) =>
-                setFormData({ ...formData, isVeg: e.target.checked })
-              }
-              className='bg-white text-black'
-            />
-            <Label htmlFor='isVeg' className='text-black'>
-              Vegetarian
-            </Label>
-          </div>
-          <div className='flex items-center space-x-2'>
-            <input
-              type='checkbox'
-              id='isNonVeg'
-              checked={!formData.isVeg}
-              onChange={(e) =>
-                setFormData({ ...formData, isVeg: !e.target.checked })
-              }
-              className='bg-white text-black'
-            />
-            <Label htmlFor='isNonVeg' className='text-black'>
-              Non-Vegetarian
-            </Label>
-          </div>
+      <div className='flex items-center space-x-4'>
+        <div className='flex items-center space-x-2'>
+          <input
+            type='checkbox'
+            id='isVeg'
+            checked={formData.isVeg}
+            onChange={(e) =>
+              setFormData({ ...formData, isVeg: e.target.checked })
+            }
+            className='bg-white text-black'
+          />
+          <Label htmlFor='isVeg' className='text-black'>
+            Vegetarian
+          </Label>
         </div>
-      )}
+        <div className='flex items-center space-x-2'>
+          <input
+            type='checkbox'
+            id='isNonVeg'
+            checked={!formData.isVeg}
+            onChange={(e) =>
+              setFormData({ ...formData, isVeg: !e.target.checked })
+            }
+            className='bg-white text-black'
+          />
+          <Label htmlFor='isNonVeg' className='text-black'>
+            Non-Vegetarian
+          </Label>
+        </div>
+      </div>
 
       <div className='flex items-center space-x-4'>
         <div className='flex items-center space-x-2'>
