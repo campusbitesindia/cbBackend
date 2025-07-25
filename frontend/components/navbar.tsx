@@ -141,55 +141,36 @@ function Navbar() {
               </div>
             </Link>
 
-            {/* Right side actions for hideNavbar */}
-            <div className='flex items-center space-x-4'>
-              {/* Notification Icon */}
-              <div className='realtive'>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  onClick={() => setNotificationList(!NotificationListShow)}
-                  className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                  <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
-                  {notificationCount > 0 && (
-                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
-                      {notificationCount}
-                    </Badge>
+            {/* Right side actions for hideNavbar - only show for dashboard, not register */}
+            {pathname === '/campus/dashboard' && (
+              <div className='flex items-center space-x-4'>
+                {/* Notification Icon */}
+                <div className='realtive'>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => setNotificationList(!NotificationListShow)}
+                    className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                    <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
+                    {notificationCount > 0 && (
+                      <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
+                        {notificationCount}
+                      </Badge>
+                    )}
+                  </Button>
+                  {NotificationListShow && user?.id && (
+                    <NotificationList userId={user.id} />
                   )}
-                </Button>
-                {NotificationListShow && user?.id && (
-                  <NotificationList userId={user.id} />
-                )}
-              </div>
+                </div>
 
-              {/* Profile Icon */}
-              {isAuthenticated ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      className='relative p-0 rounded-full h-10 w-10'>
-                      <div className='relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
-                        <Image
-                          src={profileImageSrc}
-                          alt={displayUser?.name || 'User'}
-                          fill
-                          className='object-cover'
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/placeholder-user.jpg';
-                          }}
-                        />
-                      </div>
-                      <span className='absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align='end'
-                    className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
-                    <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
-                      <div className='flex items-center space-x-3'>
-                        <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
+                {/* Profile Icon */}
+                {isAuthenticated ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='ghost'
+                        className='relative p-0 rounded-full h-10 w-10'>
+                        <div className='relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
                           <Image
                             src={profileImageSrc}
                             alt={displayUser?.name || 'User'}
@@ -201,63 +182,84 @@ function Navbar() {
                             }}
                           />
                         </div>
-                        <div>
-                          <p className='font-semibold text-gray-900 dark:text-white'>
-                            {displayUser?.name}
-                          </p>
-                          <p className='text-sm text-gray-600 dark:text-gray-400'>
-                            {displayUser?.email}
-                          </p>
-                          {displayUser?.role && (
-                            <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
-                              {displayUser.role}
+                        <span className='absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align='end'
+                      className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
+                      <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
+                        <div className='flex items-center space-x-3'>
+                          <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
+                            <Image
+                              src={profileImageSrc}
+                              alt={displayUser?.name || 'User'}
+                              fill
+                              className='object-cover'
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = '/placeholder-user.jpg';
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <p className='font-semibold text-gray-900 dark:text-white'>
+                              {displayUser?.name}
                             </p>
-                          )}
+                            <p className='text-sm text-gray-600 dark:text-gray-400'>
+                              {displayUser?.email}
+                            </p>
+                            {displayUser?.role && (
+                              <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
+                                {displayUser.role}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <DropdownMenuItem
-                      asChild
-                      className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                      <Link
-                        href='/profile'
-                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                        <User className='h-5 w-5' />
-                        <span>View Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
+                      <DropdownMenuItem
+                        asChild
+                        className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                        <Link
+                          href='/profile'
+                          className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                          <User className='h-5 w-5' />
+                          <span>View Profile</span>
+                        </Link>
+                      </DropdownMenuItem>
 
-                    <DropdownMenuItem
-                      asChild
-                      className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                      <Link
-                        href='/orders'
-                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                        <Package className='h-5 w-5' />
-                        <span>My Orders</span>
-                      </Link>
-                    </DropdownMenuItem>
+                      <DropdownMenuItem
+                        asChild
+                        className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                        <Link
+                          href='/orders'
+                          className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                          <Package className='h-5 w-5' />
+                          <span>My Orders</span>
+                        </Link>
+                      </DropdownMenuItem>
 
-                    <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
+                      <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
 
-                    <DropdownMenuItem
-                      onClick={logout}
-                      className='flex items-center space-x-3 w-full p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 focus:bg-red-50 dark:focus:bg-red-500/20 focus:text-red-600 dark:focus:text-red-400'>
-                      <LogOut className='h-5 w-5' />
-                      <span>Sign Out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                  <User className='h-5 w-5 text-gray-700 dark:text-white' />
-                </Button>
-              )}
-            </div>
+                      <DropdownMenuItem
+                        onClick={logout}
+                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 focus:bg-red-50 dark:focus:bg-red-500/20 focus:text-red-600 dark:focus:text-red-400'>
+                        <LogOut className='h-5 w-5' />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                    <User className='h-5 w-5 text-gray-700 dark:text-white' />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
