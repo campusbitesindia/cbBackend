@@ -72,7 +72,7 @@ exports.registerUser = async (req, res) => {
 
         const user=await User.findOneAndUpdate({email},{password:hashedPass,campus:campusDoc._id,...(role !== "canteen" ? { phone } : {})},{new:true});
 
-        
+        sendEmailVerificationOTP(req, user)
             const token = JWT.sign(
             {
               id: user._id.toString(), // Ensure consistent string format
