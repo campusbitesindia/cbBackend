@@ -91,6 +91,7 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [readyFilter, setReadyFilter] = useState('all');
   const [orderDetails, setOrderDetails] = useState<any | null>(null);
   const [personalData, setPersonalData] = useState({
     vendorName: '',
@@ -624,6 +625,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleToggleReady = (itemId: string, isReady: boolean) => {
+    // Update the menu item in the local state
+    setMenuItems((prevItems) =>
+      prevItems.map((item) =>
+        item._id === itemId ? { ...item, isReady } : item
+      )
+    );
+  };
+
   const resetForm = () => {
     // Clear any object URLs to prevent memory leaks
     if (imagePreview && imagePreview.startsWith('blob:')) {
@@ -769,7 +779,13 @@ export default function Dashboard() {
       categoryFilter === 'all' ||
       (item.category && item.category.toLowerCase() === categoryFilter);
 
-    return matchesSearch && matchesStatus && matchesCategory;
+    // Ready filter
+    const matchesReady =
+      readyFilter === 'all' ||
+      (readyFilter === 'ready' && item.isReady === true) ||
+      (readyFilter === 'not-ready' && item.isReady === false);
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesReady;
   });
 
   console.log('Filtered items for rendering:', filteredItems);
@@ -836,6 +852,8 @@ export default function Dashboard() {
               setStatusFilter={setStatusFilter}
               categoryFilter={categoryFilter}
               setCategoryFilter={setCategoryFilter}
+              readyFilter={readyFilter}
+              setReadyFilter={setReadyFilter}
               isAddItemOpen={isAddItemOpen}
               setIsAddItemOpen={setIsAddItemOpen}
               isEditItemOpen={isEditItemOpen}
@@ -852,6 +870,7 @@ export default function Dashboard() {
               onRefresh={() => canteenId && fetchData(canteenId)}
               resetForm={resetForm}
               canteenId={canteenId}
+              onToggleReady={handleToggleReady}
             />
           )}
 

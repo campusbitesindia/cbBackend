@@ -8,6 +8,8 @@ interface MenuItemFiltersProps {
   setStatusFilter: (status: string) => void;
   categoryFilter: string;
   setCategoryFilter: (category: string) => void;
+  readyFilter: string;
+  setReadyFilter: (ready: string) => void;
   menuItems: MenuItem[];
   categories: string[];
 }
@@ -19,6 +21,8 @@ export const MenuItemFilters: React.FC<MenuItemFiltersProps> = ({
   setStatusFilter,
   categoryFilter,
   setCategoryFilter,
+  readyFilter,
+  setReadyFilter,
   menuItems,
   categories,
 }) => {
@@ -67,6 +71,21 @@ export const MenuItemFilters: React.FC<MenuItemFiltersProps> = ({
             menuItems.filter((i) => ('available' in i ? !i.available : false))
               .length
           }
+          )
+        </option>
+      </select>
+
+      {/* Ready Status Filter */}
+      <select
+        value={readyFilter}
+        onChange={(e) => setReadyFilter(e.target.value)}
+        className='rounded-lg border border-gray-200 bg-white shadow-sm px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-100 text-gray-700 mr-2'>
+        <option value='all'>All Ready Status</option>
+        <option value='ready'>
+          Ready Items ({menuItems.filter((i) => i.isReady === true).length})
+        </option>
+        <option value='not-ready'>
+          Not Ready Items ({menuItems.filter((i) => i.isReady === false).length}
           )
         </option>
       </select>
