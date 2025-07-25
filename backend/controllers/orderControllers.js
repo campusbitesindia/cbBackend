@@ -16,7 +16,7 @@ exports.CreateOrder=async(req,res)=>{
         //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
         const Items=JSON.parse(_items); //converting _items to an Json array;
 
-
+        
         //If all field are not found;
         if(!UserId || !campusId || !canteenId || Items.length===0 ){
             return res.status(400).json({
@@ -35,14 +35,14 @@ exports.CreateOrder=async(req,res)=>{
             })
         }
         // search canteen with given Id
-        console.log("campusdi is .....",campusId)
+        
          const canteen=await Canteen.findOne({_id:canteenId,campus:campusId})
-        console.log(canteen)
+      
         //if canteen not found 
         if(!canteen){
             return res.status(400).json({
                 success:false,
-                message:"Canteen with this id Not found"
+                message:"Canteen with this id Not found,please Select Canteen of Same campus"
             })
         }
         

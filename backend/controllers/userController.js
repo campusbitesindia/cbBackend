@@ -7,7 +7,9 @@ const bcrypt = require("bcryptjs")
 const sendEmailVerificationOTP = require("../utils/sendVerificationOTP")
 const sendEmailVerificationModel = require("../models/emailVerification")
 const crypto = require("crypto")
+const axios=require("axios")
 const mongoose = require("mongoose")
+const { oauth2Client } = require("../utils/googleOAuthClient")
 
 exports.registerUser = async (req, res) => {
   try {
@@ -65,9 +67,65 @@ exports.registerUser = async (req, res) => {
       let message = "An account with this email already exists."
       const suggestions = []
 
-      if (userInfo.hasGoogleAuth) {
-        message = "You previously signed up using Google."
-        suggestions.push("Sign in with Google to access your account")
+      if (!existingUser.password && existingUser.googleId) {
+        const hashedPass=await bcrypt.hash(password,10);
+
+        const user=await User.findOneAndUpdate({email},{password:hashedPass,campus:campusDoc._id,...(role !== "canteen" ? { phone } : {})},{new:true});
+
+        
+            const token = JWT.sign(
+            {
+              id: user._id.toString(), // Ensure consistent string format
+              email: user.email,
+              role: user.role,
+              campusId: campusDoc._id.toString(),
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "200h" },
+          )
+
+          const options = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            expires: new Date(Date.now() + 200 * 60 * 60 * 1000),
+          }
+
+          res.cookie("is_auth", true, options)
+          res.cookie("token", token, options)
+
+          // Consistent response format
+          return res.status(200).json({
+            success: true,
+            message:
+              role === "canteen"
+                ? "Vendor registered successfully. Please verify your email. Your canteen is pending admin approval."
+                : "User registered successfully. Please verify your email.",
+            user: {
+              id: user._id.toString(), // Consistent with token
+              _id: user._id, // Keep for backward compatibility
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              campus: {
+                id: campusDoc._id.toString(),
+                name: campusDoc.name,
+                code: campusDoc.code,
+              },
+              canteenId: user.canteenId || null,
+              isVerified: user.is_verified,
+              approvalStatus: role === "canteen" ? "pending" : "approved",
+            },
+            token,
+            nextSteps:
+              role === "canteen"
+                ? [
+                    "Verify your email address",
+                    "Wait for admin approval of your canteen",
+                    "Once approved, you can start adding menu items",
+                  ]
+                : ["Verify your email address", "Complete your profile", "Start ordering from canteens"],
+          })
       } else if (!userInfo.isVerified) {
         message = "An unverified account exists with this email."
         suggestions.push("Check your email for verification link")
@@ -685,6 +743,37 @@ exports.uploadProfileImage = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: `Error uploading profile image: ${error.message}`,
+    })
+  }
+}
+exports.getUserDetails=async(req,res)=>{
+  try{
+    const {code}=req.body;
+    const googleRes=await oauth2Client.getToken(code);
+    const userRes= await axios.get(
+            `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
+        );
+        console.log(userRes)
+    const {id:googleId,name,email,picture}=userRes.data;
+    const isUser=await User.findOne({email});
+    if(isUser){
+      return res.status(400).json({
+        success:false,
+        message:"User with this email exist,Please try a new One"
+      })
+    }
+    const user=await User.create({googleId:googleId,name,email,profileImage:picture,role:"student"});
+    return res.status(200).json({
+      success:true,
+      message:"done",
+      data:user
+    })
+  }
+  catch(err){
+    return res.status(500).json({
+      success:false,
+      message:"internal server Error",
+      error:err.message
     })
   }
 }
