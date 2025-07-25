@@ -46,6 +46,7 @@ import {
   DollarSign,
   RefreshCw,
   TrendingUp,
+  Home,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMobile } from '@/hooks/use-mobile';
@@ -56,6 +57,14 @@ import {
   SheetClose,
 } from '@/components/ui/sheet';
 import { Menu as MenuIcon } from 'lucide-react';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -118,6 +127,87 @@ export default function Dashboard() {
   const [bankSuccess, setBankSuccess] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   useNotificationToast();
+
+  // Type for breadcrumb items
+  type BreadcrumbItem = {
+    label: string;
+    href: string;
+    onClick: (() => void) | null;
+    icon: React.ComponentType<any> | undefined;
+  };
+
+  // Breadcrumb configuration
+  const getBreadcrumbItems = (): BreadcrumbItem[] => {
+    const baseItems: BreadcrumbItem[] = [
+      {
+        label: 'Dashboard',
+        href: '#',
+        onClick: () => setActiveTab('overview'),
+        icon: Home,
+      },
+    ];
+
+    if (activeTab === 'overview') {
+      return baseItems;
+    }
+
+    const tabLabels: { [key: string]: string } = {
+      menu: 'Menu Items',
+      orders: 'Orders',
+      analytics: 'Analytics',
+      profile: 'Profile',
+      payouts: 'Payouts',
+    };
+
+    // Add sub-navigation for specific tabs
+    const breadcrumbItems: BreadcrumbItem[] = [
+      ...baseItems,
+      {
+        label: tabLabels[activeTab] || activeTab,
+        href: '#',
+        onClick: null, // Current page, no click action
+        icon: undefined,
+      },
+    ];
+
+    // Add sub-navigation for menu items
+    if (activeTab === 'menu') {
+      if (isAddItemOpen) {
+        breadcrumbItems.push({
+          label: 'Add New Item',
+          href: '#',
+          onClick: () => {
+            setIsAddItemOpen(false);
+            resetForm();
+          },
+          icon: undefined,
+        });
+      } else if (isEditItemOpen && editingItem) {
+        breadcrumbItems.push({
+          label: `Edit ${editingItem.name}`,
+          href: '#',
+          onClick: () => {
+            setIsEditItemOpen(false);
+            setEditingItem(null);
+            resetForm();
+          },
+          icon: undefined,
+        });
+      }
+    }
+
+    // Add sub-navigation for orders
+    if (activeTab === 'orders' && orderDetails) {
+      breadcrumbItems.push({
+        label: `Order #${orderDetails._id?.slice(-6) || 'Details'}`,
+        href: '#',
+        onClick: () => setOrderDetails(null),
+        icon: undefined,
+      });
+    }
+
+    return breadcrumbItems;
+  };
 
   // Form state for new/edit item
   // const [formData, setFormData] = useState({
@@ -834,6 +924,54 @@ export default function Dashboard() {
       {/* Main Content */}
       <div className='flex-1 overflow-auto scrollbar-hide w-full'>
         <div className='p-4 sm:p-8 max-w-7xl mx-auto w-full'>
+          {/* Breadcrumb Navigation */}
+          <div className='mb-6'>
+            <div className='flex items-center justify-between'>
+              <Breadcrumb>
+                <BreadcrumbList className='text-sm'>
+                  {getBreadcrumbItems().map((item, index) => (
+                    <React.Fragment key={index}>
+                      <BreadcrumbItem>
+                        {item.onClick ? (
+                          <BreadcrumbLink
+                            href={item.href}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              item.onClick?.();
+                            }}
+                            className='flex items-center gap-2 hover:text-blue-600 transition-colors font-medium text-gray-600 dark:text-gray-400'>
+                            {item.icon && <item.icon className='w-4 h-4' />}
+                            {item.label}
+                          </BreadcrumbLink>
+                        ) : (
+                          <BreadcrumbPage className='flex items-center gap-2 font-semibold text-gray-600 dark:text-gray-400'>
+                            {item.icon && <item.icon className='w-4 h-4' />}
+                            {item.label}
+                          </BreadcrumbPage>
+                        )}
+                      </BreadcrumbItem>
+                      {index < getBreadcrumbItems().length - 1 && (
+                        <BreadcrumbSeparator className='text-gray-600 dark:text-gray-400' />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
+
+              {/* Quick Navigation */}
+              {activeTab !== 'overview' && (
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => setActiveTab('overview')}
+                  className='text-gray-600 hover:text-blue-600 transition-colors'>
+                  <Home className='w-4 h-4 mr-2' />
+                  Back to Overview
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <OverviewTab canteenStats={canteenStats} menuItems={menuItems} />
