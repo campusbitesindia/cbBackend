@@ -159,7 +159,11 @@ function Navbar() {
                     )}
                   </Button>
                   {NotificationListShow && user?.id && (
-                    <NotificationList userId={user.id} />
+                    <NotificationList
+                      userId={user.id}
+                      isOpen={NotificationListShow}
+                      onClose={() => setNotificationList(false)}
+                    />
                   )}
                 </div>
 
