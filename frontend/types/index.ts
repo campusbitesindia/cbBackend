@@ -28,6 +28,7 @@ export interface Canteen {
   discount?: string;
   featured?: boolean;
   imageUrl?: string;
+  fssaiLicense?: string;
 }
 
 export interface Item {
