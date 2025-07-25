@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Bell, X } from 'lucide-react';
+import {
+  RefreshCw,
+  Bell,
+  X,
+  Filter,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Package,
+  CreditCard,
+  List,
+  Grid3X3,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { OrderCard } from './OrderCard';
@@ -96,6 +108,60 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
     }
   };
 
+  // Status filter configuration with icons and counts
+  const statusFilters = [
+    {
+      value: 'all',
+      label: 'All Orders',
+      icon: <List className='w-4 h-4' />,
+      count: orders.length,
+      description: 'View all orders',
+    },
+    {
+      value: 'placed',
+      label: 'Placed',
+      icon: <Clock className='w-4 h-4' />,
+      count: orders.filter((order) => order.status === 'placed').length,
+      description: 'New orders received',
+    },
+    {
+      value: 'payment_pending',
+      label: 'Payment Pending',
+      icon: <CreditCard className='w-4 h-4' />,
+      count: orders.filter((order) => order.status === 'payment_pending')
+        .length,
+      description: 'Awaiting payment',
+    },
+    {
+      value: 'preparing',
+      label: 'Preparing',
+      icon: <Package className='w-4 h-4' />,
+      count: orders.filter((order) => order.status === 'preparing').length,
+      description: 'Currently being prepared',
+    },
+    {
+      value: 'ready',
+      label: 'Ready',
+      icon: <CheckCircle className='w-4 h-4' />,
+      count: orders.filter((order) => order.status === 'ready').length,
+      description: 'Ready for pickup',
+    },
+    {
+      value: 'completed',
+      label: 'Completed',
+      icon: <CheckCircle className='w-4 h-4' />,
+      count: orders.filter((order) => order.status === 'completed').length,
+      description: 'Successfully delivered',
+    },
+    {
+      value: 'cancelled',
+      label: 'Cancelled',
+      icon: <XCircle className='w-4 h-4' />,
+      count: orders.filter((order) => order.status === 'cancelled').length,
+      description: 'Cancelled orders',
+    },
+  ];
+
   return (
     <div className='space-y-10'>
       {/* New Order Notification */}
@@ -143,34 +209,109 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
 
       <Separator className='mb-6 bg-gray-200' />
 
-      {/* Status Filter */}
-      <div className='flex items-center space-x-4 mb-6'>
-        <span className='text-sm font-medium text-gray-700'>
-          Filter by Status:
-        </span>
-        <div className='flex space-x-2'>
-          {[
-            'all',
-            'placed',
-            'payment_pending',
-            'preparing',
-            'ready',
-            'completed',
-            'cancelled',
-          ].map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? 'default' : 'outline'}
-              size='sm'
-              onClick={() => setStatusFilter(status)}
-              className={
-                statusFilter === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700'
-              }>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
-            </Button>
+      {/* Enhanced Status Filter */}
+      <div className='bg-white rounded-2xl border border-gray-100 p-6 shadow-sm'>
+        <div className='flex items-center space-x-3 mb-6'>
+          <div className='bg-gray-100 rounded-xl p-2'>
+            <Filter className='w-5 h-5 text-gray-600' />
+          </div>
+          <div>
+            <h3 className='font-semibold text-gray-900 text-lg'>
+              Filter Orders
+            </h3>
+            <p className='text-sm text-gray-500'>
+              Select a status to filter your orders
+            </p>
+          </div>
+        </div>
+
+        <div className='grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3'>
+          {statusFilters.map((filter) => (
+            <button
+              key={filter.value}
+              onClick={() => setStatusFilter(filter.value)}
+              className={`relative group p-4 rounded-xl border-2 transition-all duration-300 hover:shadow-md ${
+                statusFilter === filter.value
+                  ? 'border-gray-400 bg-gray-50 shadow-sm'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}>
+              {/* Active indicator */}
+              {statusFilter === filter.value && (
+                <div className='absolute -top-1 -right-1 w-3 h-3 bg-gray-600 rounded-full border-2 border-white'></div>
+              )}
+
+              {/* Icon */}
+              <div
+                className={`mb-3 transition-colors duration-300 ${
+                  statusFilter === filter.value
+                    ? 'text-gray-700'
+                    : 'text-gray-500'
+                }`}>
+                {filter.icon}
+              </div>
+
+              {/* Label */}
+              <div className='text-left'>
+                <div
+                  className={`font-semibold text-sm transition-colors duration-300 ${
+                    statusFilter === filter.value
+                      ? 'text-gray-900'
+                      : 'text-gray-700'
+                  }`}>
+                  {filter.label}
+                </div>
+
+                {/* Count badge */}
+                <div className='flex items-center justify-between mt-2'>
+                  <span
+                    className={`text-xs transition-colors duration-300 ${
+                      statusFilter === filter.value
+                        ? 'text-gray-600'
+                        : 'text-gray-500'
+                    }`}>
+                    {filter.count}
+                  </span>
+                  {filter.count > 0 && (
+                    <div
+                      className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                        statusFilter === filter.value
+                          ? 'bg-gray-600'
+                          : 'bg-gray-400'
+                      }`}></div>
+                  )}
+                </div>
+              </div>
+
+              {/* Hover effect */}
+              <div className='absolute inset-0 bg-gray-50 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10'></div>
+            </button>
           ))}
+        </div>
+
+        {/* Filter summary */}
+        <div className='mt-6 pt-4 border-t border-gray-100'>
+          <div className='flex items-center justify-between'>
+            <div className='flex items-center space-x-2'>
+              <Grid3X3 className='w-4 h-4 text-gray-500' />
+              <span className='text-sm text-gray-600'>
+                Showing{' '}
+                {statusFilter === 'all'
+                  ? orders.length
+                  : orders.filter((order) => order.status === statusFilter)
+                      .length}{' '}
+                orders
+              </span>
+            </div>
+            {statusFilter !== 'all' && (
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => setStatusFilter('all')}
+                className='text-gray-500 hover:text-gray-700 text-xs'>
+                Clear Filter
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
