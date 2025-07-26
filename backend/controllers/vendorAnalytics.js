@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Canteen = require("../models/Canteen");
 const Order = require("../models/Order");
 const Item = require("../models/Item");
+const Payout = require("../models/Payout");
 
 const startOfDay = (date) => new Date(date.setHours(0,0,0,0));
 const endOfDay = (date) => new Date(date.setHours(23,59,59,999));
@@ -9,26 +10,80 @@ const endOfDay = (date) => new Date(date.setHours(23,59,59,999));
 /**
  * Basic Dashboard Info
  * - Total orders placed (all time)
- * - Total earnings & payouts (from Canteen fields)
- * - Number of active items
- * - Average rating (adminRatings)
+ * - Total earnings (from Order schema)
+ * - Total payouts (from Payout schema)
+ * - Available balance (earnings - payouts)
+ * - Number of active items (from Item schema)
+ * - Average rating (from Canteen adminRatings)
  */
 exports.getBasicDashboard = async (req, res) => {
   try {
     const { canteenId } = req.params;
 
-    const canteen = await Canteen.findById(canteenId)
-      .select("totalEarnings totalPayouts availableBalance adminRatings items")
-      .populate({ path: "items", match: { isDeleted: false, available: true } });
+    // Validate canteenId
+    if (!mongoose.Types.ObjectId.isValid(canteenId)) {
+      return res.status(400).json({ message: "Invalid canteen ID" });
+    }
 
+    // Fetch canteen for adminRatings only
+    const canteen = await Canteen.findById(canteenId).select("adminRatings");
     if (!canteen) return res.status(404).json({ message: "Canteen not found" });
 
-    const totalOrders = await Order.countDocuments({
-      canteen: canteen._id,
+    // Calculate total earnings from completed or placed orders
+    const earningsResult = await Order.aggregate([
+      {
+        $match: {
+          canteen: new mongoose.Types.ObjectId(canteenId),
+          status: { $in: ["completed", "placed"] }, // Include "placed" for COD orders
+          isDeleted: false,
+          paymentStatus: { $in: ["COD", "paid"] } // Adjust based on business logic
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$total" },
+          orderCount: { $sum: 1 } // Count matching orders for debugging
+        }
+      }
+    ]);
+
+    const totalEarnings = earningsResult.length > 0 ? earningsResult[0].totalEarnings : 0;
+    const earningsOrderCount = earningsResult.length > 0 ? earningsResult[0].orderCount : 0;
+    console.log(`Basic Dashboard - Earnings aggregation: ${earningsOrderCount} orders found, totalEarnings: ${totalEarnings}`);
+
+    // Calculate total payouts
+    const payoutsResult = await Payout.aggregate([
+      {
+        $match: {
+          canteen: new mongoose.Types.ObjectId(canteenId)
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalPayouts: { $sum: "$amount" },
+          payoutCount: { $sum: 1 } // Count payouts for debugging
+        }
+      }
+    ]);
+
+    const totalPayouts = payoutsResult.length > 0 ? payoutsResult[0].totalPayouts : 0;
+    const payoutCount = payoutsResult.length > 0 ? payoutsResult[0].payoutCount : 0;
+    console.log(`Basic Dashboard - Payouts aggregation: ${payoutCount} payouts found, totalPayouts: ${totalPayouts}`);
+
+    // Calculate available balance
+    const availableBalance = totalEarnings - totalPayouts;
+
+    // Fetch active items
+    const activeItemsResult = await Item.find({
+      canteen: new mongoose.Types.ObjectId(canteenId),
       isDeleted: false,
+      available: true
     });
 
-    const activeItems = canteen.items ? canteen.items.length : 0;
+    const activeItems = activeItemsResult.length;
+    console.log(`Basic Dashboard - Active items: ${activeItems}`);
 
     // Compute average rating
     let avgRating = 0;
@@ -37,13 +92,20 @@ exports.getBasicDashboard = async (req, res) => {
       avgRating = totalRating / canteen.adminRatings.length;
     }
 
+    // Get total orders
+    const totalOrders = await Order.countDocuments({
+      canteen: new mongoose.Types.ObjectId(canteenId),
+      isDeleted: false,
+    });
+    console.log(`Basic Dashboard - Total orders: ${totalOrders}`);
+
     return res.json({
       success: true,
       data: {
         totalOrders,
-        totalEarnings: canteen.totalEarnings,
-        totalPayouts: canteen.totalPayouts,
-        availableBalance: canteen.availableBalance,
+        totalEarnings,
+        totalPayouts,
+        availableBalance,
         activeItems,
         averageRating: avgRating.toFixed(2),
       }
@@ -58,13 +120,16 @@ exports.getBasicDashboard = async (req, res) => {
  * Financial Overview
  * - Earnings and payouts over time (last 30 days)
  * - Daily sales totals
- * - Pending payouts
+ * - Pending payouts (calculated as totalEarnings - totalPayouts)
  */
 exports.getFinancialOverview = async (req, res) => {
   try {
     const { canteenId } = req.params;
 
-    // Confirm ownership first or add middleware for verifyVendorAccess
+    // Validate canteenId
+    if (!mongoose.Types.ObjectId.isValid(canteenId)) {
+      return res.status(400).json({ message: "Invalid canteen ID" });
+    }
 
     // Aggregate Orders for last 30 days to calculate daily totals
     const thirtyDaysAgo = new Date();
@@ -73,9 +138,9 @@ exports.getFinancialOverview = async (req, res) => {
     const salesData = await Order.aggregate([
       {
         $match: {
-          canteen: new mongoose.Types.ObjectId(canteenId), // Fix: Use 'new' keyword
+          canteen: new mongoose.Types.ObjectId(canteenId),
           createdAt: { $gte: thirtyDaysAgo },
-          status: { $in: ["completed", "ready", "placed"]}, // consider only completed or relevant orders
+          status: { $in: ["completed", "ready", "placed"]},
           isDeleted: false,
         }
       },
@@ -94,15 +159,60 @@ exports.getFinancialOverview = async (req, res) => {
         $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 }
       }
     ]);
+    console.log(`Financial Overview - Sales data: ${JSON.stringify(salesData)}`);
 
-    const canteen = await Canteen.findById(canteenId).select("totalEarnings totalPayouts availableBalance");
+    // Calculate total earnings from completed or placed orders
+    const earningsResult = await Order.aggregate([
+      {
+        $match: {
+          canteen: new mongoose.Types.ObjectId(canteenId),
+          status: { $in: ["completed", "placed"] }, // Include "placed" for COD orders
+          isDeleted: false,
+          paymentStatus: { $in: ["COD", "paid"] } // Adjust based on business logic
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: { $sum: "$total" },
+          orderCount: { $sum: 1 } // Count matching orders for debugging
+        }
+      }
+    ]);
+
+    const totalEarnings = earningsResult.length > 0 ? earningsResult[0].totalEarnings : 0;
+    const earningsOrderCount = earningsResult.length > 0 ? earningsResult[0].orderCount : 0;
+    console.log(`Financial Overview - Earnings aggregation: ${earningsOrderCount} orders found, totalEarnings: ${totalEarnings}`);
+
+    // Calculate total payouts
+    const payoutsResult = await Payout.aggregate([
+      {
+        $match: {
+          canteen: new mongoose.Types.ObjectId(canteenId)
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalPayouts: { $sum: "$amount" },
+          payoutCount: { $sum: 1 } // Count payouts for debugging
+        }
+      }
+    ]);
+
+    const totalPayouts = payoutsResult.length > 0 ? payoutsResult[0].totalPayouts : 0;
+    const payoutCount = payoutsResult.length > 0 ? payoutsResult[0].payoutCount : 0;
+    console.log(`Financial Overview - Payouts aggregation: ${payoutCount} payouts found, totalPayouts: ${totalPayouts}`);
+
+    // Calculate available balance
+    const availableBalance = totalEarnings - totalPayouts;
 
     return res.json({
       success: true,
       data: {
-        totalEarnings: canteen.totalEarnings,
-        totalPayouts: canteen.totalPayouts,
-        availableBalance: canteen.availableBalance,
+        totalEarnings,
+        totalPayouts,
+        availableBalance,
         salesData
       }
     });
@@ -124,7 +234,7 @@ exports.getOrderPerformance = async (req, res) => {
 
     // Aggregate orders for status counts
     const counts = await Order.aggregate([
-      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } },
       { $group: { _id: "$status", count: { $sum: 1 } } }
     ]);
 
@@ -139,7 +249,7 @@ exports.getOrderPerformance = async (req, res) => {
     const avgTimeResult = await Order.aggregate([
       {
         $match: {
-          canteen: new mongoose.Types.ObjectId(canteenId), // Fix: Use 'new' keyword
+          canteen: new mongoose.Types.ObjectId(canteenId),
           status: "completed",
           isDeleted: false,
           createdAt: { $exists: true },
@@ -166,7 +276,7 @@ exports.getOrderPerformance = async (req, res) => {
     // Orders by hour histogram (group orders by hour of createdAt)
     const ordersByHour = await Order.aggregate([
       {
-        $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } // Fix: Use 'new' keyword
+        $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false }
       },
       {
         $project: {
@@ -210,7 +320,7 @@ exports.getItemSalesAnalysis = async (req, res) => {
 
     // Aggregate all items in orders for this canteen
     const itemStats = await Order.aggregate([
-      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } },
       { $unwind: "$items" },
       {
         $group: {
@@ -261,6 +371,7 @@ exports.getItemSalesAnalysis = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 /**
  * Operating Metrics
  * - Active days of week by order volume
@@ -279,7 +390,7 @@ exports.getOperatingMetrics = async (req, res) => {
 
     // Orders grouped by day name of week
     const ordersByDay = await Order.aggregate([
-      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } },
       {
         $project: {
           dayOfWeek: { $dayOfWeek: "$createdAt" } // Sunday=1, Monday=2...
@@ -302,7 +413,7 @@ exports.getOperatingMetrics = async (req, res) => {
 
     // Orders grouped by hour to estimate utilization
     const ordersByHour = await Order.aggregate([
-      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } },
       {
         $project: {
           hour: { $hour: "$createdAt" }
