@@ -6,25 +6,6 @@ const Item = require("../models/Item");
 const startOfDay = (date) => new Date(date.setHours(0,0,0,0));
 const endOfDay = (date) => new Date(date.setHours(23,59,59,999));
 
-async function verifyVendorAccess(req, res, next) {
-  try {
-    const { canteenId } = req.params;
-    const vendorId = req.user._id;
-
-    const canteen = await Canteen.findById(canteenId);
-    if (!canteen) return res.status(404).json({ message: "Canteen not found" });
-    if (canteen.owner.toString() !== vendorId.toString()) {
-      return res.status(403).json({ message: "Forbidden: not your canteen" });
-    }
-
-    req.canteen = canteen;
-    next();
-  } catch (err) {
-    console.error("Vendor access check error:", err);
-    return res.status(500).json({ message: "Server error" });
-  }
-}
-
 /**
  * Basic Dashboard Info
  * - Total orders placed (all time)
@@ -92,7 +73,7 @@ exports.getFinancialOverview = async (req, res) => {
     const salesData = await Order.aggregate([
       {
         $match: {
-          canteen: mongoose.Types.ObjectId(canteenId),
+          canteen: new mongoose.Types.ObjectId(canteenId), // Fix: Use 'new' keyword
           createdAt: { $gte: thirtyDaysAgo },
           status: { $in: ["completed", "ready", "placed"]}, // consider only completed or relevant orders
           isDeleted: false,
@@ -143,11 +124,11 @@ exports.getOrderPerformance = async (req, res) => {
 
     // Aggregate orders for status counts
     const counts = await Order.aggregate([
-      { $match: { canteen: mongoose.Types.ObjectId(canteenId), isDeleted: false } },
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
       { $group: { _id: "$status", count: { $sum: 1 } } }
     ]);
 
-    // Map status counts to an object:
+    // Map status counts to an object
     const statusCounts = counts.reduce((acc, cur) => {
       acc[cur._id] = cur.count;
       return acc;
@@ -158,7 +139,7 @@ exports.getOrderPerformance = async (req, res) => {
     const avgTimeResult = await Order.aggregate([
       {
         $match: {
-          canteen: mongoose.Types.ObjectId(canteenId),
+          canteen: new mongoose.Types.ObjectId(canteenId), // Fix: Use 'new' keyword
           status: "completed",
           isDeleted: false,
           createdAt: { $exists: true },
@@ -185,7 +166,7 @@ exports.getOrderPerformance = async (req, res) => {
     // Orders by hour histogram (group orders by hour of createdAt)
     const ordersByHour = await Order.aggregate([
       {
-        $match: { canteen: mongoose.Types.ObjectId(canteenId), isDeleted: false }
+        $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } // Fix: Use 'new' keyword
       },
       {
         $project: {
@@ -229,7 +210,7 @@ exports.getItemSalesAnalysis = async (req, res) => {
 
     // Aggregate all items in orders for this canteen
     const itemStats = await Order.aggregate([
-      { $match: { canteen: mongoose.Types.ObjectId(canteenId), isDeleted: false } },
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
       { $unwind: "$items" },
       {
         $group: {
@@ -280,7 +261,6 @@ exports.getItemSalesAnalysis = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 /**
  * Operating Metrics
  * - Active days of week by order volume
@@ -299,7 +279,7 @@ exports.getOperatingMetrics = async (req, res) => {
 
     // Orders grouped by day name of week
     const ordersByDay = await Order.aggregate([
-      { $match: { canteen: mongoose.Types.ObjectId(canteenId), isDeleted: false } },
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
       {
         $project: {
           dayOfWeek: { $dayOfWeek: "$createdAt" } // Sunday=1, Monday=2...
@@ -322,7 +302,7 @@ exports.getOperatingMetrics = async (req, res) => {
 
     // Orders grouped by hour to estimate utilization
     const ordersByHour = await Order.aggregate([
-      { $match: { canteen: mongoose.Types.ObjectId(canteenId), isDeleted: false } },
+      { $match: { canteen: new mongoose.Types.ObjectId(canteenId), isDeleted: false } }, // Fix: Use 'new' keyword
       {
         $project: {
           hour: { $hour: "$createdAt" }

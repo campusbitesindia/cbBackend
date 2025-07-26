@@ -30,6 +30,7 @@ router.use(isAuthenticated);
 
 router.get(
   "/:canteenId/basic",
+  verifyVendorAccess,
   vendorAnalyticsController.getBasicDashboard
 );
 
