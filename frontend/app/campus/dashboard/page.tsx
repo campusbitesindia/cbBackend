@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
   createMenuItem,
@@ -65,11 +66,20 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function Dashboard() {
   // Move all hooks to the top
+  const router = useRouter();
   const isMobile = useMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -83,6 +93,7 @@ export default function Dashboard() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [notApprovedDialog, setNotApprovedDialog] = useState(false);
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const canteenId = localStorage.getItem('canteenId');
@@ -461,8 +472,19 @@ export default function Dashboard() {
           menuItemsArray
         );
         setMenuItems(menuItemsArray);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching menu data:', error);
+
+        // Check for canteen not approved error
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          setLoading(false); // Stop loading when showing dialog
+          return; // Exit early to prevent other error handling
+        }
+
         setMenuItems([]); // Clear menu items on error
         toast({
           title: 'Error',
@@ -480,8 +502,19 @@ export default function Dashboard() {
           ? ordersData.data
           : [];
         setOrders(ordersToSet);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching orders data:', error);
+
+        // Check for canteen not approved error
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          setLoading(false); // Stop loading when showing dialog
+          return; // Exit early to prevent other error handling
+        }
+
         toast({
           title: 'Error',
           description: 'Failed to fetch orders',
@@ -494,16 +527,38 @@ export default function Dashboard() {
         const statsData = await getCanteenStats(canteenIdToUse, token);
         const statsToSet = statsData?.data || null;
         setCanteenStats(statsToSet);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching stats data:', error);
+
+        // Check for canteen not approved error
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          setLoading(false); // Stop loading when showing dialog
+          return; // Exit early to prevent other error handling
+        }
+
         toast({
           title: 'Error',
           description: 'Failed to fetch statistics',
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+
+      // Check for canteen not approved error
+      if (
+        error?.response?.status === 403 &&
+        error?.response?.data?.message?.toLowerCase().includes('not approved')
+      ) {
+        setNotApprovedDialog(true);
+        setLoading(false); // Stop loading when showing dialog
+        return;
+      }
+
       toast({
         title: 'Error',
         description: 'Failed to fetch data',
@@ -778,25 +833,13 @@ export default function Dashboard() {
     }
   };
 
-  // Debug: Add a timeout to prevent infinite loading
+  // Redirect to login if not authenticated
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn(
-          'Dashboard loading timeout reached - setting loading to false'
-        );
-        setLoading(false);
-        toast({
-          title: 'Loading Timeout',
-          description:
-            'Dashboard took too long to load. Please refresh the page.',
-          variant: 'destructive',
-        });
-      }
-    }, 10000); // 10 second timeout
-
-    return () => clearTimeout(timeout);
-  }, [loading, toast]);
+    if (!isAuthenticated || !user) {
+      router.push('/login');
+      return;
+    }
+  }, [isAuthenticated, user, router]);
 
   if (loading) {
     return (
@@ -822,14 +865,9 @@ export default function Dashboard() {
     );
   }
 
+  // Redirect handled by useEffect above
   if (!isAuthenticated || !user) {
-    return (
-      <div className='flex items-center justify-center min-h-screen bg-white'>
-        <div className='text-gray-600'>
-          Please log in to access the dashboard
-        </div>
-      </div>
-    );
+    return null; // Show nothing while redirecting
   }
 
   // Temporarily allow any authenticated user for testing
@@ -1066,6 +1104,33 @@ export default function Dashboard() {
           onStatusUpdate={handleOrderStatusUpdate}
         />
       )}
+
+      {/* Not Approved Dialog */}
+      <Dialog
+        open={notApprovedDialog}
+        onOpenChange={(open) => {
+          if (!open) setNotApprovedDialog(false);
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Canteen Not Approved</DialogTitle>
+            <DialogDescription>
+              Your canteen is not approved yet. Please wait for admin approval.
+              You can still view your dashboard, but some features may be
+              limited until approval.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              className='w-full bg-orange-600 hover:bg-orange-700'
+              onClick={() => {
+                setNotApprovedDialog(false);
+              }}>
+              Continue to Dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
