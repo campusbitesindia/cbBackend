@@ -21,7 +21,8 @@ const menuRoutes = require("./routes/menuRoutes")
 const securityRoutes = require("./routes/securityRoutes") // 🔐 Smart Security Routes
 const bankDetailsRoutes = require("./routes/bankDetailsRoutes") // Bank Details Routes
 const payoutRoutes = require("./routes/payoutRoutes") // Payout Routes
-// const groupOrderRoutes = require("./routes/groupOrderRoutes");
+const groupOrderRoutes = require("./routes/groupOrderRoutes");
+const vendorAnalyticsRoutes = require("./routes/vendorAnalyticsRoutes");
 
 const cookieParser = require("cookie-parser")
 const itemRoutes = require("./routes/itemRoutes")
@@ -91,7 +92,8 @@ app.use("/api/v1/notifications", notificationRoutes)
 app.use("/api/v1/search", advancedRoutes)
 app.use("/api/v1/bank-details", bankDetailsRoutes) // Bank Details API
 app.use("/api/v1/payouts", payoutRoutes) // Payout API
-// app.use("/api/v1/groupOrder", groupOrderRoutes)
+app.use("/api/v1/groupOrder", groupOrderRoutes)
+app.use("/api/v1/vendorAnalytics", vendorAnalyticsRoutes)
 
 // Redirect for Google OAuth to allow shorter URL
 app.get("/api/auth/google", (req, res) => {
