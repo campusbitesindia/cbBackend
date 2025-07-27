@@ -1062,7 +1062,9 @@ export default function Dashboard() {
           )}
 
           {/* Analytics Tab */}
-          {activeTab === 'analytics' && <AnalyticsTab orders={orders} />}
+          {activeTab === 'analytics' && canteenId && (
+            <AnalyticsTab canteenId={canteenId} />
+          )}
 
           {/* Profile Tab */}
           {activeTab === 'profile' && (
