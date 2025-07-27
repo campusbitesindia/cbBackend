@@ -87,3 +87,49 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Review {
+  _id: string;
+  student: {
+    _id: string;
+    name: string;
+  };
+  canteen: {
+    _id: string;
+    name: string;
+  };
+  item: {
+    _id: string;
+    name: string;
+    price: number;
+    image?: string;
+  };
+  rating: number;
+  comment: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReviewPayload {
+  canteenId: string;
+  itemId: string;
+  rating: number;
+  comment: string;
+}
+
+export interface ReviewsResponse {
+  success: boolean;
+  message: string;
+  data: Review[];
+}
+
+export interface AverageRatingResponse {
+  success: boolean;
+  message: string;
+  data: {
+    item?: Item;
+    canteen?: Canteen;
+    AverageRating: number;
+  };
+}
