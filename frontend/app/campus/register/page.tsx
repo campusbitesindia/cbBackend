@@ -376,12 +376,28 @@ export default function VendorOnboardingForm() {
       const canteenResponse = await createCanteen(backendPayload);
 
       if (!canteenResponse.success) {
-        // Check for not approved error from backend
+        // Check for not approved error from backend - treat as success for new registrations
         if (
           canteenResponse.message &&
           canteenResponse.message.toLowerCase().includes('not approved')
         ) {
-          setNotApprovedDialog(true);
+          // Show success message for new registration pending approval
+          toast({
+            title: 'Registration Successful! 🎉',
+            description:
+              'Your vendor account has been created successfully! Your canteen is now pending admin approval and will be verified within 24 hours.',
+          });
+
+          setSuccessMessage(
+            'Registration successful! Your canteen is pending admin approval and will be verified within 24 hours.'
+          );
+          setSubmitSuccess(true);
+
+          // Show success popup for 3 seconds, then redirect
+          setTimeout(() => {
+            setSubmitSuccess(false);
+            router.push('/campus/dashboard');
+          }, 3000);
           return;
         }
         throw new Error(canteenResponse.message || 'Canteen creation failed');

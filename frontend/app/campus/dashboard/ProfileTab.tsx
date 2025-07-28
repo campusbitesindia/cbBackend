@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Upload } from 'lucide-react';
+import {
+  Upload,
+  User,
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  CreditCard,
+  Shield,
+  CheckCircle,
+  AlertCircle,
+} from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { updateProfile, uploadProfileImage } from '@/services/userService';
@@ -159,384 +170,493 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   };
 
   return (
-    <div className='max-w-2xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-6 border border-gray-100'>
-      <h2 className='text-2xl font-bold text-gray-800 mb-2'>Vendor Profile</h2>
-      <Separator className='mb-6 bg-gray-200' />
+    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6'>
+      <div className='max-w-4xl mx-auto'>
+        {/* Header */}
+        <div className='mb-8'>
+          <h1 className='text-3xl font-bold text-slate-900 mb-2'>
+            Vendor Profile
+          </h1>
+          <p className='text-slate-600'>
+            Manage your business profile and payment details
+          </p>
+        </div>
 
-      {/* Personal Details Section */}
-      <div className='mb-6'>
-        <h3 className='text-xl font-semibold text-gray-700 mb-4'>
-          Personal Details
-        </h3>
-        <form
-          className='space-y-4'
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setPersonalSubmitting(true);
-            setPersonalSuccess(false);
-
-            try {
-              const token = localStorage.getItem('token') || '';
-              await updateProfile(personalData, token);
-
-              setPersonalSuccess(true);
-              toast({
-                title: 'Success',
-                description: 'Personal details updated successfully!',
-              });
-            } catch (error) {
-              console.error('Error updating personal details:', error);
-              toast({
-                title: 'Error',
-                description:
-                  error instanceof Error
-                    ? error.message
-                    : 'Failed to update personal details',
-                variant: 'destructive',
-              });
-            } finally {
-              setPersonalSubmitting(false);
-            }
-          }}>
-          {/* Profile Picture Upload */}
-          <div className='mb-6'>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              Profile Picture
-            </label>
-            <div className='flex items-center space-x-4'>
-              <div className='w-20 h-20 rounded-full overflow-hidden border-2 border-gray-200'>
-                {profilePicPreview ? (
-                  <img
-                    src={profilePicPreview}
-                    alt='Profile Preview'
-                    className='w-full h-full object-cover'
-                  />
-                ) : (
-                  <div className='w-full h-full bg-gray-100 flex items-center justify-center'>
-                    <Upload className='w-8 h-8 text-gray-400' />
-                  </div>
-                )}
-              </div>
-              <div>
-                <input
-                  id='profilePic'
-                  type='file'
-                  accept='image/*'
-                  onChange={handleProfilePicUpload}
-                  className='hidden'
-                />
-                <label
-                  htmlFor='profilePic'
-                  className='cursor-pointer bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-block'>
-                  Choose Image
-                </label>
-                <p className='text-xs text-gray-500 mt-1'>
-                  JPG, PNG or WebP. Max 5MB.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Vendor Name *
-              </label>
-              <input
-                type='text'
-                value={personalData.vendorName}
-                onChange={(e) =>
-                  setPersonalData({
-                    ...personalData,
-                    vendorName: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Contact Person *
-              </label>
-              <input
-                type='text'
-                value={personalData.contactPerson}
-                onChange={(e) =>
-                  setPersonalData({
-                    ...personalData,
-                    contactPerson: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Mobile Number *
-              </label>
-              <input
-                type='tel'
-                value={personalData.mobileNumber}
-                onChange={(e) =>
-                  setPersonalData({
-                    ...personalData,
-                    mobileNumber: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Email Address *
-              </label>
-              <input
-                type='email'
-                value={personalData.email}
-                onChange={(e) =>
-                  setPersonalData({ ...personalData, email: e.target.value })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              Business Address *
-            </label>
-            <textarea
-              value={personalData.address}
-              onChange={(e) =>
-                setPersonalData({ ...personalData, address: e.target.value })
-              }
-              rows={3}
-              className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-              required
-            />
-          </div>
-
-          <button
-            type='submit'
-            disabled={personalSubmitting}
-            className='w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'>
-            {personalSubmitting ? 'Updating...' : 'Update Personal Details'}
-          </button>
-
-          {personalSuccess && (
-            <div className='mt-2 p-3 bg-green-100 border border-green-300 text-green-700 rounded-lg'>
-              Personal details updated successfully!
-            </div>
-          )}
-        </form>
-      </div>
-
-      <Separator className='my-8 bg-gray-200' />
-
-      {/* Bank/Payout Details Section */}
-      <div className='mb-6'>
-        <h3 className='text-xl font-semibold text-gray-700 mb-4'>
-          Bank & Payout Details
-        </h3>
-        <form className='space-y-4' onSubmit={handleBankDetailsSubmit}>
-          {bankDetailsLoading && (
-            <div className='text-center py-4'>
-              <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto'></div>
-              <p className='text-gray-600 mt-2'>Loading bank details...</p>
-            </div>
-          )}
-
-          {existingBankDetails && (
-            <div className='mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg'>
-              <div className='flex items-center justify-between'>
+        <div className='grid gap-8 lg:grid-cols-1'>
+          {/* Personal Details Section */}
+          <div className='bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden'>
+            <div className='bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6'>
+              <div className='flex items-center space-x-3'>
+                <div className='p-2 bg-white/20 rounded-lg'>
+                  <User className='w-6 h-6 text-white' />
+                </div>
                 <div>
-                  <p className='text-sm font-medium text-blue-800'>
-                    Verification Status:{' '}
-                    {existingBankDetails.isVerified
-                      ? 'Verified'
-                      : 'Pending Verification'}
-                  </p>
-                  {existingBankDetails.verificationNotes && (
-                    <p className='text-xs text-blue-600 mt-1'>
-                      Notes: {existingBankDetails.verificationNotes}
-                    </p>
-                  )}
-                  <p className='text-xs text-blue-600 mt-1'>
-                    Note: For security reasons, you'll need to re-enter your
-                    account number when updating.
+                  <h2 className='text-xl font-semibold text-white'>
+                    Personal Details
+                  </h2>
+                  <p className='text-blue-100'>
+                    Update your business information
                   </p>
                 </div>
-                {existingBankDetails.isVerified && (
-                  <span className='px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full'>
-                    ✓ Verified
-                  </span>
-                )}
               </div>
             </div>
-          )}
 
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Account Holder Name *
-              </label>
-              <input
-                type='text'
-                value={bankDetails.accountHolderName}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    accountHolderName: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
+            <div className='p-8'>
+              <form
+                className='space-y-6'
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setPersonalSubmitting(true);
+                  setPersonalSuccess(false);
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Account Number *
-              </label>
-              <input
-                type='text'
-                value={bankDetails.accountNumber}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    accountNumber: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
+                  try {
+                    const token = localStorage.getItem('token') || '';
+                    await updateProfile(personalData, token);
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Confirm Account Number *
-              </label>
-              <input
-                type='text'
-                value={bankDetails.confirmAccountNumber}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    confirmAccountNumber: e.target.value,
-                  })
-                }
-                className={`w-full px-3 py-2 bg-white text-black border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  bankDetails.accountNumber &&
-                  bankDetails.confirmAccountNumber &&
-                  bankDetails.accountNumber !== bankDetails.confirmAccountNumber
-                    ? 'border-red-300 focus:ring-red-500'
-                    : 'border-gray-300'
-                }`}
-                required
-              />
-              {bankDetails.accountNumber &&
-                bankDetails.confirmAccountNumber &&
-                bankDetails.accountNumber !==
-                  bankDetails.confirmAccountNumber && (
-                  <p className='text-xs text-red-600 mt-1'>
-                    Account numbers do not match
-                  </p>
+                    setPersonalSuccess(true);
+                    toast({
+                      title: 'Success',
+                      description: 'Personal details updated successfully!',
+                    });
+                  } catch (error) {
+                    console.error('Error updating personal details:', error);
+                    toast({
+                      title: 'Error',
+                      description:
+                        error instanceof Error
+                          ? error.message
+                          : 'Failed to update personal details',
+                      variant: 'destructive',
+                    });
+                  } finally {
+                    setPersonalSubmitting(false);
+                  }
+                }}>
+                {/* Profile Picture Upload */}
+                <div className='bg-slate-50 rounded-xl p-6 border border-slate-200'>
+                  <label className='block text-sm font-semibold text-slate-700 mb-4'>
+                    Profile Picture
+                  </label>
+                  <div className='flex items-center space-x-6'>
+                    <div className='relative'>
+                      <div className='w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg'>
+                        {profilePicPreview ? (
+                          <img
+                            src={profilePicPreview}
+                            alt='Profile Preview'
+                            className='w-full h-full object-cover'
+                          />
+                        ) : (
+                          <div className='w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center'>
+                            <User className='w-10 h-10 text-slate-400' />
+                          </div>
+                        )}
+                      </div>
+                      <div className='absolute -bottom-2 -right-2 p-2 bg-blue-600 rounded-full shadow-lg'>
+                        <Upload className='w-4 h-4 text-white' />
+                      </div>
+                    </div>
+                    <div className='flex-1'>
+                      <input
+                        id='profilePic'
+                        type='file'
+                        accept='image/*'
+                        onChange={handleProfilePicUpload}
+                        className='hidden'
+                      />
+                      <label
+                        htmlFor='profilePic'
+                        className='inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors cursor-pointer shadow-md hover:shadow-lg'>
+                        <Upload className='w-4 h-4 mr-2' />
+                        Choose Image
+                      </label>
+                      <p className='text-sm text-slate-500 mt-2'>
+                        JPG, PNG or WebP. Max 5MB.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+                  <div className='space-y-2'>
+                    <label className='flex items-center text-sm font-semibold text-slate-700 mb-2'>
+                      <Building2 className='w-4 h-4 mr-2 text-slate-500' />
+                      Vendor Name *
+                    </label>
+                    <input
+                      type='text'
+                      value={personalData.vendorName}
+                      onChange={(e) =>
+                        setPersonalData({
+                          ...personalData,
+                          vendorName: e.target.value,
+                        })
+                      }
+                      className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-400'
+                      required
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label className='flex items-center text-sm font-semibold text-slate-700 mb-2'>
+                      <User className='w-4 h-4 mr-2 text-slate-500' />
+                      Contact Person *
+                    </label>
+                    <input
+                      type='text'
+                      value={personalData.contactPerson}
+                      onChange={(e) =>
+                        setPersonalData({
+                          ...personalData,
+                          contactPerson: e.target.value,
+                        })
+                      }
+                      className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-400'
+                      required
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label className='flex items-center text-sm font-semibold text-slate-700 mb-2'>
+                      <Phone className='w-4 h-4 mr-2 text-slate-500' />
+                      Mobile Number *
+                    </label>
+                    <input
+                      type='tel'
+                      value={personalData.mobileNumber}
+                      onChange={(e) =>
+                        setPersonalData({
+                          ...personalData,
+                          mobileNumber: e.target.value,
+                        })
+                      }
+                      className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-400'
+                      required
+                    />
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label className='flex items-center text-sm font-semibold text-slate-700 mb-2'>
+                      <Mail className='w-4 h-4 mr-2 text-slate-500' />
+                      Email Address *
+                    </label>
+                    <input
+                      type='email'
+                      value={personalData.email}
+                      onChange={(e) =>
+                        setPersonalData({
+                          ...personalData,
+                          email: e.target.value,
+                        })
+                      }
+                      className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-400'
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className='space-y-2'>
+                  <label className='flex items-center text-sm font-semibold text-slate-700 mb-2'>
+                    <MapPin className='w-4 h-4 mr-2 text-slate-500' />
+                    Business Address *
+                  </label>
+                  <textarea
+                    value={personalData.address}
+                    onChange={(e) =>
+                      setPersonalData({
+                        ...personalData,
+                        address: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-400 resize-none'
+                    required
+                  />
+                </div>
+
+                <div className='flex items-center space-x-4 pt-4'>
+                  <button
+                    type='submit'
+                    disabled={personalSubmitting}
+                    className='flex-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl'>
+                    {personalSubmitting ? (
+                      <>
+                        <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2'></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className='w-5 h-5 mr-2' />
+                        Update Personal Details
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {personalSuccess && (
+                  <div className='flex items-center p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl'>
+                    <CheckCircle className='w-5 h-5 mr-3 text-emerald-600' />
+                    <span className='font-medium'>
+                      Personal details updated successfully!
+                    </span>
+                  </div>
                 )}
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Bank Name *
-              </label>
-              <input
-                type='text'
-                value={bankDetails.bankName}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    bankName: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                IFSC Code *
-              </label>
-              <input
-                type='text'
-                value={bankDetails.ifscCode}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    ifscCode: e.target.value.toUpperCase(),
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                maxLength={11}
-                required
-              />
-            </div>
-
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Branch Name *
-              </label>
-              <input
-                type='text'
-                value={bankDetails.branchName}
-                onChange={(e) =>
-                  setBankDetails({
-                    ...bankDetails,
-                    branchName: e.target.value,
-                  })
-                }
-                className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                required
-              />
+              </form>
             </div>
           </div>
 
-          <div>
-            <label className='block text-sm font-medium text-gray-700 mb-1'>
-              UPI ID (Optional)
-            </label>
-            <input
-              type='text'
-              value={bankDetails.upiId}
-              onChange={(e) =>
-                setBankDetails({
-                  ...bankDetails,
-                  upiId: e.target.value,
-                })
-              }
-              className='w-full px-3 py-2 bg-white text-black border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-            />
-          </div>
-
-          <button
-            type='submit'
-            disabled={bankSubmitting}
-            className='w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors'>
-            {bankSubmitting ? 'Updating...' : 'Update Bank Details'}
-          </button>
-
-          {bankSuccess && (
-            <div className='mt-2 p-3 bg-green-100 border border-green-300 text-green-700 rounded-lg'>
-              Bank details updated successfully!
+          {/* Bank/Payout Details Section */}
+          <div className='bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden'>
+            <div className='bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-6'>
+              <div className='flex items-center space-x-3'>
+                <div className='p-2 bg-white/20 rounded-lg'>
+                  <CreditCard className='w-6 h-6 text-white' />
+                </div>
+                <div>
+                  <h2 className='text-xl font-semibold text-white'>
+                    Bank & Payout Details
+                  </h2>
+                  <p className='text-emerald-100'>Secure payment information</p>
+                </div>
+              </div>
             </div>
-          )}
-        </form>
+
+            <div className='p-8'>
+              <form className='space-y-6' onSubmit={handleBankDetailsSubmit}>
+                {bankDetailsLoading && (
+                  <div className='flex flex-col items-center justify-center py-12 space-y-4'>
+                    <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600'></div>
+                    <p className='text-slate-600 font-medium'>
+                      Loading bank details...
+                    </p>
+                  </div>
+                )}
+
+                {existingBankDetails && !bankDetailsLoading && (
+                  <div className='bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6'>
+                    <div className='flex items-start justify-between'>
+                      <div className='flex items-start space-x-3'>
+                        <div className='p-2 bg-blue-100 rounded-lg'>
+                          <Shield className='w-5 h-5 text-blue-600' />
+                        </div>
+                        <div className='flex-1'>
+                          <div className='flex items-center space-x-2 mb-2'>
+                            <h4 className='font-semibold text-slate-900'>
+                              Verification Status
+                            </h4>
+                            {existingBankDetails.isVerified ? (
+                              <span className='inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800'>
+                                <CheckCircle className='w-3 h-3 mr-1' />
+                                Verified
+                              </span>
+                            ) : (
+                              <span className='inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800'>
+                                <AlertCircle className='w-3 h-3 mr-1' />
+                                Pending
+                              </span>
+                            )}
+                          </div>
+                          {existingBankDetails.verificationNotes && (
+                            <p className='text-sm text-slate-600 mb-2'>
+                              <span className='font-medium'>Notes:</span>{' '}
+                              {existingBankDetails.verificationNotes}
+                            </p>
+                          )}
+                          <p className='text-sm text-slate-600'>
+                            <span className='font-medium'>
+                              Security Notice:
+                            </span>{' '}
+                            For security reasons, you'll need to re-enter your
+                            account number when updating.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!bankDetailsLoading && (
+                  <>
+                    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+                      <div className='space-y-2'>
+                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                          Account Holder Name *
+                        </label>
+                        <input
+                          type='text'
+                          value={bankDetails.accountHolderName}
+                          onChange={(e) =>
+                            setBankDetails({
+                              ...bankDetails,
+                              accountHolderName: e.target.value,
+                            })
+                          }
+                          className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-slate-400'
+                          required
+                        />
+                      </div>
+
+                      <div className='space-y-2'>
+                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                          Bank Name *
+                        </label>
+                        <input
+                          type='text'
+                          value={bankDetails.bankName}
+                          onChange={(e) =>
+                            setBankDetails({
+                              ...bankDetails,
+                              bankName: e.target.value,
+                            })
+                          }
+                          className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-slate-400'
+                          required
+                        />
+                      </div>
+
+                      <div className='space-y-2'>
+                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                          Account Number *
+                        </label>
+                        <input
+                          type='text'
+                          value={bankDetails.accountNumber}
+                          onChange={(e) =>
+                            setBankDetails({
+                              ...bankDetails,
+                              accountNumber: e.target.value,
+                            })
+                          }
+                          className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-slate-400'
+                          required
+                        />
+                      </div>
+
+                      <div className='space-y-2'>
+                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                          Confirm Account Number *
+                        </label>
+                        <input
+                          type='text'
+                          value={bankDetails.confirmAccountNumber}
+                          onChange={(e) =>
+                            setBankDetails({
+                              ...bankDetails,
+                              confirmAccountNumber: e.target.value,
+                            })
+                          }
+                          className={`w-full px-4 py-3 bg-white text-slate-900 border rounded-xl focus:ring-2 transition-all duration-200 hover:border-slate-400 ${
+                            bankDetails.accountNumber &&
+                            bankDetails.confirmAccountNumber &&
+                            bankDetails.accountNumber !==
+                              bankDetails.confirmAccountNumber
+                              ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                              : 'border-slate-300 focus:ring-emerald-500 focus:border-emerald-500'
+                          }`}
+                          required
+                        />
+                        {bankDetails.accountNumber &&
+                          bankDetails.confirmAccountNumber &&
+                          bankDetails.accountNumber !==
+                            bankDetails.confirmAccountNumber && (
+                            <div className='flex items-center space-x-2 mt-2'>
+                              <AlertCircle className='w-4 h-4 text-red-500' />
+                              <p className='text-sm text-red-600 font-medium'>
+                                Account numbers do not match
+                              </p>
+                            </div>
+                          )}
+                      </div>
+
+                      <div className='space-y-2'>
+                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                          IFSC Code *
+                        </label>
+                        <input
+                          type='text'
+                          value={bankDetails.ifscCode}
+                          onChange={(e) =>
+                            setBankDetails({
+                              ...bankDetails,
+                              ifscCode: e.target.value.toUpperCase(),
+                            })
+                          }
+                          className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-slate-400'
+                          maxLength={11}
+                          required
+                        />
+                      </div>
+
+                      <div className='space-y-2'>
+                        <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                          Branch Name *
+                        </label>
+                        <input
+                          type='text'
+                          value={bankDetails.branchName}
+                          onChange={(e) =>
+                            setBankDetails({
+                              ...bankDetails,
+                              branchName: e.target.value,
+                            })
+                          }
+                          className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-slate-400'
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <label className='block text-sm font-semibold text-slate-700 mb-2'>
+                        UPI ID (Optional)
+                      </label>
+                      <input
+                        type='text'
+                        value={bankDetails.upiId}
+                        onChange={(e) =>
+                          setBankDetails({
+                            ...bankDetails,
+                            upiId: e.target.value,
+                          })
+                        }
+                        className='w-full px-4 py-3 bg-white text-slate-900 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 hover:border-slate-400'
+                        placeholder='example@upi'
+                      />
+                    </div>
+
+                    <div className='flex items-center space-x-4 pt-4'>
+                      <button
+                        type='submit'
+                        disabled={bankSubmitting}
+                        className='flex-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl'>
+                        {bankSubmitting ? (
+                          <>
+                            <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2'></div>
+                            Updating...
+                          </>
+                        ) : (
+                          <>
+                            <Shield className='w-5 h-5 mr-2' />
+                            Update Bank Details
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {bankSuccess && (
+                      <div className='flex items-center p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl'>
+                        <CheckCircle className='w-5 h-5 mr-3 text-emerald-600' />
+                        <span className='font-medium'>
+                          Bank details updated successfully!
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
