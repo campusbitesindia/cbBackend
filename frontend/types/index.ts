@@ -42,6 +42,7 @@ export interface Item {
   rating: number;
   isVeg: boolean;
   canteen: string;
+  isReady: boolean;
 }
 
 export interface Order {

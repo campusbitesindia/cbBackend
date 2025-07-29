@@ -42,7 +42,10 @@ const CanteenMenuPage = () => {
   const [menuItems, setMenuItems] = useState<Item[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [selectedItemType, setSelectedItemType] = useState('all'); // For 'All Items' dropdown
+  const [selectedItemType, setSelectedItemType] = useState('all');
+  const [under99Filter, setUnder99Filter] = useState(false);
+  const [isReadyFilter, setIsReadyFilter] = useState(false);
+  const [priceRange, setPriceRange] = useState([0, 1000]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,7 +55,7 @@ const CanteenMenuPage = () => {
           const res = await fetch(`${API_ENDPOINTS.CANTEENS}/${canteenId}`);
           if (!res.ok) throw new Error('Failed to fetch canteen details');
           const data = await res.json();
-          setCanteen(data.canteen); // Changed from data.data to data.canteen to match backend response
+          setCanteen(data.canteen);
         } catch (error) {
           console.error(error);
           toast({
@@ -94,8 +97,11 @@ const CanteenMenuPage = () => {
 
   const itemTypes = [
     { label: `All Items (${menuItems.length})`, value: 'all' },
-    // You can add more item types if needed
   ];
+
+  const maxPrice = menuItems.length > 0 
+    ? Math.ceil(Math.max(...menuItems.map(item => item.price || 0)))
+    : 1000;
 
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesCategory =
@@ -104,8 +110,11 @@ const CanteenMenuPage = () => {
     const matchesSearch = item.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    // You can add more filters for itemTypes if needed
-    return matchesCategory && matchesSearch;
+    const matchesUnder99 = !under99Filter || (item.price && item.price < 99);
+    const matchesPriceRange = 
+      item.price && item.price >= priceRange[0] && item.price <= priceRange[1];
+    const matchesIsReady = !isReadyFilter || item.isReady === true;
+    return matchesCategory && matchesSearch && matchesUnder99 && matchesPriceRange && matchesIsReady;
   });
 
   const getCartItemQuantity = (itemId: string) =>
@@ -137,6 +146,16 @@ const CanteenMenuPage = () => {
       });
     } else {
       updateQuantity(item._id, currentQuantity - 1);
+    }
+  };
+
+  const handlePriceRangeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const [min, max] = priceRange;
+    const value = Number(e.target.value);
+    if (e.target.id === 'min-price') {
+      setPriceRange([Math.min(value, max), max]);
+    } else {
+      setPriceRange([min, Math.max(value, min)]);
     }
   };
 
@@ -200,43 +219,90 @@ const CanteenMenuPage = () => {
 
       <div className='container mx-auto px-4 py-8'>
         {/* Filter Bar */}
-        <div className='flex flex-col md:flex-row gap-4 mb-8 items-center'>
-          <div className='relative w-full md:w-1/2'>
-            <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5' />
-            <Input
-              type='text'
-              placeholder='Search menu items by name...'
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className='pl-10'
-            />
+        <div className='flex flex-col gap-6 mb-8 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700'>
+          <div className='flex flex-col md:flex-row gap-4 items-center'>
+            <div className='relative w-full md:w-1/3'>
+              <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5' />
+              <Input
+                type='text'
+                placeholder='Search menu items by name...'
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className='pl-10 rounded-lg border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500'
+              />
+            </div>
+            <select
+              className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
+              value={selectedItemType}
+              onChange={(e) => setSelectedItemType(e.target.value)}>
+              {itemTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
-          <select
-            className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-w-[160px]'
-            value={selectedItemType}
-            onChange={(e) => setSelectedItemType(e.target.value)}>
-            {itemTypes.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-          <select
-            className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-white min-w-[160px]'
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+          <div className='flex flex-col sm:flex-row gap-4 items-center'>
+            <div className='flex items-center gap-4'>
+              <label className='flex items-center gap-2 text-gray-900 dark:text-white cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={under99Filter}
+                  onChange={(e) => setUnder99Filter(e.target.checked)}
+                  className='h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
+                />
+                <span className='text-sm font-medium'>Under ₹99</span>
+              </label>
+              <label className='flex items-center gap-2 text-gray-900 dark:text-white cursor-pointer'>
+                <input
+                  type='checkbox'
+                  checked={isReadyFilter}
+                  onChange={(e) => setIsReadyFilter(e.target.checked)}
+                  className='h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600'
+                />
+                <span className='text-sm font-medium'>Quick Bites</span>
+              </label>
+            </div>
+            <div className='flex flex-col w-full sm:w-auto'>
+              <span className='text-gray-900 dark:text-white text-sm font-medium mb-2'>
+                Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
+              </span>
+              <div className='flex gap-4'>
+                <input
+                  type='range'
+                  id='min-price'
+                  min='0'
+                  max={maxPrice}
+                  value={priceRange[0]}
+                  onChange={handlePriceRangeChange}
+                  className='w-full sm:w-32 accent-blue-500'
+                />
+                <input
+                  type='range'
+                  id='max-price'
+                  min='0'
+                  max={maxPrice}
+                  value={priceRange[1]}
+                  onChange={handlePriceRangeChange}
+                  className='w-full sm:w-32 accent-blue-500'
+                />
+              </div>
+            </div>
+          </div>
         </div>
         {/* End Filter Bar */}
         <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
-          {/* Removed aside with categories */}
           <main className='md:col-span-4'>
-            {/* Removed old search input here, now in filter bar above */}
             {filteredMenuItems.length > 0 ? (
               <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
                 {filteredMenuItems.map((item) => {
@@ -259,13 +325,11 @@ const CanteenMenuPage = () => {
                             <Utensils className='w-12 h-12 text-gray-400' />
                           </div>
                         )}
-                        {/* Top-left Active badge */}
                         <div className='absolute top-3 left-3 z-10'>
                           <Badge className='bg-green-500 text-white rounded-full px-3 py-1 text-xs shadow'>
                             Active
                           </Badge>
                         </div>
-                        {/* Top-right VEG/NON-VEG badge */}
                         <div className='absolute top-3 right-3 z-10'>
                           <Badge
                             className={
