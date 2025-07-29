@@ -12,6 +12,7 @@ import {
   DialogTrigger,
   DialogDescription,
 } from '@/components/ui/dialog';
+
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -51,7 +52,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { getMyOrders, getOrderById, AuthError } from '@/services/orderService';
-import { createReview } from '@/services/reviewService';
+import { createReview, getItemReviews } from '@/services/reviewService';
 import { toast } from 'sonner';
 import {
   motion,
@@ -60,6 +61,7 @@ import {
   useSpring,
   useTransform,
 } from 'framer-motion';
+import ItemReviewSelector from '@/components/ItemReviewSelector';
 
 // Shared Helper Functions
 const getStatusConfig = (status: string) => {
@@ -188,7 +190,7 @@ export default function OrdersPage() {
   const [orderDetailLoading, setOrderDetailLoading] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // Review related state
+  // Review related state - simplified
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [selectedItemForReview, setSelectedItemForReview] = useState<any>(null);
   const [selectedOrderForReview, setSelectedOrderForReview] =
@@ -196,8 +198,42 @@ export default function OrdersPage() {
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [showItemSelection, setShowItemSelection] = useState(false);
   const [showThankYouDialog, setShowThankYouDialog] = useState(false);
+
+  // View reviews related state - simplified
+  const [showViewReviewDialog, setShowViewReviewDialog] = useState(false);
+  const [selectedItemForViewReview, setSelectedItemForViewReview] =
+    useState<any>(null);
+  const [existingReviews, setExistingReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  // Item review selector dialog state
+  const [showItemSelectorDialog, setShowItemSelectorDialog] = useState(false);
+  const [selectedOrderForSelector, setSelectedOrderForSelector] =
+    useState<Order | null>(null);
+
+  // Frontend-only state for tracking viewed reviews (no backend update)
+  const [viewedReviews, setViewedReviews] = useState<Set<string>>(new Set());
+
+  // Load viewed reviews from localStorage on component mount
+  useEffect(() => {
+    const savedViewedReviews = localStorage.getItem('viewedReviews');
+    if (savedViewedReviews) {
+      try {
+        const parsed = JSON.parse(savedViewedReviews);
+        setViewedReviews(new Set(parsed));
+      } catch (error) {
+        console.error('Error loading viewed reviews:', error);
+      }
+    }
+  }, []);
+
+  // Save viewed reviews to localStorage whenever it changes
+  useEffect(() => {
+    if (viewedReviews.size > 0) {
+      localStorage.setItem('viewedReviews', JSON.stringify([...viewedReviews]));
+    }
+  }, [viewedReviews]);
 
   useEffect(() => {
     if (isAuthenticated && token) {
@@ -217,7 +253,7 @@ export default function OrdersPage() {
       items: apiOrder.items.map((item: any) => ({
         _id: item._id,
         item: {
-          _id: item.item || '',
+          _id: typeof item.item === 'string' ? item.item : item.item?._id || '',
           name: item.nameAtPurchase || 'Unknown Item',
           price: item.priceAtPurchase || 0,
           image: undefined, // API doesn't provide image in this response
@@ -372,12 +408,17 @@ export default function OrdersPage() {
 
     setReviewSubmitting(true);
     try {
+      const itemId =
+        typeof selectedItemForReview.item === 'string'
+          ? selectedItemForReview.item
+          : selectedItemForReview.item._id;
+
+      console.log('Writing review for item ID:', itemId);
+      console.log('Selected item structure:', selectedItemForReview);
+
       const reviewData = {
         canteenId: selectedOrderForReview.canteen._id,
-        itemId:
-          typeof selectedItemForReview.item === 'string'
-            ? selectedItemForReview.item
-            : selectedItemForReview.item._id,
+        itemId,
         rating: reviewRating,
         comment: reviewComment.trim(),
       };
@@ -393,12 +434,108 @@ export default function OrdersPage() {
 
       // Show thank you dialog
       setShowThankYouDialog(true);
+
+      // If user has view review dialog open for the same item, refresh the reviews
+      if (showViewReviewDialog && selectedItemForViewReview) {
+        const viewItemId =
+          typeof selectedItemForViewReview.item === 'string'
+            ? selectedItemForViewReview.item
+            : selectedItemForViewReview.item._id;
+        if (viewItemId === itemId) {
+          console.log('Refreshing reviews after creating new review');
+          // Add a small delay to ensure the backend has processed the review
+          setTimeout(() => {
+            fetchItemReviews(itemId);
+          }, 1000);
+        }
+      }
     } catch (error) {
       console.error('Error submitting review:', error);
       toast.error('Failed to submit review. Please try again.');
     } finally {
       setReviewSubmitting(false);
     }
+  };
+
+  // View review helper functions
+  const handleViewReviews = (order: Order, item: any) => {
+    setSelectedOrderForReview(order);
+    setSelectedItemForViewReview(item);
+
+    const itemId = typeof item.item === 'string' ? item.item : item.item._id;
+    console.log('🔍 Viewing reviews for item ID:', itemId);
+    console.log('📦 Item structure:', item);
+    console.log('🏪 Order structure:', order);
+    console.log('🆔 Order ID:', order._id);
+    console.log('🍽️ Item name:', item.item?.name || 'Unknown');
+
+    // Mark this item's reviews as viewed (frontend-only, no backend update)
+    setViewedReviews((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(itemId);
+      return newSet;
+    });
+
+    setShowViewReviewDialog(true);
+    // Add a small delay to ensure any recently submitted reviews are fetched
+    setTimeout(() => {
+      fetchItemReviews(itemId);
+    }, 500);
+  };
+
+  // Item selector helper functions
+  const handleOpenItemSelector = (order: Order) => {
+    setSelectedOrderForSelector(order);
+    setShowItemSelectorDialog(true);
+  };
+
+  const handleItemSelectorWriteReview = (item: any) => {
+    if (selectedOrderForSelector) {
+      setShowItemSelectorDialog(false);
+      handleWriteReview(selectedOrderForSelector, item);
+    }
+  };
+
+  const handleItemSelectorViewReviews = (item: any) => {
+    if (selectedOrderForSelector) {
+      handleViewReviews(selectedOrderForSelector, item);
+    }
+  };
+
+  const fetchItemReviews = async (itemId: string) => {
+    setReviewsLoading(true);
+    try {
+      console.log('Fetching reviews for item ID:', itemId);
+      const reviews = await getItemReviews(itemId);
+      console.log('Fetched reviews:', reviews);
+      console.log('Review count:', reviews.length);
+      console.log('First review (if exists):', reviews[0]);
+      setExistingReviews(reviews);
+
+      if (reviews.length === 0) {
+        toast.info('No reviews found for this item yet.');
+      } else {
+        toast.success(`Found ${reviews.length} review(s) for this item.`);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      toast.error('Failed to load reviews');
+      setExistingReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  // Helper function to check if an item's reviews have been viewed (frontend-only)
+  const hasViewedReviews = (itemId: string) => {
+    return viewedReviews.has(itemId);
+  };
+
+  // Helper function to clear viewed reviews (frontend-only utility)
+  const clearViewedReviews = () => {
+    setViewedReviews(new Set());
+    localStorage.removeItem('viewedReviews');
+    toast.success('Viewed reviews cleared! 🧹');
   };
 
   // Reorder functionality
@@ -469,7 +606,7 @@ export default function OrdersPage() {
             transition={{ duration: 0.6 }}>
             <div className='relative'>
               <motion.div
-                className='w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-8 shadow-2xl'
+                className='w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-2xl'
                 animate={{
                   scale: [1, 1.1, 1],
                   rotate: [0, 5, -5, 0],
@@ -479,10 +616,10 @@ export default function OrdersPage() {
                   repeat: Infinity,
                   ease: 'easeInOut',
                 }}>
-                <Loader2 className='h-10 w-10 text-white animate-spin' />
+                <Loader2 className='h-8 w-8 sm:h-10 sm:w-10 text-white animate-spin' />
               </motion.div>
               <motion.div
-                className='absolute -inset-6 bg-gradient-to-r from-orange-200/40 via-red-200/40 to-pink-200/40 dark:from-orange-500/20 dark:via-red-500/20 dark:to-pink-500/20 rounded-3xl blur-2xl'
+                className='absolute -inset-4 sm:-inset-6 bg-gradient-to-r from-orange-200/40 via-red-200/40 to-pink-200/40 dark:from-orange-500/20 dark:via-red-500/20 dark:to-pink-500/20 rounded-3xl blur-2xl'
                 animate={{
                   scale: [1, 1.2, 1],
                   opacity: [0.3, 0.6, 0.3],
@@ -502,10 +639,10 @@ export default function OrdersPage() {
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}>
-              <p className='text-gray-700 dark:text-slate-300 text-lg font-medium mb-2'>
+              <p className='text-gray-700 dark:text-slate-300 text-base sm:text-lg font-medium mb-1 sm:mb-2'>
                 Loading your orders...
               </p>
-              <p className='text-gray-500 dark:text-slate-400 text-sm'>
+              <p className='text-gray-500 dark:text-slate-400 text-xs sm:text-sm'>
                 This won't take long
               </p>
             </motion.div>
@@ -607,12 +744,32 @@ export default function OrdersPage() {
         <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
           <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
             <div>
-              <h1 className='text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
+              <h1 className='text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
                 My Orders
               </h1>
-              <p className='text-gray-600 dark:text-slate-300 mt-2 text-sm sm:text-base'>
+              <p className='text-gray-600 dark:text-slate-300 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base'>
                 Track your delicious journey across campus
               </p>
+            </div>
+            {/* Utility actions */}
+            <div className='flex items-center gap-2 sm:gap-3'>
+              {viewedReviews.size > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className='flex items-center gap-1.5 sm:gap-2'>
+                  <Badge className='bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs sm:text-sm px-2 sm:px-3 py-1'>
+                    {viewedReviews.size} viewed
+                  </Badge>
+                  <Button
+                    onClick={clearViewedReviews}
+                    variant='ghost'
+                    size='sm'
+                    className='text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 h-6 px-1.5 sm:px-2'>
+                    Clear
+                  </Button>
+                </motion.div>
+              )}
             </div>
           </div>
         </div>
@@ -624,18 +781,18 @@ export default function OrdersPage() {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className='text-center py-16 lg:py-24'>
-            <div className='max-w-md mx-auto'>
+            className='text-center py-12 sm:py-16 lg:py-24'>
+            <div className='max-w-sm sm:max-w-md mx-auto px-4 sm:px-0'>
               <motion.div
-                className='w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 rounded-2xl flex items-center justify-center'
+                className='w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 rounded-2xl flex items-center justify-center'
                 whileHover={{ scale: 1.05, rotate: 5 }}
                 transition={{ type: 'spring', stiffness: 300 }}>
-                <Inbox className='w-12 h-12 text-orange-500' />
+                <Inbox className='w-10 h-10 sm:w-12 sm:h-12 text-orange-500' />
               </motion.div>
-              <h3 className='text-2xl font-bold text-gray-900 dark:text-white mb-4'>
+              <h3 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4'>
                 No orders yet
               </h3>
-              <p className='text-gray-600 dark:text-gray-300 mb-8 leading-relaxed'>
+              <p className='text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base'>
                 Start your food journey by exploring our amazing campus
                 restaurants and placing your first order.
               </p>
@@ -644,9 +801,9 @@ export default function OrdersPage() {
                 whileTap={{ scale: 0.98 }}>
                 <Button
                   asChild
-                  className='bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300'>
+                  className='w-full sm:w-auto bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base'>
                   <Link href='/menu'>
-                    <Plus className='w-5 h-5 mr-2' />
+                    <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
                     Browse Menu
                   </Link>
                 </Button>
@@ -680,10 +837,7 @@ export default function OrdersPage() {
                       index={index}
                       onViewDetails={handleViewDetails}
                       onReorder={handleReorder}
-                      onWriteReview={() => {
-                        setSelectedOrderForReview(order);
-                        setShowItemSelection(true);
-                      }}
+                      onOpenItemSelector={() => handleOpenItemSelector(order)}
                       orderDetailLoading={orderDetailLoading}
                       isDetailModalOpen={isDetailModalOpen}
                       setIsDetailModalOpen={setIsDetailModalOpen}
@@ -724,10 +878,7 @@ export default function OrdersPage() {
                       index={index}
                       onViewDetails={handleViewDetails}
                       onReorder={handleReorder}
-                      onWriteReview={() => {
-                        setSelectedOrderForReview(order);
-                        setShowItemSelection(true);
-                      }}
+                      onOpenItemSelector={() => handleOpenItemSelector(order)}
                       orderDetailLoading={orderDetailLoading}
                       isDetailModalOpen={isDetailModalOpen}
                       setIsDetailModalOpen={setIsDetailModalOpen}
@@ -742,148 +893,167 @@ export default function OrdersPage() {
 
       {/* Dialogs remain the same but with improved mobile responsiveness */}
       {/* Item Selection Dialog for Review */}
-      <Dialog open={showItemSelection} onOpenChange={setShowItemSelection}>
-        <DialogContent className='max-w-2xl max-h-[80vh] overflow-y-auto mx-4'>
-          <DialogHeader>
-            <DialogTitle className='text-xl font-bold'>
-              Select Item to Review
-            </DialogTitle>
-            <DialogDescription className='text-base'>
-              Choose an item from this order to write a review
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedOrderForReview && (
-            <div className='space-y-4'>
-              {selectedOrderForReview.items.map((orderItem, index) => (
-                <Card
-                  key={`${orderItem._id}-${index}`}
-                  className='hover:shadow-lg transition-all duration-300 border-0 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm'>
-                  <CardContent className='p-4'>
-                    <div className='flex items-center justify-between flex-wrap gap-4'>
-                      <div className='flex items-center space-x-4 flex-1 min-w-0'>
-                        <div className='relative w-16 h-16 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0'>
-                          <Image
-                            src={orderItem.item?.image || '/placeholder.svg'}
-                            alt={orderItem.item?.name || 'Item'}
-                            fill
-                            className='object-cover'
-                          />
-                        </div>
-                        <div className='flex-1 min-w-0'>
-                          <h3 className='font-semibold text-lg text-gray-900 dark:text-white truncate'>
-                            {orderItem.item?.name}
-                          </h3>
-                          <div className='flex items-center gap-4 mt-1 text-sm text-gray-600 dark:text-gray-400'>
-                            <span>Qty: {orderItem.quantity}</span>
-                            <span>₹{orderItem.item?.price}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        size='sm'
-                        className='bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg'
-                        onClick={() => {
-                          handleWriteReview(selectedOrderForReview, orderItem);
-                          setShowItemSelection(false);
-                        }}>
-                        <Star className='w-4 h-4 mr-1' />
-                        Write Review
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Write Review Dialog */}
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-        <DialogContent className='max-w-2xl mx-4'>
-          <DialogHeader>
-            <DialogTitle className='text-xl font-bold'>
-              Write a Review
+        <DialogContent className='max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl max-h-[85vh] overflow-y-auto mx-2 sm:mx-4 bg-white dark:bg-slate-900 border-0 shadow-2xl'>
+          <DialogHeader className='text-center pb-4 sm:pb-6 border-b border-gray-100 dark:border-slate-800'>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className='flex justify-center mb-3 sm:mb-4'>
+              <div className='w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-xl'>
+                <Star className='w-8 h-8 sm:w-10 sm:h-10 text-white fill-current' />
+              </div>
+            </motion.div>
+            <DialogTitle className='text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent'>
+              Share Your Experience
             </DialogTitle>
-            <DialogDescription className='text-base'>
-              Share your experience with {selectedItemForReview?.item?.name}{' '}
-              from {selectedOrderForReview?.canteen?.name}
+            <DialogDescription className='text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed px-2 sm:px-0'>
+              Tell others about your experience with{' '}
+              <span className='font-semibold text-orange-600 dark:text-orange-400'>
+                {selectedItemForReview?.item?.name}
+              </span>{' '}
+              from{' '}
+              <span className='font-semibold text-blue-600 dark:text-blue-400'>
+                {selectedOrderForReview?.canteen?.name}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmitReview} className='space-y-6'>
-            <div>
-              <label className='block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300'>
-                Rating
+          <form
+            onSubmit={handleSubmitReview}
+            className='space-y-6 sm:space-y-8 pt-4 sm:pt-6'>
+            {/* Item Preview Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className='bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-700 rounded-2xl p-4 sm:p-6 border border-gray-200 dark:border-slate-700'>
+              <div className='flex items-center gap-3 sm:gap-4'>
+                <div className='relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0 shadow-lg'>
+                  <Image
+                    src={
+                      selectedItemForReview?.item?.image || '/placeholder.svg'
+                    }
+                    alt={selectedItemForReview?.item?.name || 'Item'}
+                    fill
+                    className='object-cover'
+                  />
+                </div>
+                <div className='flex-1 min-w-0'>
+                  <h3 className='font-bold text-base sm:text-lg text-gray-900 dark:text-white truncate'>
+                    {selectedItemForReview?.item?.name}
+                  </h3>
+                  <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400 truncate'>
+                    {selectedOrderForReview?.canteen?.name}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Rating Section */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}>
+              <label className='block text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-gray-200'>
+                How would you rate this item?
               </label>
-              <div className='flex items-center space-x-2'>
+              <div className='flex items-center justify-center space-x-2 sm:space-x-3 p-4 sm:p-6 bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 dark:from-yellow-900/20 dark:via-orange-900/20 dark:to-red-900/20 rounded-2xl border border-yellow-200 dark:border-yellow-800'>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <motion.button
                     key={star}
                     type='button'
-                    className='cursor-pointer transition-all duration-200'
+                    className='cursor-pointer transition-all duration-300 hover:scale-110 focus:outline-none focus:ring-4 focus:ring-yellow-300 dark:focus:ring-yellow-600 rounded-full p-1 sm:p-2'
                     onClick={() => setReviewRating(star)}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}>
+                    whileHover={{ scale: 1.2, rotate: 10 }}
+                    whileTap={{ scale: 0.9 }}>
                     <Star
-                      className={`w-8 h-8 transition-colors ${
+                      className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 ${
                         star <= reviewRating
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300 dark:text-gray-600'
+                          ? 'fill-yellow-400 text-yellow-400 drop-shadow-lg'
+                          : 'text-gray-300 dark:text-gray-600 hover:text-yellow-300'
                       }`}
                     />
                   </motion.button>
                 ))}
               </div>
-            </div>
+              {reviewRating > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className='text-center mt-2 sm:mt-3'>
+                  <span className='inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 rounded-full text-xs sm:text-sm font-medium'>
+                    {reviewRating} Star{reviewRating !== 1 ? 's' : ''} Selected
+                  </span>
+                </motion.div>
+              )}
+            </motion.div>
 
-            <div>
-              <label className='block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300'>
-                Comment
+            {/* Comment Section */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}>
+              <label className='block text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-800 dark:text-gray-200'>
+                Share your thoughts
               </label>
-              <Textarea
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-                placeholder='Share your experience with this item...'
-                rows={5}
-                required
-                className='resize-none'
-              />
-            </div>
+              <div className='relative'>
+                <Textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder='What did you love about this item? Was it delicious? Fresh? Would you recommend it to others?'
+                  rows={4}
+                  required
+                  className='resize-none border-2 border-gray-200 dark:border-slate-700 rounded-xl px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base leading-relaxed focus:border-orange-400 dark:focus:border-orange-500 focus:ring-4 focus:ring-orange-100 dark:focus:ring-orange-900/30 transition-all duration-300 bg-white dark:bg-slate-800'
+                />
+                <div className='absolute bottom-2 sm:bottom-3 right-2 sm:right-3 text-xs text-gray-400 dark:text-gray-500'>
+                  {reviewComment.length}/500
+                </div>
+              </div>
+            </motion.div>
 
-            <div className='flex gap-3 justify-end pt-4'>
+            {/* Action Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className='flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end pt-4 sm:pt-6 border-t border-gray-100 dark:border-slate-800'>
               <Button
                 type='button'
                 variant='outline'
-                onClick={() => setShowReviewDialog(false)}>
+                onClick={() => setShowReviewDialog(false)}
+                className='w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 border-2 border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all duration-300 text-sm sm:text-base'>
                 Cancel
               </Button>
               <Button
                 type='submit'
-                disabled={reviewSubmitting}
-                className='bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'>
+                disabled={reviewSubmitting || reviewRating === 0}
+                className='w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base'>
                 {reviewSubmitting ? (
                   <>
-                    <Loader2 className='w-4 h-4 mr-2 animate-spin' />
-                    Submitting...
+                    <Loader2 className='w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin' />
+                    Saving...
                   </>
                 ) : (
-                  'Submit Review'
+                  <>
+                    <Heart className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
+                    Save Review
+                  </>
                 )}
               </Button>
-            </div>
+            </motion.div>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Thank You Dialog */}
       <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
-        <DialogContent className='max-w-md text-center mx-4'>
+        <DialogContent className='max-w-sm sm:max-w-md text-center mx-2 sm:mx-4'>
           <DialogHeader>
-            <div className='flex justify-center mb-6'>
+            <div className='flex justify-center mb-4 sm:mb-6'>
               <motion.div
-                className='w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl'
+                className='w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center shadow-2xl'
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{
@@ -894,26 +1064,26 @@ export default function OrdersPage() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.4 }}>
-                  <Heart className='w-12 h-12 text-white fill-current' />
+                  <Heart className='w-10 h-10 sm:w-12 sm:h-12 text-white fill-current' />
                 </motion.div>
               </motion.div>
             </div>
-            <DialogTitle className='text-2xl font-bold text-gray-900 dark:text-white mb-4'>
+            <DialogTitle className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4'>
               Thank You! 🎉
             </DialogTitle>
-            <DialogDescription className='text-gray-600 dark:text-gray-300 text-base leading-relaxed mb-8'>
-              Your review has been submitted successfully! Your feedback helps
-              us improve our service and makes other students happy! ✨
+            <DialogDescription className='text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed mb-6 sm:mb-8 px-2 sm:px-0'>
+              Your review has been saved successfully! Your feedback helps us
+              improve our service and makes other students happy! ✨
             </DialogDescription>
           </DialogHeader>
 
           <motion.div
-            className='space-y-6'
+            className='space-y-4 sm:space-y-6'
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.4 }}>
-            <div className='bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-4 rounded-xl border border-orange-200 dark:border-orange-800'>
-              <p className='text-sm text-gray-700 dark:text-gray-300'>
+            <div className='bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 p-3 sm:p-4 rounded-xl border border-orange-200 dark:border-orange-800'>
+              <p className='text-xs sm:text-sm text-gray-700 dark:text-gray-300'>
                 <strong>🌟 Your voice matters!</strong> Thanks for helping
                 fellow students make great food choices.
               </p>
@@ -921,12 +1091,278 @@ export default function OrdersPage() {
 
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
-                onClick={() => setShowThankYouDialog(false)}
-                className='w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 py-3'>
+                onClick={() => {
+                  setShowThankYouDialog(false);
+                  if (selectedItemForReview && selectedOrderForReview) {
+                    // Force refresh reviews to show the newly created/updated review
+                    handleViewReviews(
+                      selectedOrderForReview,
+                      selectedItemForReview
+                    );
+                  }
+                }}
+                className='w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 py-2.5 sm:py-3 mb-2 sm:mb-3 text-sm sm:text-base'>
+                <MessageSquare className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
+                View My Review
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => {
+                  setShowThankYouDialog(false);
+                }}
+                variant='outline'
+                className='w-full border-2 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50 shadow-lg hover:shadow-xl transition-all duration-300 py-2.5 sm:py-3 text-sm sm:text-base'>
                 Continue Exploring
               </Button>
             </motion.div>
           </motion.div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Reviews Dialog */}
+      <Dialog
+        open={showViewReviewDialog}
+        onOpenChange={setShowViewReviewDialog}>
+        <DialogContent className='max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-y-auto mx-2 sm:mx-4 bg-white dark:bg-slate-900 border-0 shadow-2xl'>
+          <DialogHeader className='pb-4 sm:pb-6 border-b border-gray-100 dark:border-slate-800'>
+            <div className='flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-3 sm:mb-4'>
+              <div className='w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-xl mx-auto sm:mx-0'>
+                <MessageSquare className='w-6 h-6 sm:w-8 sm:h-8 text-white' />
+              </div>
+              <div className='flex-1 text-center sm:text-left'>
+                <DialogTitle className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white'>
+                  Customer Reviews
+                </DialogTitle>
+                <DialogDescription className='text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1'>
+                  <span className='font-semibold text-orange-600 dark:text-orange-400'>
+                    {selectedItemForViewReview?.item?.name}
+                  </span>{' '}
+                  from{' '}
+                  <span className='font-semibold text-blue-600 dark:text-blue-400'>
+                    {selectedOrderForReview?.canteen?.name}
+                  </span>
+                </DialogDescription>
+              </div>
+            </div>
+
+            {/* Reviews Stats */}
+            {existingReviews.length > 0 && (
+              <div className='grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4'>
+                <div className='bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-3 sm:p-4 text-center border border-blue-200 dark:border-blue-800'>
+                  <div className='text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400'>
+                    {existingReviews.length}
+                  </div>
+                  <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
+                    Total Reviews
+                  </div>
+                </div>
+                <div className='bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl p-3 sm:p-4 text-center border border-yellow-200 dark:border-yellow-800'>
+                  <div className='text-xl sm:text-2xl font-bold text-yellow-600 dark:text-yellow-400'>
+                    {existingReviews.length > 0
+                      ? (
+                          existingReviews.reduce(
+                            (sum, review) => sum + (review.rating || 0),
+                            0
+                          ) / existingReviews.length
+                        ).toFixed(1)
+                      : '0.0'}
+                    ★
+                  </div>
+                  <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
+                    Average Rating
+                  </div>
+                </div>
+                <div className='bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-3 sm:p-4 text-center border border-green-200 dark:border-green-800'>
+                  <div className='text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400'>
+                    {Math.round(
+                      (existingReviews.filter((r) => (r.rating || 0) >= 4)
+                        .length /
+                        existingReviews.length) *
+                        100
+                    ) || 0}
+                    %
+                  </div>
+                  <div className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
+                    Positive
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogHeader>
+
+          <div className='space-y-4 sm:space-y-6 pt-4 sm:pt-6'>
+            {reviewsLoading ? (
+              <div className='flex flex-col items-center justify-center py-12 sm:py-16'>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  className='w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mb-3 sm:mb-4 shadow-xl'>
+                  <Loader2 className='h-6 w-6 sm:h-8 sm:w-8 text-white' />
+                </motion.div>
+                <p className='text-gray-600 dark:text-gray-400 text-base sm:text-lg font-medium'>
+                  Loading reviews...
+                </p>
+                <p className='text-gray-500 dark:text-gray-500 text-xs sm:text-sm mt-1'>
+                  Please wait while we fetch the latest reviews
+                </p>
+              </div>
+            ) : existingReviews.length > 0 ? (
+              <div className='space-y-4 sm:space-y-6'>
+                {existingReviews.map((review, index) => (
+                  <motion.div
+                    key={review._id || index}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className='group'>
+                    <Card className='border-0 bg-gradient-to-br from-white via-gray-50/50 to-white dark:from-slate-800 dark:via-slate-800/50 dark:to-slate-700 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden'>
+                      <CardContent className='p-4 sm:p-6 md:p-8'>
+                        <div className='flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6'>
+                          {/* Avatar */}
+                          <div className='relative flex-shrink-0 mx-auto sm:mx-0'>
+                            <div className='w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg'>
+                              {review.student?.name?.charAt(0)?.toUpperCase() ||
+                                'A'}
+                            </div>
+                            <motion.div
+                              className='absolute -inset-2 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 rounded-3xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300'
+                              initial={false}
+                            />
+                          </div>
+
+                          <div className='flex-1 min-w-0'>
+                            {/* Header */}
+                            <div className='flex flex-col gap-3 mb-3 sm:mb-4'>
+                              <div className='text-center sm:text-left'>
+                                <h4 className='font-bold text-base sm:text-lg text-gray-900 dark:text-white'>
+                                  {review.student?.name || 'Anonymous Student'}
+                                </h4>
+                                {(review.createdAt || review.updatedAt) && (
+                                  <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1'>
+                                    {review.updatedAt &&
+                                    review.updatedAt !== review.createdAt
+                                      ? `Updated on ${formatDate(
+                                          review.updatedAt
+                                        )}`
+                                      : `Posted on ${formatDate(
+                                          review.createdAt || review.updatedAt
+                                        )}`}
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Rating */}
+                              <div className='flex items-center justify-center sm:justify-start gap-2 bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 px-3 sm:px-4 py-2 rounded-full border border-yellow-200 dark:border-yellow-800 w-fit mx-auto sm:mx-0'>
+                                <div className='flex items-center'>
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                                        star <= (review.rating || 0)
+                                          ? 'fill-yellow-400 text-yellow-400'
+                                          : 'text-gray-300 dark:text-gray-600'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <span className='text-xs sm:text-sm font-semibold text-yellow-700 dark:text-yellow-400'>
+                                  {review.rating || 0}/5
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Comment */}
+                            <div className='bg-white/60 dark:bg-slate-800/60 rounded-xl p-4 sm:p-5 border border-gray-200 dark:border-slate-700'>
+                              <p className='text-gray-700 dark:text-gray-300 leading-relaxed text-sm sm:text-base'>
+                                "{review.comment}"
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className='text-center py-12 sm:py-16'>
+                <div className='w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-slate-700 dark:to-slate-600 rounded-2xl flex items-center justify-center shadow-lg'>
+                  <MessageSquare className='w-10 h-10 sm:w-12 sm:h-12 text-gray-400 dark:text-gray-500' />
+                </div>
+                <h3 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2 sm:mb-3'>
+                  No Reviews Yet
+                </h3>
+                <p className='text-gray-600 dark:text-gray-400 text-sm sm:text-base mb-4 sm:mb-6 max-w-md mx-auto leading-relaxed px-4 sm:px-0'>
+                  This item hasn't been reviewed yet. Be the first to share your
+                  experience and help other students!
+                </p>
+                <Button
+                  onClick={() => {
+                    setShowViewReviewDialog(false);
+                    if (selectedItemForViewReview && selectedOrderForReview) {
+                      handleWriteReview(
+                        selectedOrderForReview,
+                        selectedItemForViewReview
+                      );
+                    }
+                  }}
+                  className='bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3'>
+                  <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
+                  Write First Review
+                </Button>
+              </motion.div>
+            )}
+          </div>
+
+          <div className='flex justify-end pt-4 sm:pt-6 border-t border-gray-100 dark:border-slate-800 mt-6 sm:mt-8'>
+            <Button
+              onClick={() => setShowViewReviewDialog(false)}
+              className='w-full sm:w-auto px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base'>
+              Close Reviews
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Item Review Selector Dialog */}
+      <Dialog
+        open={showItemSelectorDialog}
+        onOpenChange={setShowItemSelectorDialog}>
+        <DialogContent className='max-w-xs sm:max-w-lg md:max-w-xl lg:max-w-2xl max-h-[85vh] overflow-y-auto mx-2 sm:mx-4 bg-white dark:bg-slate-900 border-0 shadow-2xl'>
+          <DialogHeader className='pb-3 sm:pb-4 border-b border-gray-100 dark:border-slate-800'>
+            <DialogTitle className='text-lg sm:text-xl font-bold text-gray-900 dark:text-white text-center sm:text-left'>
+              Review Your Order Items
+            </DialogTitle>
+            <DialogDescription className='text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 text-center sm:text-left px-1 sm:px-0'>
+              Share your experience with items from{' '}
+              <span className='font-semibold text-blue-600 dark:text-blue-400'>
+                {selectedOrderForSelector?.canteen?.name}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrderForSelector && (
+            <ItemReviewSelector
+              order={selectedOrderForSelector}
+              onWriteReview={handleItemSelectorWriteReview}
+              onViewReviews={handleItemSelectorViewReviews}
+              hasViewedReviews={hasViewedReviews}
+              className='pt-3 sm:pt-4'
+            />
+          )}
+
+          <div className='flex justify-end pt-3 sm:pt-4 border-t border-gray-100 dark:border-slate-800 mt-4 sm:mt-6'>
+            <Button
+              onClick={() => setShowItemSelectorDialog(false)}
+              variant='outline'
+              className='w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 border-2 border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-800 transition-all duration-300 text-xs sm:text-sm'>
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -939,7 +1375,7 @@ function OrderCard({
   index,
   onViewDetails,
   onReorder,
-  onWriteReview,
+  onOpenItemSelector,
   orderDetailLoading,
   isDetailModalOpen,
   setIsDetailModalOpen,
@@ -949,7 +1385,7 @@ function OrderCard({
   index: number;
   onViewDetails: (orderId: string) => void;
   onReorder: (order: Order) => void;
-  onWriteReview: () => void;
+  onOpenItemSelector: () => void;
   orderDetailLoading: boolean;
   isDetailModalOpen: boolean;
   setIsDetailModalOpen: (open: boolean) => void;
@@ -1039,39 +1475,41 @@ function OrderCard({
           </div>
 
           {/* Order Items Preview */}
-          <div className='space-y-3 mb-6'>
+          <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
             {order.items.slice(0, 3).map((item, itemIndex) => (
               <motion.div
                 key={item._id}
-                className='flex items-center gap-4 p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
+                className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 + itemIndex * 0.05 }}>
-                <div className='relative w-14 h-14 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
-                  <Image
-                    src={item.item?.image || '/placeholder.svg'}
-                    alt={item.item?.name || 'Item'}
-                    fill
-                    className='object-cover'
-                  />
+                <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
+                  <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
+                    <Image
+                      src={item.item?.image || '/placeholder.svg'}
+                      alt={item.item?.name || 'Item'}
+                      fill
+                      className='object-cover'
+                    />
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                    <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
+                      {item.item?.name || 'Item No Longer Available'}
+                    </h4>
+                    <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
+                      Qty: {item.quantity}
+                    </p>
+                  </div>
                 </div>
-                <div className='flex-1 min-w-0'>
-                  <h4 className='font-semibold text-gray-900 dark:text-white truncate text-base'>
-                    {item.item?.name || 'Item No Longer Available'}
-                  </h4>
-                  <p className='text-sm text-gray-600 dark:text-gray-400'>
-                    Qty: {item.quantity}
-                  </p>
-                </div>
-                <div className='text-right'>
-                  <p className='font-semibold text-gray-800 dark:text-gray-200 text-base'>
+                <div className='text-right flex-shrink-0'>
+                  <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
                     ₹{(item.quantity * (item.item?.price || 0)).toFixed(2)}
                   </p>
                 </div>
               </motion.div>
             ))}
             {order.items.length > 3 && (
-              <div className='text-center py-3 text-gray-500 dark:text-gray-400 text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
+              <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
                 +{order.items.length - 3} more item
                 {order.items.length - 3 !== 1 ? 's' : ''}
               </div>
@@ -1087,29 +1525,33 @@ function OrderCard({
               <span className='text-sm'>{statusConfig.description}</span>
             </div>
 
-            <div className='flex flex-wrap gap-3'>
+            {/* Responsive Button Container */}
+            <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto'>
               <Dialog
                 open={isDetailModalOpen}
                 onOpenChange={setIsDetailModalOpen}>
                 <DialogTrigger asChild>
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}>
+                    whileTap={{ scale: 0.98 }}
+                    className='w-full sm:w-auto'>
                     <Button
                       variant='outline'
-                      className='border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50'
+                      size='sm'
+                      className='w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50 transition-all duration-300'
                       onClick={() => onViewDetails(order._id)}
                       disabled={orderDetailLoading}>
                       {orderDetailLoading ? (
-                        <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                        <Loader2 className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin' />
                       ) : (
-                        <Eye className='w-4 h-4 mr-2' />
+                        <Eye className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
                       )}
-                      View Details
+                      <span className='sm:hidden'>Details</span>
+                      <span className='hidden sm:inline'>View Details</span>
                     </Button>
                   </motion.div>
                 </DialogTrigger>
-                <DialogContent className='max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-4'>
+                <DialogContent className='max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4'>
                   {orderDetailLoading ? (
                     <>
                       <DialogHeader>
@@ -1169,22 +1611,27 @@ function OrderCard({
                 <>
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}>
+                    whileTap={{ scale: 0.98 }}
+                    className='w-full sm:w-auto'>
                     <Button
+                      onClick={onOpenItemSelector}
                       variant='outline'
-                      className='border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50'
-                      onClick={onWriteReview}>
-                      <Star className='w-4 h-4 mr-2' />
-                      Review
+                      size='sm'
+                      className='w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm border-2 border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-950/30 dark:hover:to-red-950/30 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold'>
+                      <Star className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current' />
+                      <span className='sm:hidden'>Review</span>
+                      <span className='hidden sm:inline'>Write Reviews</span>
                     </Button>
                   </motion.div>
                   <motion.div
                     whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}>
+                    whileTap={{ scale: 0.98 }}
+                    className='w-full sm:w-auto'>
                     <Button
                       onClick={() => onReorder(order)}
-                      className='bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300'>
-                      <RefreshCw className='w-4 h-4 mr-2' />
+                      size='sm'
+                      className='w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold'>
+                      <RefreshCw className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
                       Reorder
                     </Button>
                   </motion.div>
@@ -1266,16 +1713,16 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
   };
 
   return (
-    <div className='grid lg:grid-cols-2 gap-8 py-6'>
+    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 py-6'>
       {/* Order Timeline */}
       <div>
-        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2'>
-          <Truck className='w-5 h-5' />
+        <h3 className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2'>
+          <Truck className='w-4 h-4 sm:w-5 sm:h-5' />
           Order Timeline
         </h3>
-        <div className='space-y-6 relative'>
+        <div className='space-y-3 sm:space-y-4 md:space-y-6 relative'>
           {/* Progress Line */}
-          <div className='absolute left-6 top-6 bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700'>
+          <div className='absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700'>
             <motion.div
               className='bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top'
               initial={{ scaleY: 0 }}
@@ -1293,12 +1740,12 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
             return (
               <motion.div
                 key={step.status}
-                className='flex items-center gap-4 relative z-10'
+                className='flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10'
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.2 }}>
                 <motion.div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-900 shadow-lg ${
+                  className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 sm:border-3 md:border-4 border-white dark:border-slate-900 shadow-lg ${
                     step.completed
                       ? step.status === 'cancelled'
                         ? 'bg-red-500'
@@ -1310,16 +1757,16 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                   transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
                   whileHover={{ scale: 1.1 }}>
                   <StepIcon
-                    className={`w-6 h-6 ${
+                    className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ${
                       step.completed
                         ? 'text-white'
                         : 'text-gray-400 dark:text-slate-500'
                     }`}
                   />
                 </motion.div>
-                <div className='flex-1'>
+                <div className='flex-1 min-w-0'>
                   <motion.div
-                    className={`font-medium text-base ${
+                    className={`font-medium text-xs sm:text-sm md:text-base ${
                       step.completed
                         ? 'text-gray-800 dark:text-gray-200'
                         : 'text-gray-400 dark:text-slate-500'
@@ -1331,7 +1778,7 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                   </motion.div>
                   {step.completed && order.status === step.status && (
                     <motion.div
-                      className='text-sm text-green-600 dark:text-green-400 font-medium'
+                      className='text-xs text-green-600 dark:text-green-400 font-medium'
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.2 + 0.7 }}>
@@ -1348,20 +1795,20 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
       {/* Restaurant & Payment Info */}
       <div className='space-y-6'>
         <div>
-          <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
-            <MapPin className='w-5 h-5' />
+          <h3 className='text-sm sm:text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4 flex items-center gap-2'>
+            <MapPin className='w-4 h-4 sm:w-5 sm:h-5' />
             Restaurant Details
           </h3>
-          <Card className='p-6 bg-gray-50/80 border-gray-200 dark:bg-slate-800/80 dark:border-slate-700 backdrop-blur-sm'>
-            <div className='flex items-center gap-4'>
-              <div className='w-14 h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg'>
-                <ChefHat className='w-7 h-7 text-white' />
+          <Card className='p-3 sm:p-4 md:p-6 bg-gray-50/80 border-gray-200 dark:bg-slate-800/80 dark:border-slate-700 backdrop-blur-sm'>
+            <div className='flex items-center gap-2 sm:gap-3 md:gap-4'>
+              <div className='w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg'>
+                <ChefHat className='w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white' />
               </div>
-              <div>
-                <h4 className='font-semibold text-gray-800 dark:text-gray-200 text-lg'>
+              <div className='min-w-0'>
+                <h4 className='font-semibold text-gray-800 dark:text-gray-200 text-sm sm:text-base md:text-lg truncate'>
                   {order.canteen?.name || 'Unknown Restaurant'}
                 </h4>
-                <p className='text-sm text-gray-600 dark:text-gray-400'>
+                <p className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
                   Campus Restaurant
                 </p>
               </div>
@@ -1371,22 +1818,22 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
 
         {order.payment && (
           <div>
-            <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2'>
-              <CreditCard className='w-5 h-5' />
+            <h3 className='text-sm sm:text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4 flex items-center gap-2'>
+              <CreditCard className='w-4 h-4 sm:w-5 sm:h-5' />
               Payment Information
             </h3>
-            <Card className='p-6 bg-gray-50/80 border-gray-200 dark:bg-slate-800/80 dark:border-slate-700 backdrop-blur-sm'>
-              <div className='space-y-4'>
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600 dark:text-gray-400'>
+            <Card className='p-3 sm:p-4 md:p-6 bg-gray-50/80 border-gray-200 dark:bg-slate-800/80 dark:border-slate-700 backdrop-blur-sm'>
+              <div className='space-y-2 sm:space-y-3 md:space-y-4'>
+                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                  <span className='text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400'>
                     Method:
                   </span>
-                  <span className='font-medium capitalize dark:text-gray-200 text-base'>
+                  <span className='font-medium capitalize dark:text-gray-200 text-xs sm:text-sm md:text-base'>
                     {order.payment.method}
                   </span>
                 </div>
-                <div className='flex justify-between items-center'>
-                  <span className='text-gray-600 dark:text-gray-400'>
+                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                  <span className='text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400'>
                     Status:
                   </span>
                   <Badge
@@ -1396,16 +1843,16 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                         : order.payment.status === 'pending'
                         ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
                         : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                    } border-0`}>
+                    } border-0 text-xs w-fit`}>
                     {order.payment.status}
                   </Badge>
                 </div>
                 {order.payment.transactionId && (
-                  <div className='flex justify-between items-center'>
-                    <span className='text-gray-600 dark:text-gray-400'>
+                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
+                    <span className='text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400'>
                       Transaction ID:
                     </span>
-                    <span className='font-mono text-sm dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded'>
+                    <span className='font-mono text-xs sm:text-sm dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded break-all sm:break-normal'>
                       {order.payment.transactionId}
                     </span>
                   </div>
@@ -1429,55 +1876,85 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}>
-              <Card className='p-6 border-gray-200 dark:border-slate-700 dark:bg-slate-800/50 hover:shadow-lg transition-all duration-300 backdrop-blur-sm'>
-                <div className='flex items-center gap-6'>
-                  <div className='relative w-20 h-20 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0'>
-                    <Image
-                      src={item.item?.image || '/placeholder.svg'}
-                      alt={item.item?.name || 'Item'}
-                      fill
-                      className='object-cover'
-                    />
-                  </div>
-                  <div className='flex-1'>
-                    <h4 className='font-semibold text-gray-800 dark:text-gray-200 text-lg'>
-                      {item.item?.name || 'Item No Longer Available'}
-                    </h4>
-                    <div className='flex items-center gap-6 mt-3'>
-                      <div className='flex items-center gap-2'>
-                        <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                          Quantity:
-                        </span>
-                        <span className='font-medium text-gray-800 dark:text-gray-200'>
-                          {item.quantity || 'N/A'}
-                        </span>
-                      </div>
-                      <div className='flex items-center gap-2'>
-                        <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                          Unit Price:
-                        </span>
-                        <span className='font-medium text-gray-800 dark:text-gray-200'>
-                          ₹{item.item?.price || 0}
-                        </span>
-                      </div>
+              <Card className='p-4 sm:p-6 border-gray-200 dark:border-slate-700 dark:bg-slate-800/50 hover:shadow-lg transition-all duration-300 backdrop-blur-sm'>
+                <div className='flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6'>
+                  {/* Image and basic info */}
+                  <div className='flex items-center gap-4 flex-1'>
+                    <div className='relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0'>
+                      <Image
+                        src={item.item?.image || '/placeholder.svg'}
+                        alt={item.item?.name || 'Item'}
+                        fill
+                        className='object-cover'
+                      />
                     </div>
-                    {(!item.item ||
-                      item.item.name === 'Item No Longer Available') && (
-                      <p className='text-sm text-red-500 italic mt-2'>
-                        This item may have been removed from the menu
-                      </p>
-                    )}
-                  </div>
-                  <div className='text-right'>
-                    <div className='text-2xl font-bold text-gray-800 dark:text-gray-200'>
-                      ₹
-                      {((item.quantity || 0) * (item.item?.price || 0)).toFixed(
-                        2
+                    <div className='flex-1 min-w-0'>
+                      <h4 className='font-semibold text-gray-800 dark:text-gray-200 text-base sm:text-lg'>
+                        {item.item?.name || 'Item No Longer Available'}
+                      </h4>
+                      {/* Mobile: Show quantity and price inline */}
+                      <div className='flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 sm:hidden'>
+                        <div className='flex items-center gap-1'>
+                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
+                            Qty:
+                          </span>
+                          <span className='font-medium text-gray-800 dark:text-gray-200 text-sm'>
+                            {item.quantity || 'N/A'}
+                          </span>
+                        </div>
+                        <div className='flex items-center gap-1'>
+                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
+                            Unit:
+                          </span>
+                          <span className='font-medium text-gray-800 dark:text-gray-200 text-sm'>
+                            ₹{item.item?.price || 0}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Desktop: Show quantity and price in separate layout */}
+                      <div className='hidden sm:flex sm:items-center sm:gap-6 mt-3'>
+                        <div className='flex items-center gap-2'>
+                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
+                            Quantity:
+                          </span>
+                          <span className='font-medium text-gray-800 dark:text-gray-200'>
+                            {item.quantity || 'N/A'}
+                          </span>
+                        </div>
+                        <div className='flex items-center gap-2'>
+                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
+                            Unit Price:
+                          </span>
+                          <span className='font-medium text-gray-800 dark:text-gray-200'>
+                            ₹{item.item?.price || 0}
+                          </span>
+                        </div>
+                      </div>
+                      {(!item.item ||
+                        item.item.name === 'Item No Longer Available') && (
+                        <p className='text-sm text-red-500 italic mt-2'>
+                          This item may have been removed from the menu
+                        </p>
                       )}
                     </div>
-                    <p className='text-sm text-gray-500 dark:text-gray-400 mt-1'>
-                      Subtotal
-                    </p>
+                  </div>
+
+                  {/* Price section */}
+                  <div className='flex justify-between sm:block sm:text-right flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200 dark:border-slate-700'>
+                    <span className='text-sm text-gray-600 dark:text-gray-400 sm:hidden'>
+                      Total:
+                    </span>
+                    <div className='sm:text-right'>
+                      <div className='text-lg sm:text-2xl font-bold text-gray-800 dark:text-gray-200'>
+                        ₹
+                        {(
+                          (item.quantity || 0) * (item.item?.price || 0)
+                        ).toFixed(2)}
+                      </div>
+                      <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 hidden sm:block'>
+                        Subtotal
+                      </p>
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -1490,12 +1967,12 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}>
-          <Card className='mt-8 p-8 bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 dark:bg-gradient-to-r dark:from-slate-800 dark:to-slate-700 dark:border-slate-700 shadow-lg'>
-            <div className='flex justify-between items-center'>
-              <div className='text-xl font-semibold text-gray-800 dark:text-gray-200'>
+          <Card className='mt-6 sm:mt-8 p-6 sm:p-8 bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 dark:bg-gradient-to-r dark:from-slate-800 dark:to-slate-700 dark:border-slate-700 shadow-lg'>
+            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0'>
+              <div className='text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-200'>
                 Total Amount
               </div>
-              <div className='text-4xl font-bold text-gray-900 dark:text-gray-100'>
+              <div className='text-2xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100'>
                 ₹{order.total.toFixed(2)}
               </div>
             </div>
