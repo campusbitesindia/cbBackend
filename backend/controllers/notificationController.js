@@ -1,37 +1,8 @@
-const sendNotification = require('../utils/notify');
 const Notification = require('../models/Notification');
 const SendNotification=require("../utils/sendNotification")
 
 const User =require("../models/User")
-// POST /api/notifications/user
-exports.sendNotificationToUser = async (req, res) => {
-  try {
-    const { userId, message, type = 'order' } = req.body;
-
-    if (!userId || !message) {
-      return res.status(400).json({ success: false, message: "Missing userId or message" });
-    }
-
-    // 🔥 Save in DB
-    const dbNotif = await Notification.create({
-      user: userId,
-      message,
-      type,
-    });
-
-    // 🔥 Send via socket
-    sendNotification(`user_${userId}`, {
-      type,
-      message,
-      timestamp: dbNotif.createdAt,
-    });
-
-    return res.status(200).json({ success: true, notification: dbNotif });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-// works
+// POST /api/notifications/usere
 
 // GET /api/notifications/user/:id
 exports.getUserNotifications = async (req, res) => {

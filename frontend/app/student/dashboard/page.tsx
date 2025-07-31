@@ -25,7 +25,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Canteen } from '@/types';
 import { useCart } from '@/context/cart-context';
-import { useNotificationToast } from '@/hooks/use-notification';
+
 import { useAuth } from '@/context/auth-context';
 import NotificationList from '@/components/notification-list';
 
@@ -39,7 +39,7 @@ export default function StudentDashboard() {
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
 
-  useNotificationToast();
+
 
   // Fetch user profile to get campus ID
   useEffect(() => {

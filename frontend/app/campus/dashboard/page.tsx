@@ -22,7 +22,6 @@ import {
 } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
-import { useNotificationToast } from '@/hooks/use-notification';
 import axios from 'axios';
 import { DashboardSidebar } from '@/app/campus/dashboard/DashboardSidebar';
 import { OverviewTab } from '@/app/campus/dashboard/OverviewTab';
@@ -137,7 +136,6 @@ export default function Dashboard() {
   const [bankSubmitting, setBankSubmitting] = useState(false);
   const [bankSuccess, setBankSuccess] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  useNotificationToast();
 
   // Type for breadcrumb items
   type BreadcrumbItem = {

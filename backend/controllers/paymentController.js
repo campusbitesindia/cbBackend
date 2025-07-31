@@ -31,18 +31,10 @@ const createPaymentOrder = async (req, res) => {
     }
 
     // Check if user owns the order
-    if (order.student._id.toString() !== userId) {
+       if (order.student._id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized access to order",
-      })
-    }
-
-    // Check if order is in correct status
-    if (order.status !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "please Create a New Order",
       })
     }
 
