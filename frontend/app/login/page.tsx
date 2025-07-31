@@ -188,13 +188,25 @@ export default function LoginPage() {
               <div className='relative'>
                 <div className='w-32 h-32 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-gentle shadow-2xl relative overflow-hidden'>
                   <div className='absolute inset-0 bg-gradient-to-r from-orange-400 to-red-400 rounded-full animate-spin-slow opacity-20'></div>
-                  <Image
-                    src='/placeholder.svg?height=80&width=80'
-                    alt='Campus Bites Logo'
-                    width={80}
-                    height={80}
-                    className='rounded-full relative z-10'
-                  />
+                  <div className='relative z-10 flex items-center justify-center w-full h-full'>
+                    <span className='text-5xl font-black text-white relative select-none'>
+                      <span
+                        className='absolute inset-0 text-5xl font-black bg-gradient-to-r from-white via-yellow-200 to-white bg-clip-text text-transparent animate-pulse'
+                        style={{
+                          filter: 'blur(1px)',
+                        }}>
+                        CB
+                      </span>
+                      <span
+                        className='relative text-white'
+                        style={{
+                          textShadow:
+                            '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.7), 0 0 30px rgba(255,255,255,0.5), 0 0 40px rgba(255,204,0,0.8), 0 0 70px rgba(255,204,0,0.6), 0 0 80px rgba(255,204,0,0.4), 0 0 100px rgba(255,204,0,0.3)',
+                        }}>
+                        CB
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 {/* Orbiting Elements */}
                 <div className='absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 w-4 h-4 bg-yellow-400 rounded-full animate-orbit'></div>
@@ -272,15 +284,18 @@ export default function LoginPage() {
                       render={({ field }) => (
                         <FormItem>
                           {/* Remove the label for visual consistency */}
-                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                              <SelectTrigger
-                              className="bg-white/10 border-white/20 text-white rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-100 focus:border-transparent w-full"
-                            >
-                              <SelectValue placeholder="Select your role" />
-                              </SelectTrigger>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            defaultValue={field.value}>
+                            <SelectTrigger className='bg-white/10 border-white/20 text-white rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-100 focus:border-transparent w-full'>
+                              <SelectValue placeholder='Select your role' />
+                            </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="student">Student</SelectItem>
-                              <SelectItem value="campus">Campus Partner</SelectItem>
+                              <SelectItem value='student'>Student</SelectItem>
+                              <SelectItem value='campus'>
+                                Campus Partner
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
