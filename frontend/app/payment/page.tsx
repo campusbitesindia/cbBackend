@@ -46,8 +46,7 @@ export default function PaymentPage() {
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "upi">("cod");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Added: allow user or backend to set a custom transaction ID
-  const customTransactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+ 
 
   // Query param
   const orderId = searchParams.get("orderId");
@@ -65,7 +64,7 @@ export default function PaymentPage() {
             },
           }
         );
-
+        
         if (!response.data.success) {
           throw new Error(response.data.message || "Failed to get order details");
         }
@@ -75,7 +74,7 @@ export default function PaymentPage() {
         };
         setOrderDetails(filteredData);
       } catch (err: any) {
-        console.error(err);
+        console.log(err);
         toast({
           variant: "destructive",
           title: "Error fetching order",
@@ -219,6 +218,7 @@ export default function PaymentPage() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err: any) {
+      console.log(err)
       toast({
         variant: "destructive",
         title: "Payment Initialization Failed",
@@ -245,10 +245,7 @@ export default function PaymentPage() {
       else {
         await openRazorpay(paymentData);
       }
-      toast({
-        title: "Payment submitted",
-        description: `Payment method: ${paymentMethod.toUpperCase()}`,
-      });
+
     } 
     catch (error: any) {
       toast({

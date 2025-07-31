@@ -1095,7 +1095,7 @@ exports.getSuspectedUser=async(req,res)=>{
         });
       }
     }
-      console.log("userssssss withhhhhhh penaltyyyyy",UsersWithPenalty);
+      
       if(UsersWithPenalty.length===0){
         return res.status(400).json({
           success:false,
