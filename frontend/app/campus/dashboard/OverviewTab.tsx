@@ -25,9 +25,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       {/* Hero Section */}
       <div className='relative overflow-hidden bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white'>
         <div className='absolute inset-0 bg-black/10'></div>
-        <div className='relative px-6 py-12'>
+        <div className='relative px-6 py-16 pb-20'>
           <div className='max-w-7xl mx-auto'>
-            <div className='text-center space-y-4'>
+            <div className='text-center space-y-6'>
               <div className='inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium'>
                 <Star className='w-4 h-4 mr-2' />
                 Campus Vendor Partner
@@ -35,7 +35,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <h1 className='text-4xl md:text-5xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent'>
                 Dashboard Overview
               </h1>
-              <p className='text-xl text-blue-100 max-w-2xl mx-auto'>
+              <p className='text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed'>
                 Welcome back! Here's a comprehensive view of your canteen's
                 performance and key metrics.
               </p>
