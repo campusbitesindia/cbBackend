@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search, Loader2 } from 'lucide-react';
 import api from '@/lib/axios';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface SearchResult {
   _id: string;
@@ -15,14 +17,16 @@ interface Props {
   setQuery: (q: string) => void;
   open: boolean;
   setOpen: (o: boolean) => void;
+  onSearch?: (query: string) => void;
 }
 
-export default function GlobalSearchDropdown({ query, setQuery, open, setOpen }: Props) {
+export default function GlobalSearchDropdown({ query, setQuery, open, setOpen, onSearch }: Props) {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<{ [type: string]: SearchResult[] }>({});
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter()
 
   // Debounce search
   useEffect(() => {
@@ -67,15 +71,36 @@ export default function GlobalSearchDropdown({ query, setQuery, open, setOpen }:
 
   return (
     <div className="relative w-full">
-      <div className="flex items-center gap-2 bg-white/90 dark:bg-gray-900/90 border border-gray-200/50 dark:border-gray-700/50 rounded-xl px-3 py-2 shadow-sm">
+      <div className="flex items-center gap-2 bg-white/90 dark:bg-gray-900/90 border-2 border-gray-200/50 dark:border-gray-700/50 rounded-xl px-5 py-2.5 shadow-lg">
         <Search className="w-5 h-5 text-gray-400" />
         <Input
           ref={inputRef}
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => {
+            setQuery(e.target.value); 
+            setError('');
+          }}
           placeholder="Search for items, dishes, or canteens..."
           className="flex-1 bg-transparent border-none focus:ring-0 text-base"
           onFocus={() => query && setOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              // Try to find a matching result
+              const allResults = Object.values(results).flat()
+              const match = allResults.find(
+                (item) => item.name.toLowerCase() === query.trim().toLowerCase()
+              )
+              if (match) {
+                // Navigate to the matched item's page
+                window.location.href = getResultLink(match)
+                setOpen(false)
+              } else {
+                // Show DNE result
+                setError('No such canteen found.')
+                setOpen(true)
+              }
+            }
+          }}
         />
       </div>
       {open && (
@@ -99,11 +124,17 @@ export default function GlobalSearchDropdown({ query, setQuery, open, setOpen }:
                   <ul className="space-y-2">
                     {items.map(item => (
                       <li key={item._id}>
-                        <a
-                          href={getResultLink(item)}
-                          className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white"
-                          onClick={() => setOpen(false)}
-                        >
+                        <div
+                          className="block px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white cursor-pointer"
+                          onMouseDown={() => {
+                            setQuery(item.name);
+                            setOpen(false);
+                            if (typeof window !== "undefined") {
+                              window.dispatchEvent(new Event("closeMobileMenu"));
+                            }
+                            router.push(getResultLink(item)); // <-- This navigates immediately!
+                          }}
+                          >
                           {item.name}
                           {item.type === 'item' && item.price && (
                             <span className="ml-2 text-sm text-gray-400">₹{item.price}</span>
@@ -111,7 +142,7 @@ export default function GlobalSearchDropdown({ query, setQuery, open, setOpen }:
                           {item.type === 'canteen' && item.location && (
                             <span className="ml-2 text-sm text-gray-400">{item.location}</span>
                           )}
-                        </a>
+                        </div>
                       </li>
                     ))}
                   </ul>

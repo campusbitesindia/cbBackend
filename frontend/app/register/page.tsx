@@ -392,6 +392,7 @@ export default function RegisterPage() {
                             />
                             <button
                               type="button"
+                              aria-label="show password"
                               onClick={() => setShowPassword(!showPassword)}
                               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition-colors duration-500"
                             >
@@ -422,6 +423,7 @@ export default function RegisterPage() {
                             />
                             <button
                               type="button"
+                              aria-label='show confirm password'
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 transition-colors duration-500"
                             >
