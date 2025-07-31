@@ -25,7 +25,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Canteen } from '@/types';
 import { useCart } from '@/context/cart-context';
-
 import { useAuth } from '@/context/auth-context';
 import NotificationList from '@/components/notification-list';
 
@@ -34,12 +33,12 @@ export default function StudentDashboard() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [restaurants, setRestaurants] = useState<Canteen[]>([]);
   const [userCampusId, setUserCampusId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { cart } = useCart();
   const { token } = useAuth();
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
-
-
 
   // Fetch user profile to get campus ID
   useEffect(() => {
@@ -47,6 +46,7 @@ export default function StudentDashboard() {
       if (!token) return;
 
       try {
+        setError(null);
         const response = await fetch(
           'http://localhost:8080/api/v1/users/profile',
           {
@@ -55,16 +55,20 @@ export default function StudentDashboard() {
             },
           }
         );
+        
         if (!response.ok) {
           throw new Error('Failed to fetch user profile');
         }
+        
         const data = await response.json();
         console.log('User Profile:', data);
-        if (data.success && data.user.campus) {
+        
+        if (data.success && data.user?.campus?._id) {
           setUserCampusId(data.user.campus._id);
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
+        setError('Failed to load user profile');
       }
     };
 
@@ -75,6 +79,9 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchCanteens = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         let url = 'http://localhost:8080/api/v1/canteens';
         if (userCampusId) {
           url += `?campus=${userCampusId}`;
@@ -84,11 +91,22 @@ export default function StudentDashboard() {
         if (!response.ok) {
           throw new Error('Failed to fetch canteens');
         }
+       
         const data = await response.json();
-        console.log('Canteens:', data);
-        setRestaurants(data.canteens);
+        
+        const processedCanteens = data.canteens?.map((canteen: any) => ({
+          ...canteen,
+          image: canteen.owner?.profileImage || canteen.image || '/placeholder.svg'
+        })) || [];
+        
+        console.log('Processed Canteens:', processedCanteens);
+        setRestaurants(processedCanteens);
       } catch (error) {
         console.error('Error fetching canteens:', error);
+        setError('Failed to load restaurants');
+        setRestaurants([]);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -110,9 +128,35 @@ export default function StudentDashboard() {
       restaurant?.cuisine?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory =
       selectedCategory === 'all' ||
-      restaurant.cuisine.toLowerCase() === selectedCategory;
+      restaurant?.cuisine?.toLowerCase() === selectedCategory;
     return matchesSearch && matchesCategory;
-  });
+  }) || [];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
+        <div className='text-white text-xl'>Loading restaurants...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='text-red-400 text-xl mb-4'>{error}</div>
+          <Button 
+            onClick={() => window.location.reload()}
+            className='bg-gradient-to-r from-blue-500 to-purple-600'
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black'>
@@ -208,7 +252,7 @@ export default function StudentDashboard() {
                     <div className='relative'>
                       <Image
                         src={restaurant.image || '/placeholder.svg'}
-                        alt={restaurant.name}
+                        alt={restaurant.name || 'Restaurant'}
                         width={300}
                         height={200}
                         className='w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300'
@@ -289,7 +333,7 @@ export default function StudentDashboard() {
                   <div className='relative'>
                     <Image
                       src={restaurant.image || '/placeholder.svg'}
-                      alt={restaurant.name}
+                      alt={restaurant.name || 'Restaurant'}
                       width={300}
                       height={200}
                       className='w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300'

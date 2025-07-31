@@ -25,6 +25,7 @@ export interface Canteen {
   isOpen: boolean;
   is_verified?: boolean;
   isBanned?: boolean;
+  owner:any,
   discount?: string;
   featured?: boolean;
   imageUrl?: string;
