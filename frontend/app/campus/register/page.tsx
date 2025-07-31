@@ -94,6 +94,9 @@ const vendorSchema = z
     collegeName: z.string().min(1, 'Please select a college'),
     openingHours: z.string().min(1, 'Please select opening hours'),
     closingHours: z.string().min(1, 'Please select closing hours'),
+    operatingDays: z
+      .array(z.string())
+      .min(1, 'Please select at least one operating day'),
     adhaarNumber: z
       .string()
       .regex(
@@ -112,6 +115,10 @@ const vendorSchema = z
         /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
         'GST number must be 15 characters in valid GST format'
       ),
+    fssaiLicense: z
+      .string()
+      .regex(/^[0-9]{14}$/, 'FSSAI license must be 14 digits')
+      .optional(),
     termsAccepted: z
       .boolean()
       .refine(
@@ -213,6 +220,7 @@ export default function VendorOnboardingForm() {
       adhaarNumber: '',
       panNumber: '',
       gstNumber: '',
+      fssaiLicense: '',
     },
   });
 
@@ -338,12 +346,14 @@ export default function VendorOnboardingForm() {
         adhaarNumber: data.adhaarNumber,
         panNumber: data.panNumber,
         gstNumber: data.gstNumber,
+        fssaiLicense: data.fssaiLicense || undefined,
         contactPersonName: data.contactPerson,
         mobile: data.mobileNumber,
         email: data.email,
         address: data.address,
         openingHours: data.openingHours,
         closingHours: data.closingHours,
+        operatingDays: data.operatingDays,
         images: selectedImages,
       };
 
@@ -354,24 +364,42 @@ export default function VendorOnboardingForm() {
         adhaarNumber: canteenPayload.adhaarNumber,
         panNumber: canteenPayload.panNumber,
         gstNumber: canteenPayload.gstNumber,
+        fssaiLicense: canteenPayload.fssaiLicense,
         contactPersonName: canteenPayload.contactPersonName,
         mobile: canteenPayload.mobile,
         email: canteenPayload.email,
         address: canteenPayload.address,
         openingHours: canteenPayload.openingHours,
         closingHours: canteenPayload.closingHours,
+        operatingDays: canteenPayload.operatingDays,
         images: canteenPayload.images,
       };
 
       const canteenResponse = await createCanteen(backendPayload);
 
       if (!canteenResponse.success) {
-        // Check for not approved error from backend
+        // Check for not approved error from backend - treat as success for new registrations
         if (
           canteenResponse.message &&
           canteenResponse.message.toLowerCase().includes('not approved')
         ) {
-          setNotApprovedDialog(true);
+          // Show success message for new registration pending approval
+          toast({
+            title: 'Registration Successful! 🎉',
+            description:
+              'Your vendor account has been created successfully! Your canteen is now pending admin approval and will be verified within 24 hours.',
+          });
+
+          setSuccessMessage(
+            'Registration successful! Your canteen is pending admin approval and will be verified within 24 hours.'
+          );
+          setSubmitSuccess(true);
+
+          // Show success popup for 3 seconds, then redirect
+          setTimeout(() => {
+            setSubmitSuccess(false);
+            router.push('/campus/dashboard');
+          }, 3000);
           return;
         }
         throw new Error(canteenResponse.message || 'Canteen creation failed');
@@ -874,6 +902,61 @@ export default function VendorOnboardingForm() {
                 )}
               </div>
             </div>
+
+            <div>
+              <Label>Operating Days *</Label>
+              <div className='grid grid-cols-2 md:grid-cols-4 gap-3 mt-2'>
+                {[
+                  'Monday',
+                  'Tuesday',
+                  'Wednesday',
+                  'Thursday',
+                  'Friday',
+                  'Saturday',
+                  'Sunday',
+                ].map((day) => (
+                  <div key={day} className='flex items-center space-x-2'>
+                    <Controller
+                      name='operatingDays'
+                      control={control}
+                      defaultValue={[
+                        'Monday',
+                        'Tuesday',
+                        'Wednesday',
+                        'Thursday',
+                        'Friday',
+                        'Saturday',
+                      ]}
+                      render={({ field }) => (
+                        <Checkbox
+                          id={day}
+                          checked={field.value?.includes(day)}
+                          onCheckedChange={(checked) => {
+                            const currentDays = field.value || [];
+                            if (checked) {
+                              field.onChange([...currentDays, day]);
+                            } else {
+                              field.onChange(
+                                currentDays.filter((d) => d !== day)
+                              );
+                            }
+                          }}
+                          className='border-black data-[state=checked]:bg-white data-[state=checked]:border-black data-[state=checked]:text-black'
+                        />
+                      )}
+                    />
+                    <Label htmlFor={day} className='text-sm font-normal'>
+                      {day}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {errors.operatingDays && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.operatingDays.message}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -1037,13 +1120,41 @@ export default function VendorOnboardingForm() {
                 )}
               </div>
             </div>
+
+            <div>
+              <Label htmlFor='fssaiLicense'>FSSAI License (Optional)</Label>
+              <Input
+                id='fssaiLicense'
+                placeholder='12345678901234'
+                {...register('fssaiLicense')}
+                className='bg-white'
+                maxLength={14}
+                inputMode='numeric'
+                pattern='\d*'
+                onInput={(e) => {
+                  // @ts-ignore
+                  e.target.value = e.target.value
+                    .replace(/[^0-9]/g, '')
+                    .slice(0, 14);
+                }}
+              />
+              <p className='text-xs text-gray-500 mt-1'>
+                Enter your 14-digit FSSAI license number (optional for small
+                food businesses)
+              </p>
+              {errors.fssaiLicense && (
+                <p className='text-sm text-red-500 mt-1'>
+                  {errors.fssaiLicense.message}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
         {/* Terms & Conditions */}
         <Card className='bg-gray-50 shadow-sm border border-gray-100'>
           <CardContent className='pt-6 text-gray-700'>
-            <div className='flex items-start space-x-3'>
+            <div className='flex items-center space-x-3'>
               <Controller
                 name='termsAccepted'
                 control={control}
@@ -1052,12 +1163,16 @@ export default function VendorOnboardingForm() {
                     id='termsAccepted'
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    className={errors.termsAccepted ? 'border-red-500 bg-gray-500' : 'bg-gray-600 border-black'}
+                    className={`mt-0.5 bg-white ${
+                      errors.termsAccepted ? 'border-red-500' : 'border-black'
+                    } data-[state=checked]:bg-white data-[state=checked]:border-black data-[state=checked]:text-black`}
                   />
                 )}
               />
               <div className='flex-1'>
-                <Label htmlFor='termsAccepted' className='text-sm'>
+                <Label
+                  htmlFor='termsAccepted'
+                  className='text-sm leading-relaxed'>
                   I agree to the{' '}
                   <a href='#' className='text-orange-600 hover:underline'>
                     Terms and Conditions

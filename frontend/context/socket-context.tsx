@@ -9,7 +9,7 @@ export function SocketProvider({ children, userId, isVendor }: any) {
     useEffect(() => {
         if (!userId) return;
 
-        socketRef.current = io('http://localhost:5000')         //  change this in production
+        socketRef.current = io('http://localhost:8080')         //  change this in production
 
         const room = isVendor ? `vendor_${userId}` : `user_${userId}`;
 

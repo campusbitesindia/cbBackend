@@ -2,20 +2,21 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { useAuth } from "@/context/auth-context"
+import { GoogleOAuthProvider } from "@react-oauth/google"
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import GoogleSignUp from "@/components/GoogleSignUp"
 import { useToast } from "@/hooks/use-toast"
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { useAuth } from "@/context/auth-context"
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Gift, LogIn, RefreshCw, MapPin } from "lucide-react"
+import { Gift, ArrowRight, LogIn, RefreshCw, Eye, EyeOff, Mail, Lock, User, MapPin } from "lucide-react"
 import { getAllCampuses, Campus } from "@/services/campusService"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
 import api from "@/lib/axios"
 
 const registerSchema = z
@@ -44,25 +45,12 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [campuses, setCampuses] = useState<Campus[]>([])
   const [isLoadingCampuses, setIsLoadingCampuses] = useState(true)
-  const [existingUserDialog, setExistingUserDialog] = useState<{
-    open: boolean
-    message: string
-    suggestions: string[]
-    userInfo?: {
-      hasGoogleAuth: boolean
-      isVerified: boolean
-      registrationMethod: string
-    }
-  }>({
-    open: false,
-    message: "",
-    suggestions: [],
-  })
+  // Removed existingUserDialog logic!
+
   const [campusInput, setCampusInput] = useState('');
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [requestForm, setRequestForm] = useState({ name: '', email: '', mobile: '', collegeName: '', city: '', message: '' });
   const [requestLoading, setRequestLoading] = useState(false);
-  // Add a new state to track if a campus is selected
   const [campusSelected, setCampusSelected] = useState(false);
   const [showOtpDialog, setShowOtpDialog] = useState(false);
   const [otp, setOtp] = useState("");
@@ -70,8 +58,8 @@ export default function RegisterPage() {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [otpSuccess, setOtpSuccess] = useState("");
-
-  // Autocomplete filter
+  const {token}=useAuth();
+  const userId=useSearchParams().get("id");
   const filteredCampuses = campusInput
     ? campuses.filter((c) => c.name.toLowerCase().includes(campusInput.toLowerCase()))
     : campuses;
@@ -89,7 +77,6 @@ export default function RegisterPage() {
     },
   })
 
-  // Fetch campuses on component mount
   useEffect(() => {
     const fetchCampuses = async () => {
       try {
@@ -107,7 +94,6 @@ export default function RegisterPage() {
         setIsLoadingCampuses(false)
       }
     }
-
     fetchCampuses()
   }, [toast])
 
@@ -118,7 +104,7 @@ export default function RegisterPage() {
   async function onSubmit(values: z.infer<typeof registerSchema>) {
     setIsLoading(true)
     try {
-      await register(values.name, values.email, values.password, values.role, values.campus, values.phone); // <-- pass campus _id and phone
+      await register(values.name, values.email, values.password, values.role, values.campus, values.phone);
       setPendingEmail(values.email);
       setShowOtpDialog(true);
       toast({
@@ -126,25 +112,6 @@ export default function RegisterPage() {
         description: "Please verify your email with the OTP sent to your inbox.",
       }) 
     } catch (error) {
-      // Handle existing user professionally
-      if (error instanceof Error) {
-        try {
-          const errorData = JSON.parse(error.message)
-          if (errorData.userExists) {
-            setExistingUserDialog({
-              open: true,
-              message: errorData.message,
-              suggestions: errorData.suggestions || [],
-              userInfo: errorData.userInfo
-            })
-            return
-          }
-        } catch {
-          // Not a JSON error, fall through to regular error handling
-        }
-      }
-      
-      // Regular error handling for other types of errors
       toast({
         variant: "destructive",
         title: "Registration failed",
@@ -155,21 +122,10 @@ export default function RegisterPage() {
     }
   }
 
-  const handleGoogleSignIn = () => {
-    window.location.href = "http://localhost:8080/api/v1/users/auth/google"
-  }
-
-  const handleGoToSignIn = () => {
-    setExistingUserDialog(prev => ({ ...prev, open: false }))
-    router.push('/login')
-  }
-
   async function handleRequestCampus() {
     setRequestLoading(true);
     try {
-      // Get the role from the registration form (default to 'student' if not set)
       const role = form.getValues('role') || 'student';
-      // Use the campus input as collegeName
       const collegeName = requestForm.collegeName || campusInput;
       await api.post('/api/v1/admin/campus-request', {
         name: requestForm.name,
@@ -214,14 +170,11 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:from-[#0a192f] dark:via-[#1e3a5f] dark:to-[#0f172a] text-gray-900 dark:text-white flex items-center justify-center relative overflow-hidden transition-all duration-500">
-      {/* Professional Background */}
+      {/* Background and floating food icons (unchanged) */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Animated Background Elements */}
         <div className="absolute top-0 left-0 w-96 h-96 bg-red-500/5 dark:bg-red-500/10 rounded-full blur-3xl animate-pulse transition-colors duration-500"></div>
         <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000 transition-colors duration-500"></div>
         <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-purple-500/5 dark:bg-white/5 rounded-full blur-2xl animate-pulse delay-2000 transition-colors duration-500"></div>
-
-        {/* Floating Food Icons */}
         <div className="absolute top-20 right-20 w-16 h-16 bg-purple-500/10 dark:bg-purple-500/10 rounded-full flex items-center justify-center animate-float">
           <span className="text-2xl">🎂</span>
         </div>
@@ -331,9 +284,7 @@ export default function RegisterPage() {
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400 w-5 h-5 pointer-events-none flex items-center justify-center">
                                 <MapPin className="w-5 h-5" />
                               </span>
-                              {/* Hidden input for form value (campus _id) */}
                               <input type="hidden" value={field.value} name="campus" />
-                              {/* Display input for user (campus name/city) */}
                               <Input
                                 placeholder="Type your campus name"
                                 value={campusSelected && selectedCampusObj ? (selectedCampusObj.name + (selectedCampusObj.city ? ` (${selectedCampusObj.city})` : '')) : campusInput}
@@ -386,10 +337,6 @@ export default function RegisterPage() {
                                   Can’t find your campus? <span className="font-semibold">Request to add it</span>
                                 </div>
                               )}
-                              {/* Helper message if not selected */}
-                              {!campusSelected && campusInput && !filteredCampuses.some(c => c.name === campusInput) && (
-                                <div className="mt-2 text-red-500 text-xs">Please select a campus from the list.</div>
-                              )}
                             </div>
                           </FormControl>
                           <FormMessage className="text-red-500 dark:text-red-400 transition-colors duration-500" />
@@ -415,7 +362,6 @@ export default function RegisterPage() {
                               pattern="[0-9]*"
                               value={field.value}
                               onChange={e => {
-                                // Only allow digits
                                 const val = e.target.value.replace(/[^0-9]/g, "");
                                 field.onChange(val);
                               }}
@@ -519,30 +465,12 @@ export default function RegisterPage() {
                     <span className="bg-white/90 dark:bg-white/10 backdrop-blur-xl px-4 text-gray-600 dark:text-slate-400 transition-all duration-500">Or sign up with</span>
                   </div>
                 </div>
-
                 <div className="mt-6">
-                  <a href="http://localhost:8080/api/auth/google" className="w-full">
-                    <Button
-                      variant="outline"
-                      className="w-full bg-gray-50 dark:bg-white/10 border-gray-300 dark:border-white/20 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/20 transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                    >
-                      <svg className="mr-2 h-4 w-4" viewBox="0 0 48 48">
-                        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
-	c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24
-	s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
-                        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657
-	C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
-                        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36
-	c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
-                        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.089,5.571l6.19,5.238
-	C43.021,36.697,44,34.0,44,30C44,22.659,43.862,21.35,43.611,20.083z" />
-                      </svg>
-                      Sign up with Google
-                    </Button>
-                  </a>
+                  <GoogleOAuthProvider clientId="263127730-lvie4hq2dmps465a875fptaat5gnq707.apps.googleusercontent.com">
+                    <GoogleSignUp form={form}/>
+                  </GoogleOAuthProvider>
                 </div>
               </div>
-
               <p className="mt-6 text-xs text-center text-gray-500 dark:text-slate-500 transition-colors duration-500">
                 By creating an account, you agree to our{" "}
                 <Link href="#" className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors">
@@ -557,19 +485,15 @@ export default function RegisterPage() {
             </div>
           </div>
         </div>
-
-        {/* Right Side - Benefits */}
+        {/* Benefits panel as before */}
         <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 relative">
           <div className="text-center animate-slide-in-right">
-            {/* Special Offer */}
             <div className="mb-8 p-6 bg-gradient-to-r from-red-500/5 dark:from-red-500/10 to-rose-500/5 dark:to-rose-500/10 border border-red-500/10 dark:border-red-500/20 rounded-2xl backdrop-blur-sm transition-all duration-500">
               <div className="text-4xl mb-4">🎉</div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 transition-colors duration-500">Welcome Bonus!</h2>
               <p className="text-red-600 dark:text-red-300 font-semibold text-lg transition-colors duration-500">Get 20% OFF on your first order</p>
               <p className="text-gray-600 dark:text-slate-400 text-sm mt-2 transition-colors duration-500">Plus free delivery for your first month</p>
             </div>
-
-            {/* Benefits */}
             <div className="space-y-6">
               <div className="flex items-center gap-4 text-left">
                 <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
@@ -692,8 +616,7 @@ export default function RegisterPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Email Verification Dialog */}
+      {/* Email Verification Dialog (no change) */}
       <Dialog open={showOtpDialog} onOpenChange={setShowOtpDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>

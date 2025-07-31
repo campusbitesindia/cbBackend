@@ -20,32 +20,31 @@ import {
   BarElement,
   ArcElement,
   ChartOptions,
+  Tooltip,
 } from "chart.js"
 // @ts-ignore
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Legend, BarElement, ArcElement, ChartDataLabels)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Legend, BarElement, ArcElement, ChartDataLabels, Tooltip)
 
+// @ts-ignore
+import annotationPlugin from 'chartjs-plugin-annotation';
+ChartJS.register(annotationPlugin);
+
+// This section is commented out as it is redundant after the global ChartJS.register call above.
+/*
 import {
   TooltipProvider,
   Tooltip,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-
-// Register Chart.js components once
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Legend,
-  BarElement,
-  ArcElement
-)
+*/
 
 import { useRouter } from "next/navigation";
 import { useAdminAuth } from "@/context/admin-auth-context";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 interface PendingRequest {
   id: string
@@ -91,16 +90,16 @@ const cardVariants: Variants = {
 }
 
 // Add a simple CountUp component for animated numbers
-function CountUp({ end, duration = 1.2, className = "" }: { end: number, duration?: number, className?: string }) {
+function CountUp({ end, duration = 1.2, className = "", decimals = 0 }: { end: number, duration?: number, className?: string, decimals?: number }) {
   const [value, setValue] = useState(0);
   useEffect(() => {
     let start = 0;
-    const increment = end / (duration * 60);
+    const increment = (end - start) / (duration * 60); // Calculate increment based on difference
     let frame: any;
     function animate() {
       start += increment;
       if (start < end) {
-        setValue(Math.floor(start));
+        setValue(parseFloat(start.toFixed(decimals)));
         frame = requestAnimationFrame(animate);
       } else {
         setValue(end);
@@ -108,8 +107,8 @@ function CountUp({ end, duration = 1.2, className = "" }: { end: number, duratio
     }
     animate();
     return () => cancelAnimationFrame(frame);
-  }, [end, duration]);
-  return <span className={className}>{value.toLocaleString()}</span>;
+  }, [end, duration, decimals]);
+  return <span className={className}>{value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}</span>;
 }
 
 export default function AdminDashboard() {
@@ -130,18 +129,64 @@ export default function AdminDashboard() {
   const [revenueDaily, setRevenueDaily] = useState<any[]>([])
   const [revenueWeekly, setRevenueWeekly] = useState<any[]>([])
   const [revenueMonthly, setRevenueMonthly] = useState<any[]>([])
+  const [totalRevenueValue, setTotalRevenueValue] = useState<number>(0);
+  const [dailyRevenueValue, setDailyRevenueValue] = useState<number>(0);
+  const [averageOrderValue, setAverageOrderValue] = useState<number>(0);
+  const [peakOrderTimes, setPeakOrderTimes] = useState<any[]>([]);
+  const [revenueByPaymentMethod, setRevenueByPaymentMethod] = useState<any[]>([]);
+  const [suspectedUsers, setSuspectedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [orderStatus, setOrderStatus] = useState<any>(null)
   const [userRoles, setUserRoles] = useState<any>(null)
   const [topSpenders, setTopSpenders] = useState<any[]>([])
   const [topCanteens, setTopCanteens] = useState<any[]>([])
+  const [topCampusesByRevenue, setTopCampusesByRevenue] = useState<any[]>([]);
+  const [revenueByCampusCanteen, setRevenueByCampusCanteen] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([])
   const [actionLoading, setActionLoading] = useState<{[userId: string]: boolean}>({});
   const [canteens, setCanteens] = useState<any[]>([]);
   const [canteenActionLoading, setCanteenActionLoading] = useState<{[canteenId: string]: boolean}>({});
   const [totalOrders, setTotalOrders] = useState<number>(0);
   const [ordersByCampusCanteen, setOrdersByCampusCanteen] = useState<any[]>([]);
+  const [pendingVendors, setPendingVendors] = useState<any[]>([]);
+
+  const [selectedCanteenForRating, setSelectedCanteenForRating] = useState<string>("");
+  const [vendorRating, setVendorRating] = useState<number>(0);
+  const [ratingLoading, setRatingLoading] = useState<boolean>(false);
+
+  async function handleRateVendor() {
+    if (!selectedCanteenForRating || vendorRating === 0 || vendorRating < 1 || vendorRating > 5) {
+      toast({ title: "Error", description: "Please select a canteen and provide a rating between 1 and 5.", variant: "destructive" });
+      return;
+    }
+
+    setRatingLoading(true);
+    try {
+      const res = await fetch("http://localhost:8080/api/v1/admin/rateVendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          canteenId: selectedCanteenForRating,
+          rating: vendorRating,
+        }),
+      });
+
+      if (res.ok) {
+        toast({ title: "Success", description: "Vendor rated successfully!" });
+        setSelectedCanteenForRating("");
+        setVendorRating(0);
+      } else {
+        const errorData = await res.json();
+        toast({ title: "Error", description: errorData.message || "Failed to rate vendor", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Error rating vendor:", err);
+      toast({ title: "Error", description: "Failed to connect to server for rating.", variant: "destructive" });
+    } finally {
+      setRatingLoading(false);
+    }
+  }
 
   // Fetch users/vendors from backend
   const fetchUsersByRole = async () => {
@@ -154,9 +199,13 @@ export default function AdminDashboard() {
           ...(data.canteenOwners || []).map((u: any) => ({ ...u, role: 'canteen' }))
         ];
         setUsersList(combined);
+      } else {
+        console.error("Failed to fetch user list:", res.status, res.statusText);
+        toast({ title: "Error", description: "Failed to fetch user list.", variant: "destructive" });
       }
     } catch (err) {
-      // handle error
+      console.error("Error fetching user list:", err);
+      toast({ title: "Error", description: "Failed to connect to server for user list.", variant: "destructive" });
     }
   };
 
@@ -167,7 +216,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetch("http://localhost:8080/api/v1/admin/canteens")
       .then(res => res.json())
-      .then(data => setCanteens(data.canteens || []));
+      .then(data => setCanteens(data.canteens || []))
+      .catch(err => console.error("Error fetching all canteens:", err));
   }, []);
 
   // Fetch total orders from /api/v1/admin/orders/by-campus-canteen
@@ -176,65 +226,130 @@ export default function AdminDashboard() {
       .then(res => res.json())
       .then(data => {
         setOrdersByCampusCanteen(data || []);
-        // Calculate total orders
         const total = (data || []).reduce((sum: number, item: any) => sum + (item.totalOrders || 0), 0);
         setTotalOrders(total);
-      });
+      })
+      .catch(err => console.error("Error fetching orders by campus/canteen:", err));
   }, []);
 
-  // Helper to update a single user in usersList
   function updateUserInList(userId: string, updates: any) {
     setUsersList(users => users.map(u => u._id === userId ? { ...u, ...updates } : u));
   }
 
   async function handleBanUser(userId: string, ban: boolean) {
     setActionLoading(l => ({ ...l, [userId]: true }));
+    try {
     const res = await fetch("http://localhost:8080/api/v1/admin/banUser", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, ban }),
     });
-    setActionLoading(l => ({ ...l, [userId]: false }));
     if (res.ok) {
       toast({ title: ban ? "User banned" : "User unbanned" });
-      fetchUsersByRole(); // Re-fetch from backend for fresh data
+        fetchUsersByRole();
+      } else {
+        const errorData = await res.json();
+        toast({ title: "Error", description: errorData.message || "Failed to update user status", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Error banning user:", err);
+      toast({ title: "Error", description: "Failed to connect to server.", variant: "destructive" });
+    } finally {
+      setActionLoading(l => ({ ...l, [userId]: false }));
     }
   }
 
-  async function handleApproveCanteen(canteenId: string) {
+  async function handleApproveCanteen(canteenId: string, approved: boolean, rejectionReason: string = "") {
     setCanteenActionLoading(l => ({ ...l, [canteenId]: true }));
-    const res = await fetch("http://localhost:8080/api/v1/admin/ApproveCanteen", {
+    try {
+      const res = await fetch(`http://localhost:8080/api/v1/admin/vendors/${canteenId}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ canteenId, approve: true }),
+        body: JSON.stringify({ approved, rejectionReason }),
     });
-    setCanteenActionLoading(l => ({ ...l, [canteenId]: false }));
     if (res.ok) {
-      toast({ title: "Canteen approved" });
-      setCanteens(canteens => canteens.map(c => c._id === canteenId ? { ...c, is_verified: true } : c));
+        toast({ title: approved ? "Canteen approved" : "Canteen rejected" });
+        fetchPendingVendors();
+        setCanteens(prevCanteens => prevCanteens.map(c => c._id === canteenId ? { ...c, approvalStatus: approved ? "approved" : "rejected", isApproved: approved } : c));
+      } else {
+        const errorData = await res.json();
+        toast({ title: "Error", description: errorData.message || "Failed to update vendor status", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Error approving canteen:", err);
+      toast({ title: "Error", description: "Failed to connect to server.", variant: "destructive" });
+    } finally {
+      setCanteenActionLoading(l => ({ ...l, [canteenId]: false }));
     }
   }
 
-  async function handleBanCanteen(canteenId: string, ban: boolean) {
+  async function handleBanCanteen(canteenId: string, suspend: boolean) {
     setCanteenActionLoading(l => ({ ...l, [canteenId]: true }));
+    try {
     const res = await fetch("http://localhost:8080/api/v1/admin/suspendCanteen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ canteenId, ban }),
-    });
+        body: JSON.stringify({ canteenId, suspend }),
+      });
+      if (res.ok) {
+        toast({ title: suspend ? "Canteen suspended" : "Canteen unsuspended" });
+        setCanteens(canteens => canteens.map(c => c._id === canteenId ? { ...c, isSuspended: suspend } : c));
+      } else {
+        const errorData = await res.json();
+        toast({ title: "Error", description: errorData.message || "Failed to suspend canteen", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Error suspending canteen:", err);
+      toast({ title: "Error", description: "Failed to connect to server.", variant: "destructive" });
+    } finally {
     setCanteenActionLoading(l => ({ ...l, [canteenId]: false }));
-    if (res.ok) {
-      toast({ title: ban ? "Canteen banned" : "Canteen unbanned" });
-      setCanteens(canteens => canteens.map(c => c._id === canteenId ? { ...c, isBanned: ban } : c));
     }
   }
+
+  async function fetchPendingVendors() {
+    try {
+      const res = await fetch("http://localhost:8080/api/v1/admin/vendors/pending");
+    if (res.ok) {
+        const data = await res.json();
+        setPendingVendors(data.data || []);
+      } else {
+        console.error("Failed to fetch pending vendors:", res.status, res.statusText);
+        setPendingVendors([]);
+      }
+    } catch (err) {
+      console.error("Error fetching pending vendors:", err);
+      setPendingVendors([]);
+    }
+  }
+
+  useEffect(() => {
+    fetchPendingVendors();
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
       setLoading(true)
       setError(null)
       try {
-        const [summaryRes, usersRes, userRolesRes, topSpendersRes, ordersRes, orderStatusRes, topCanteensRes, revenueDailyRes] = await Promise.all([
+        const [
+          summaryRes,
+          usersRes,
+          userRolesRes,
+          topSpendersRes,
+          ordersRes,
+          orderStatusRes,
+          topCanteensRes,
+          revenueDailyRes,
+          revenueWeeklyRes,
+          revenueMonthlyRes,
+          totalRevenueRes,
+          averageOrderValueRes,
+          peakOrderTimesRes,
+          revenueByPaymentMethodRes,
+          suspectedUsersRes,
+          topCampusesByRevenueRes,
+          revenueByCampusCanteenRes,
+        ] = await Promise.all([
           fetch("http://localhost:8080/api/v1/admin/totals"),
           fetch("http://localhost:8080/api/v1/admin/users/monthly"),
           fetch("http://localhost:8080/api/v1/admin/users/count-by-role"),
@@ -243,38 +358,114 @@ export default function AdminDashboard() {
           fetch("http://localhost:8080/api/v1/admin/orders/status-wise"),
           fetch("http://localhost:8080/api/v1/admin/orders/top-tcanteens"),
           fetch("http://localhost:8080/api/v1/admin/revenue/daily"), 
+          fetch("http://localhost:8080/api/v1/admin/revenue/weekly"),
+          fetch("http://localhost:8080/api/v1/admin/revenue/monthly"),
+          fetch("http://localhost:8080/api/v1/admin/revenue/total"),
+          fetch("http://localhost:8080/api/v1/admin/orders/average-order-value"),
+          fetch("http://localhost:8080/api/v1/admin/orders/peak-hours"),
+          fetch("http://localhost:8080/api/v1/admin/revenue/payment-breakdown"),
+          fetch("http://localhost:8080/api/v1/admin/users/getSuspectedUser"),
+          fetch("http://localhost:8080/api/v1/admin/revenue/top-campuses"),
+          fetch("http://localhost:8080/api/v1/admin/revenue/by-campus-canteen"),
         ])
-        if (!summaryRes.ok || !usersRes.ok || !userRolesRes.ok || !topSpendersRes.ok || !ordersRes.ok || !orderStatusRes.ok || !topCanteensRes.ok || !revenueDailyRes.ok) {
-          throw new Error("API error")
-        }
-        const [summaryData, usersData, userRolesData, topSpendersData, ordersData, orderStatusData, topCanteensData, revenueDailyData] = await Promise.all([
-          summaryRes.json(),
-          usersRes.json(),
-          userRolesRes.json(),
-          topSpendersRes.json(),
-          ordersRes.json(),
-          orderStatusRes.json(),
-          topCanteensRes.json(),
-          revenueDailyRes.json(),
+
+        const checkResponse = async (res: Response, name: string) => {
+          try {
+            const data = await res.json();
+            if (!res.ok) {
+                console.error(`Error fetching ${name}:`, res.status, res.statusText, data);
+            }
+            // If data object has a 'data' property that is an array, use that. Otherwise, use the data itself.
+            if (data && typeof data === 'object' && 'data' in data && Array.isArray(data.data)) {
+                return data.data;
+            }
+            return data; // Return the data as is (could be array or other object)
+          } catch (error) {
+            console.error(`Error parsing JSON for ${name}:`, error, res.status, res.statusText);
+            return null; // Return null if JSON parsing fails
+          }
+        };
+
+        const [
+          summaryData,
+          usersData,
+          userRolesData,
+          topSpendersData,
+          ordersData,
+          orderStatusData,
+          topCanteensData,
+          revenueDailyData,
+          revenueWeeklyData,
+          revenueMonthlyData,
+          totalRevenueData,
+          averageOrderValueData,
+          peakOrderTimesData,
+          revenueByPaymentMethodData,
+          suspectedUsersData,
+          topCampusesByRevenueData,
+          revenueByCampusCanteenData,
+        ] = await Promise.all([
+          checkResponse(summaryRes, "summary"),
+          checkResponse(usersRes, "monthly users"),
+          checkResponse(userRolesRes, "user roles"),
+          checkResponse(topSpendersRes, "top spenders"),
+          checkResponse(ordersRes, "monthly orders"),
+          checkResponse(orderStatusRes, "order status"),
+          checkResponse(topCanteensRes, "top canteens"),
+          checkResponse(revenueDailyRes, "daily revenue"),
+          checkResponse(revenueWeeklyRes, "weekly revenue"),
+          checkResponse(revenueMonthlyRes, "monthly revenue"),
+          checkResponse(totalRevenueRes, "total revenue"),
+          checkResponse(averageOrderValueRes, "average order value"),
+          checkResponse(peakOrderTimesRes, "peak order times"),
+          checkResponse(revenueByPaymentMethodRes, "revenue by payment method"),
+          checkResponse(suspectedUsersRes, "suspected users"),
+          checkResponse(topCampusesByRevenueRes, "top campuses by revenue"),
+          checkResponse(revenueByCampusCanteenRes, "revenue by campus and canteen"),
         ])
+
         setSummary(summaryData)
-        setUsersMonthly(usersData)
+        setUsersMonthly(usersData || [])
         const userRolesObj: Record<string, number> = {}
+        if (userRolesData) {
         userRolesData.forEach((item: any) => { userRolesObj[item._id] = item.count })
+        }
         setUserRoles(userRolesObj)
-        setTopSpenders(topSpendersData)
-        setOrdersMonthly(ordersData)
+        setTopSpenders(topSpendersData || [])
+        setOrdersMonthly(ordersData || [])
         const orderStatusObj: Record<string, number> = {}
+        if (orderStatusData) {
         orderStatusData.forEach((item: any) => { orderStatusObj[item._id] = item.count })
+        }
         setOrderStatus(orderStatusObj)
-        setTopCanteens(topCanteensData)
-        // Filter revenueDaily to only today's date
-        const today = new Date();
-        const todayStr = today.toISOString().slice(0, 10); // 'YYYY-MM-DD'
-        const todayRevenue = revenueDailyData.filter((r: any) => (r._id || r.date) === todayStr);
-        setRevenueDaily(todayRevenue);
+        setTopCanteens(topCanteensData || [])
+
+        setRevenueDaily(revenueDailyData || []);
+        setRevenueWeekly(revenueWeeklyData || []);
+        setRevenueMonthly(revenueMonthlyData || []);
+        setTotalRevenueValue(totalRevenueData?.totalRevenue || 0);
+        
+        const latestDailyRevenue = revenueDailyData && revenueDailyData.length > 0 
+          ? (revenueDailyData.sort((a: any, b: any) => (b._id || b.date).localeCompare(a._id || a.date)))[0]?.revenue || 0
+          : 0;
+        setDailyRevenueValue(latestDailyRevenue);
+
+        setAverageOrderValue(averageOrderValueData?.averageOrderValue || 0);
+        setPeakOrderTimes(peakOrderTimesData || []);
+        setRevenueByPaymentMethod(revenueByPaymentMethodData || []);
+        setTopCampusesByRevenue(topCampusesByRevenueData || []);
+        setRevenueByCampusCanteen(revenueByCampusCanteenData || []);
+        if (suspectedUsersData && Array.isArray(suspectedUsersData.data)) {
+          setSuspectedUsers(suspectedUsersData.data);
+        } else if (Array.isArray(suspectedUsersData)) {
+          setSuspectedUsers(suspectedUsersData);
+        } else {
+          setSuspectedUsers([]);
+        }
+
       } catch (err: any) {
         setError(err.message)
+        toast({ title: "Data Fetch Error", description: `Failed to load some dashboard data: ${err.message}`, variant: "destructive" });
       } finally {
         setLoading(false)
       }
@@ -309,21 +500,95 @@ export default function AdminDashboard() {
       },
     ],
   }
-  // Daily revenue
-  const revenueChartData = {
-    labels: revenueDaily.map((r) => r._id || 'Unknown'),
+
+  // New Combined Revenue Chart Data
+  const combinedRevenueChartData = {
+    labels: Array.from(new Set([
+      ...revenueWeekly.map(r => r._id || r.week),
+      ...revenueMonthly.map(r => r._id || r.month),
+    ])).sort((a, b) => a.localeCompare(b)), // Sort labels chronologically
     datasets: [
       {
-        label: "Daily Revenue",
-        data: revenueDaily.map((r) => r.revenue),
-        borderColor: "#fff", // white border
-        backgroundColor: "#34d399",
+        label: "Weekly Revenue",
+        data: revenueWeekly.map((r) => ({ x: r._id || r.week, y: r.revenue || r.total || r.totalAmount })),
+        borderColor: "#bae6fd", // Light Blue
+        backgroundColor: "rgba(186, 230, 253, 0.2)",
         borderWidth: 3,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      },
+      {
+        label: "Monthly Revenue",
+        data: revenueMonthly.map((r) => ({ x: r._id || r.month, y: r.revenue || r.total || r.totalAmount })),
+        borderColor: "#bbf7d0", // Light Green
+        backgroundColor: "rgba(187, 247, 208, 0.2)",
+        borderWidth: 3,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 8,
       },
     ],
   }
 
-  // New chart data helpers
+  const combinedRevenueChartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: '#fff',
+          font: { size: 14, weight: 'bold' as const },
+        },
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#fff',
+        borderWidth: 1,
+        caretPadding: 10,
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      },
+    },
+    scales: {
+      x: {
+        type: 'category',
+        ticks: { color: '#fff', font: { size: 12, weight: 'bold' as const } },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+        title: { display: true, text: 'Period', color: '#fff', font: { size: 14, weight: 'bold' as const } },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: '#fff',
+          font: { size: 12, weight: 'bold' as const },
+          callback: function(value) {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value as number);
+          }
+        },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+        title: { display: true, text: 'Revenue (₹)', color: '#fff', font: { size: 14, weight: 'bold' as const } },
+      },
+    },
+  };
+
+
   const orderStatusChartData = orderStatus
     ? {
         labels: Object.keys(orderStatus),
@@ -332,7 +597,7 @@ export default function AdminDashboard() {
             label: "Order Status",
             data: Object.values(orderStatus),
             backgroundColor: ["#fbbf24", "#34d399", "#f87171", "#a78bfa"],
-            borderColor: "#fff", // white border
+            borderColor: "#fff",
             borderWidth: 3,
           },
         ],
@@ -348,62 +613,52 @@ export default function AdminDashboard() {
             label: "User Roles",
             data: Object.values(userRoles),
             backgroundColor: ["#f87171", "#60a5fa", "#34d399", "#fbbf24", "#a78bfa"],
-            borderColor: "#fff", // white border
+            borderColor: "#fff",
             borderWidth: 3,
           },
         ],
       }
     : { labels: [], datasets: [] }
 
-  const revenueDailyChartData = {
-    labels: revenueDaily.map((r) => r._id || r.date),
+  const peakOrderTimesChartData = {
+    labels: peakOrderTimes.map((item) => `${item._id}:00 - ${item._id + 1}:00`),
     datasets: [
       {
-        label: "Daily Revenue",
-        data: revenueDaily.map((r) => r.revenue || r.total || r.totalAmount),
-        borderColor: "#fff", // white border
-        backgroundColor: "#ef4444", // red
+        label: "Number of Orders",
+        data: peakOrderTimes.map((item) => item.count),
+        backgroundColor: "#60a5fa",
+        borderColor: "#fff",
         borderWidth: 3,
       },
     ],
-  }
-  const revenueWeeklyChartData = {
-    labels: revenueWeekly.map((r) => r._id || r.week),
+  };
+
+  const revenueByPaymentMethodChartData = {
+    labels: revenueByPaymentMethod.map((item) => item.paymentMethod),
     datasets: [
       {
-        label: "Weekly Revenue",
-        data: revenueWeekly.map((r) => r.revenue || r.total || r.totalAmount),
-        borderColor: "#fff", // white border
-        backgroundColor: "#bae6fd",
+        label: "Revenue",
+        data: revenueByPaymentMethod.map((item) => item.totalRevenue),
+        backgroundColor: ["#34d399", "#fbbf24", "#a78bfa", "#f87171"],
+        borderColor: "#fff",
         borderWidth: 3,
       },
     ],
-  }
-  const revenueMonthlyChartData = {
-    labels: revenueMonthly.map((r) => r._id || r.month),
-    datasets: [
-      {
-        label: "Monthly Revenue",
-        data: revenueMonthly.map((r) => r.revenue || r.total || r.totalAmount),
-        borderColor: "#fff", // white border
-        backgroundColor: "#bbf7d0",
-        borderWidth: 3,
-      },
-    ],
-  }
+  };
+
   const topSpendersChartData = {
-    labels: topSpenders.map((u) => u.name || u.username || u.email),
+    labels: topSpenders.length > 0 ? [topSpenders[0].name || topSpenders[0].username || topSpenders[0].email] : [],
     datasets: [
       {
         label: "Amount Spent",
-        data: topSpenders.map((u) => u.amount || u.totalSpent),
-        backgroundColor: "#ef4444", // red
-        borderColor: "#fff", // white border
+        data: topSpenders.length > 0 ? [topSpenders[0].amount || topSpenders[0].totalSpent] : [],
+        backgroundColor: "#ef4444",
+        borderColor: "#fff",
         borderWidth: 3,
       },
     ],
   }
-  // Top Canteens by Order Volume chart data with red and white colors and percentage display
+
   const totalCanteenOrders = topCanteens.reduce((sum: number, c: any) => sum + (c.totalOrders || c.count || c.orderCount || 0), 0);
   const topCanteensChartData = {
     labels: topCanteens.map((c) => c.name || c.canteenName),
@@ -414,8 +669,8 @@ export default function AdminDashboard() {
           const value = c.totalOrders || c.count || c.orderCount || 0;
           return totalCanteenOrders > 0 ? (value / totalCanteenOrders) * 100 : 0;
         }),
-        backgroundColor: "#ef4444", // red
-        borderColor: "#fff", // white border
+        backgroundColor: "#ef4444",
+        borderColor: "#fff",
         borderWidth: 3,
       },
     ],
@@ -428,7 +683,7 @@ export default function AdminDashboard() {
       datalabels: {
         color: '#fff',
         anchor: 'end',
-        align: 'center', // changed from 'end' to 'center' for compatibility
+        align: 'center',
         font: { weight: 'bold', size: 14 },
         formatter: (value: number) => value ? value.toFixed(1) + '%' : '',
       },
@@ -456,6 +711,147 @@ export default function AdminDashboard() {
       },
     },
   }
+
+  // Top Campuses by Revenue Chart Data
+  const topCampusesByRevenueChartData = {
+    labels: topCampusesByRevenue.map((c) => c._id || c.campusName || 'Unknown'),
+    datasets: [
+      {
+        label: "Revenue",
+        data: topCampusesByRevenue.map((c) => c.totalRevenue || 0),
+        backgroundColor: "#34d399", // Green color
+        borderColor: "#fff",
+        borderWidth: 3,
+      },
+    ],
+  };
+
+  const topCampusesByRevenueChartOptions: ChartOptions<'bar'> = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      datalabels: {
+        color: '#fff',
+        anchor: 'end',
+        align: 'center',
+        font: { weight: 'bold', size: 14 },
+        formatter: (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value),
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#fff', font: { weight: 'bold' as const } },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: '#fff',
+          callback: function(value) {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value as number);
+          },
+        },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+      },
+    },
+  };
+
+  // --- Revenue Chart Data Mapping ---
+  const weeklyRevenueChartData = {
+    labels: revenueWeekly.map(r => r._id || r.week),
+    datasets: [
+      {
+        label: "Weekly Revenue",
+        data: revenueWeekly.map((r) => r.revenue || r.total || r.totalAmount),
+        borderColor: "#bae6fd", // Light Blue
+        backgroundColor: "rgba(186, 230, 253, 0.2)",
+        borderWidth: 3,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      },
+    ],
+  };
+
+  const monthlyRevenueChartData = {
+    labels: revenueMonthly.map(r => r._id || r.month),
+    datasets: [
+      {
+        label: "Monthly Revenue",
+        data: revenueMonthly.map((r) => r.revenue || r.total || r.totalAmount),
+        borderColor: "#bbf7d0", // Light Green
+        backgroundColor: "rgba(187, 247, 208, 0.2)",
+        borderWidth: 3,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      },
+    ],
+  };
+
+  const revenueChartOptions: ChartOptions<'line'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: '#fff',
+          font: { size: 14, weight: 'bold' as const },
+        },
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: '#fff',
+        borderWidth: 1,
+        caretPadding: 10,
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      },
+    },
+    scales: {
+      x: {
+        type: 'category',
+        ticks: { color: '#fff', font: { size: 12, weight: 'bold' as const } },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+        title: { display: true, text: 'Period', color: '#fff', font: { size: 14, weight: 'bold' as const } },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: {
+          color: '#fff',
+          font: { size: 12, weight: 'bold' as const },
+          callback: function(value) {
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value as number);
+          }
+        },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+        title: { display: true, text: 'Revenue (₹)', color: '#fff', font: { size: 14, weight: 'bold' as const } },
+      },
+    },
+  };
 
   return (
     <div className="min-h-screen p-6 bg-white/80 dark:bg-gradient-to-br dark:from-[#0a192f] dark:via-[#1e3a5f] dark:to-[#2d4a6b] transition-colors duration-500">
@@ -485,7 +881,7 @@ export default function AdminDashboard() {
           </div>
           
           {/* Enhanced Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 mb-12">
             {summary && typeof summary.totalUsers !== 'undefined' && (
               <motion.div variants={cardVariants}>
                 <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-red-500/30 transition-all duration-300 group cursor-pointer" onClick={() => router.push('/admin/users')}>
@@ -493,14 +889,14 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Total Users</p>
-                        <p className="text-4xl font-bold text-white">{summary.totalUsers.toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-white">{summary.totalUsers.toLocaleString()}</p>
                         <div className="flex items-center mt-2">
                           <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
                           <span className="text-green-400 text-sm font-medium">+12% this month</span>
                         </div>
                       </div>
-                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <Users className="w-8 h-8 text-white" />
+                      <div className="w-16 h-11 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <Users className="w-8 h-6 text-white" />
                       </div>
             </div>
                   </CardContent>
@@ -514,14 +910,14 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Total Canteens</p>
-                        <p className="text-4xl font-bold text-white">{summary.totalCanteens.toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-white">{summary.totalCanteens.toLocaleString()}</p>
                         <div className="flex items-center mt-2">
                           <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
                           <span className="text-green-400 text-sm font-medium">+8% this month</span>
             </div>
           </div>
-                      <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <Store className="w-8 h-8 text-white" />
+                      <div className="w-16 h-11 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <Store className="w-8 h-6 text-white" />
         </div>
       </div>
                   </CardContent>
@@ -535,78 +931,161 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Total Orders</p>
-                        <p className="text-4xl font-bold text-white">{totalOrders.toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-white"><CountUp end={totalOrders} /></p>
                         <div className="flex items-center mt-2">
                           <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
-                          <span className="text-green-400 text-sm font-medium">+15% this month</span>
+                          <span className="text-green-400 text-sm font-medium">Monthly order volume</span>
             </div>
           </div>
-                      <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <ShoppingCart className="w-8 h-8 text-white" />
+                      <div className="w-16 h-11 bg-gradient-to-r from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <ShoppingCart className="w-8 h-6 text-white" />
           </div>
         </div>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
-              </div>
-              
-          {/* Core Analytics Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-            {topSpenders.length > 0 && (
+            {typeof totalRevenueValue !== 'undefined' && (
               <motion.div variants={cardVariants}>
-                <Card className="bg-gradient-to-br from-rose-500/80 to-red-400/80 shadow-2xl border-0 rounded-2xl flex items-center justify-center h-full">
-                  <CardContent className="flex flex-col items-center justify-center h-72 w-full">
-                    {topSpenders.length === 1 ? (
-                      <div className="flex flex-col items-center justify-center w-full h-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <span className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 shadow-lg">
-                            <Crown className="w-10 h-10 text-black drop-shadow-lg" />
-                          </span>
+                <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-yellow-500/30 transition-all duration-300 group">
+                  <CardContent className="p-8">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Total Revenue</p>
+                        <p className="text-3xl font-bold text-white">₹<CountUp end={totalRevenueValue} /></p>
+                        <div className="flex items-center mt-2">
+                          <TrendingUp className="w-4 h-4 text-green-400 mr-1" />
+                          <span className="text-green-400 text-sm font-medium">Cumulative earnings</span>
                         </div>
-                        <span className="text-4xl font-extrabold text-black mb-2">Top Spender</span>
-                        <span className="text-3xl font-bold text-white mb-1">
-                          <CountUp end={topSpenders[0].amount || topSpenders[0].totalSpent} />
-                        </span>
-                        <span className="text-lg font-semibold text-white mb-1">{topSpenders[0].name || topSpenders[0].email}</span>
-                </div>
-                    ) : (
-                      <Bar data={topSpendersChartData} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />
-                    )}
+                      </div>
+                      <div className="mx-3 w-24 h-11 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <DollarSign className="w-8 h-6 text-white" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
             )}
-            {/* Daily Revenue Chart */}
+            {typeof averageOrderValue !== 'undefined' && (
+              <motion.div variants={cardVariants}>
+                <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:border-cyan-500/30 transition-all duration-300 group">
+                  <CardContent className="p-8">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg text-slate-300 font-bold uppercase tracking-wider mb-2">Avg. Order Value</p>
+                        <p className="text-3xl font-bold text-white">₹<CountUp end={averageOrderValue} decimals={2} /></p>
+                        <div className="flex items-center mt-2">
+                          <TrendingUp className="w-4 h-4 text-red-400 mr-1" />
+                          <span className="text-red-400 text-sm font-medium">Avg. value per order</span>
+                        </div>
+                      </div>
+                      <div className="mx-2 w-20 h-11 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <Award className="w-8 h-6 text-white" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+              </div>
+              
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+              <motion.div variants={cardVariants}>
+              <Card className="bg-gradient-to-br from-purple-500/80 to-violet-400/80 shadow-2xl border-0 rounded-2xl flex items-center justify-center h-full">
+                  <CardContent className="flex flex-col items-center justify-center h-72 w-full">
+                      <div className="flex flex-col items-center justify-center w-full h-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <span className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 shadow-lg">
+                        <DollarSign className="w-10 h-10 text-black drop-shadow-lg" />
+                          </span>
+                        </div>
+                    <span className="text-4xl font-extrabold text-black mb-2">Daily Revenue</span>
+                    <span className="text-3xl font-bold text-black">₹<CountUp end={dailyRevenueValue} decimals={2} /></span>
+                    <div className="flex items-center mt-4 text-black">
+                      <TrendingUp className="w-5 h-5 mr-2" />
+                      <span className="text-base font-medium">Today's Earnings</span>
+                </div>
+                  </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+            {topSpenders.length > 0 && (
             <motion.div variants={cardVariants}>
-              <Card className="bg-gradient-to-br from-green-400/80 to-emerald-500/80 shadow-2xl border-0 rounded-2xl flex items-center justify-center h-full">
+                <Card className="bg-gradient-to-br from-red-500/80 to-red-500/80 shadow-2xl border-0 rounded-2xl flex items-center justify-center h-full">
                 <CardContent className="flex flex-col items-center justify-center h-72 w-full">
-                  {revenueDaily.length === 1 ? (
                     <div className="flex flex-col items-center justify-center w-full h-full">
                       <div className="flex items-center justify-center mb-4">
                         <span className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 shadow-lg">
-                          <span className="text-5xl text-black font-extrabold">₹</span>
+                          <Crown className="w-10 h-10 text-black drop-shadow-lg" />
                         </span>
                       </div>
-                      <span className="text-4xl font-extrabold text-black mb-2">Daily Revenue</span>
-                      <span className="text-3xl font-bold text-white mb-1">
-                        <CountUp end={revenueDaily[0].revenue || revenueDaily[0].total || revenueDaily[0].totalAmount} />
-                      </span>
-                      <span className="text-lg font-semibold text-white mb-1">{revenueDaily[0]._id || revenueDaily[0].date}</span>
+                      <span className="text-4xl font-extrabold text-black mb-2">Top Spender</span>
+                      <span className="text-3xl font-bold text-black">{topSpenders[0].name || topSpenders[0].username}</span>
+                      <span className="text-xl font-medium text-black mt-2">₹<CountUp end={topSpenders[0].amount || topSpenders[0].totalSpent} decimals={2} /></span>
+                      <div className="flex items-center mt-4 text-black">
+                        <Star className="w-5 h-5 mr-2" />
+                        <span className="text-base font-medium">Highest Spending User</span>
                     </div>
-                  ) : revenueDaily.length === 0 ? (
-                    <div className="flex items-center justify-center h-full  text-lg font-semibold">
-                      No revenue data for today
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Weekly Revenue Trends</h3>
+                      <p className="text-slate-400 text-sm">Aggregated Weekly Earnings</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-72 w-full">
+                  {weeklyRevenueChartData.labels.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-lg font-semibold text-white">
+                      No weekly revenue data available
             </div>
                   ) : (
-                    <Bar data={revenueDailyChartData} options={{ responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#000' } }, y: { ticks: { color: '#000' } } } }} />
+                    <Line data={weeklyRevenueChartData} options={revenueChartOptions} />
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Monthly Revenue Trends</h3>
+                      <p className="text-slate-400 text-sm">Aggregated Monthly Earnings</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center h-72 w-full">
+                  {monthlyRevenueChartData.labels.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-lg font-semibold text-white">
+                      No monthly revenue data available
+                    </div>
+                  ) : (
+                    <Line data={monthlyRevenueChartData} options={revenueChartOptions} />
                   )}
                 </CardContent>
               </Card>
             </motion.div>
               </div>
 
-          {/* Place the three analytics charts (New Users, Orders, Revenue) below */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
             <motion.div variants={cardVariants}>
               <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
@@ -710,38 +1189,18 @@ export default function AdminDashboard() {
                       <DollarSign className="w-5 h-5 text-green-400" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-white">Revenue</h3>
-                      <p className="text-slate-400 text-sm">Monthly earnings</p>
+                      <h3 className="text-lg font-semibold text-white">Top Canteens by Orders</h3>
+                      <p className="text-slate-400 text-sm">Canteens with highest order volume</p>
                   </div>
                 </div>
                 </CardHeader>
                 <CardContent>
                   <div style={{ height: '300px' }} className="flex items-center justify-center h-full">
-                    {revenueMonthly.length === 0 ? 
+                    {topCanteens.length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
-                      <Line 
-                        data={revenueChartData} 
-                        options={{
-                          responsive: true,
-                          plugins: { legend: { display: false } },
-                          elements: { line: { borderColor: '#fff', borderWidth: 4 }, point: { backgroundColor: '#fff', radius: 6 } },
-                          scales: {
-                            x: {
-                              ticks: { color: '#fff', font: { size: 16, weight: 'bold' } },
-                              grid: { color: 'rgba(255,255,255,0.08)' },
-                              title: { display: false },
-                            },
-                            y: {
-                              ticks: { color: '#fff', font: { size: 16, weight: 'bold' }, stepSize: 1000, maxTicksLimit: 10 },
-                              grid: { color: 'rgba(255,255,255,0.08)' },
-                              title: { display: false },
-                              suggestedMin: 0,
-                              suggestedMax: Math.max(...(revenueMonthly.map(r => r.revenue || r.total || r.totalAmount)), 10000) * 2,
-                            },
-                          },
-                          layout: { padding: 24 },
-                          backgroundColor: 'transparent',
-                        }}
+                      <Bar 
+                        data={topCanteensChartData} 
+                        options={topCanteensChartOptions} 
                       />
                     }
                   </div>
@@ -750,8 +1209,7 @@ export default function AdminDashboard() {
             </motion.div>
               </div>
               
-          {/* Distribution Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
             <motion.div variants={cardVariants}>
               <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
                 <CardHeader className="pb-4">
@@ -767,7 +1225,7 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
-                    {!orderStatus ? 
+                    {!orderStatus || Object.keys(orderStatus).length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Pie 
                         data={orderStatusChartData} 
@@ -776,11 +1234,16 @@ export default function AdminDashboard() {
                           plugins: {
                             legend: {
                               position: 'bottom',
-                              labels: { color: '#000', font: { size: 18, weight: 'bold' } },
+                              labels: { color: '#fff', font: { size: 14, weight: 'bold' } },
                             },
                             datalabels: {
                               color: '#111',
                               font: { size: 22, weight: 'bold' },
+                              formatter: (value, ctx) => {
+                                const sum = (ctx.dataset.data as number[]).reduce((a, b) => a + b, 0);
+                                const percentage = (value * 100 / sum).toFixed(1) + '%';
+                                return percentage;
+                              },
                             },
                           },
                         }}
@@ -806,7 +1269,7 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
-                    {!userRoles ? 
+                    {!userRoles || Object.keys(userRoles).length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Pie 
                         data={userRolesChartData} 
@@ -815,12 +1278,60 @@ export default function AdminDashboard() {
                           plugins: {
                             legend: {
                               position: 'bottom',
-                              labels: { color: '#000', font: { size: 18, weight: 'bold' } },
+                              labels: { color: '#fff', font: { size: 14, weight: 'bold' } },
                             },
                             datalabels: {
                               color: '#111',
                               font: { size: 22, weight: 'bold' },
+                              formatter: (value, ctx) => {
+                                const sum = (ctx.dataset.data as number[]).reduce((a, b) => a + b, 0);
+                                const percentage = (value * 100 / sum).toFixed(1) + '%';
+                                return percentage;
+                              },
                             },
+                          },
+                        }}
+                      />
+                    }
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+            <motion.div variants={cardVariants}>
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Revenue by Payment Method</h3>
+                      <p className="text-slate-400 text-sm">Breakdown of revenue sources</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
+                    {!revenueByPaymentMethod || revenueByPaymentMethod.length === 0 ? 
+                      <div className="flex items-center justify-center h-full text-slate-400">No payment data available</div> : 
+                      <Pie 
+                        data={revenueByPaymentMethodChartData} 
+                        options={{
+                          responsive: true,
+                          plugins: {
+                            legend: {
+                              position: 'bottom',
+                              labels: { color: '#fff', font: { size: 14, weight: 'bold' } },
+                            },
+                            tooltip: {
+                              callbacks: {
+                                label: function(context) {
+                                  const label = context.label || '';
+                                  const value = context.raw as number;
+                                  return `${label}: ₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                }
+                              }
+                            }
                           },
                         }}
                       />
@@ -831,7 +1342,101 @@ export default function AdminDashboard() {
             </motion.div>
                 </div>
 
-          {/* Performance Charts */}
+          <motion.div variants={itemVariants} className="mb-12 my-20 w-full">
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 w-full">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                    <UserX className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Suspected Users</h3>
+                    <p className="text-slate-400 text-sm">Users with suspicious activity or unpaid penalties</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0 w-full">
+                {Array.isArray(suspectedUsers) && suspectedUsers.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400">No suspected users found.</div>
+                ) : Array.isArray(suspectedUsers) && suspectedUsers.length > 0 ? (
+                  <div className="overflow-x-auto w-full">
+                    <table className="min-w-full divide-y divide-white/20">
+                      <thead className="bg-white/15">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Name</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Email</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Suspicious Count</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Penalty Amount</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Penalty Order</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Penalty Paid</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {suspectedUsers.map((user, index) => (
+                          <tr key={user.email + index} className="hover:bg-white/5">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{user.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{user.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{user.suspiciousCount}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">₹{user.penalty?.Amount ?? user.penalty?.amount ?? 'N/A'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{user.penalty?.Order?.OrderNumber ?? user.penalty?.order?.orderNumber ?? 'N/A'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <Badge variant={user.penalty?.isPaid === false ? "destructive" : "default"}>
+                                {user.penalty?.isPaid === false ? "Unpaid" : "Paid"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-slate-400">No suspected users found.</div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div variants={cardVariants}>
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-sky-500/20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-sky-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">Revenue by Campus and Canteen</h3>
+                      <p className="text-slate-400 text-sm">Detailed revenue breakdown</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {revenueByCampusCanteen.length === 0 ? (
+                    <div className="p-6 text-center text-slate-400">No revenue by campus and canteen data available.</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-white/20">
+                        <thead className="bg-white/15">
+                          <tr>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Campus</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Canteen</th>
+                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/10">
+                          {revenueByCampusCanteen.map((data, index) => (
+                            <tr key={data.campusId + data.canteenId + index} className="hover:bg-white/5">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{data.campusName || 'N/A'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{data.canteenName || 'N/A'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(data.revenue || data.totalRevenue || 0)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
 
     
         </motion.div>

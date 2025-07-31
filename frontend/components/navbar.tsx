@@ -161,7 +161,8 @@ function Navbar() {
               </div>
             </Link>
 
-            {/* Right side actions for hideNavbar */}
+           {/* Right side actions for hideNavbar - only show for dashboard, not register */}
+           {pathname === '/campus/dashboard' && (
             <div className='flex items-center space-x-4'>
 
               {isAuthenticated ? (
@@ -181,7 +182,11 @@ function Navbar() {
                       )}
                     </Button>
                     {NotificationListShow && user?.id && (
-                      <NotificationList userId={user.id} />
+                      <NotificationList
+                        userId={user.id}
+                        isOpen={NotificationListShow}
+                        onClose={() => setNotificationList(false)}
+                      />
                     )}
                   </div>
 
@@ -280,6 +285,7 @@ function Navbar() {
                 </Button>
               )}
             </div>
+           )}
           </div>
         </div>
       </header>

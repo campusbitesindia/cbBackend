@@ -1,92 +1,224 @@
 import React, { useState } from 'react';
-import { Edit, Leaf, Trash2 } from 'lucide-react';
+import { Edit, Leaf, Trash2, Clock, CheckCircle, Star } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MenuItem } from '@/services/menuService';
+import { Switch } from '@/components/ui/switch';
+import { MenuItem, toggleMenuItemReadyStatus } from '@/services/menuService';
 import { useToast } from '@/hooks/use-toast';
 
 interface MenuItemCardProps {
   item: MenuItem;
   onEdit: (item: MenuItem) => void;
   onDelete: (itemId: string) => void;
+  onToggleReady?: (itemId: string, isReady: boolean) => void;
 }
 
 export const MenuItemCard: React.FC<MenuItemCardProps> = ({
   item,
   onEdit,
   onDelete,
+  onToggleReady,
 }) => {
   const { toast } = useToast();
   const [currentItem, setCurrentItem] = useState(item);
+  const [togglingReady, setTogglingReady] = useState(false);
+
+  const handleToggleReady = async () => {
+    if (togglingReady) return;
+
+    setTogglingReady(true);
+    try {
+      const updatedItem = await toggleMenuItemReadyStatus(currentItem._id);
+      setCurrentItem(updatedItem);
+
+      toast({
+        title: 'Status Updated',
+        description: `Item ${
+          updatedItem.isReady ? 'marked as ready' : 'marked as not ready'
+        }`,
+      });
+
+      // Call parent callback if provided
+      if (onToggleReady) {
+        onToggleReady(currentItem._id, updatedItem.isReady || false);
+      }
+    } catch (error: any) {
+      console.error('Error toggling ready status:', error);
+      toast({
+        title: 'Update Failed',
+        description:
+          error.response?.data?.message || 'Failed to update ready status',
+        variant: 'destructive',
+      });
+    } finally {
+      setTogglingReady(false);
+    }
+  };
 
   return (
     <Card
-      className={`flex flex-col h-full bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-lg rounded-2xl transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] transform ${
-        currentItem.available === false ? 'opacity-60 grayscale-[0.3]' : ''
+      className={`group relative overflow-hidden bg-white border-0 shadow-lg rounded-2xl transition-all duration-500 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 ${
+        currentItem.available === false
+          ? 'opacity-75 ring-2 ring-red-100'
+          : 'hover:ring-2 hover:ring-indigo-100'
       }`}>
-      <div className='relative bg-white rounded-t-2xl overflow-hidden'>
-        <img
-          src={currentItem.image || '/placeholder.svg'}
-          alt={currentItem.name}
-          className={`w-full h-48 object-cover transition-transform duration-300 hover:scale-105 ${
-            currentItem.available === false ? 'grayscale-[0.5]' : ''
-          }`}
-        />
-        <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300'></div>
-        <span
-          className={`absolute top-3 left-3 text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur-sm shadow-lg ${
-            currentItem.available !== false
-              ? 'bg-green-500/90'
-              : 'bg-red-500/90 animate-pulse'
-          }`}>
-          {currentItem.available !== false ? 'Active' : 'Not Active'}
-        </span>
-        {currentItem.isVeg ? (
-          <span className='absolute top-3 right-3 bg-green-100/95 text-green-800 text-xs font-semibold px-2.5 py-1.5 rounded-full flex items-center backdrop-blur-sm shadow-lg'>
-            <Leaf className='w-3 h-3 mr-1' /> VEG
-          </span>
-        ) : (
-          <span className='absolute top-3 right-3 bg-red-100/95 text-red-800 text-xs font-semibold px-2.5 py-1.5 rounded-full flex items-center backdrop-blur-sm shadow-lg'>
-            <Leaf className='w-3 h-3 mr-1 rotate-180' /> NON-VEG
-          </span>
-        )}
-      </div>
-      <CardContent className='flex-1 flex flex-col p-5 bg-white rounded-b-2xl'>
-        <h3 className='font-bold text-lg text-gray-900 mb-2 line-clamp-1'>
-          {currentItem.name}
-        </h3>
-        <p className='text-sm text-gray-600 mb-3 line-clamp-2 leading-relaxed'>
-          {currentItem.description || 'No description available'}
-        </p>
-        <div className='mb-3'>
-          <span className='text-2xl font-bold text-gray-900 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent'>
-            ₹{currentItem.price}
-          </span>
+      {/* Gradient overlay for depth */}
+      <div className='absolute inset-0 bg-gradient-to-br from-slate-50/30 via-transparent to-slate-100/20 pointer-events-none' />
+
+      {/* Image Section */}
+      <div className='relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 to-slate-200'>
+        <div className='aspect-[3/2] relative overflow-hidden'>
+          <img
+            src={currentItem.image || '/placeholder.svg'}
+            alt={currentItem.name}
+            className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${
+              currentItem.available === false ? 'grayscale saturate-50' : ''
+            }`}
+          />
+
+          {/* Image overlay gradient */}
+          <div className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60' />
+
+          {/* Animated overlay on hover */}
+          <div className='absolute inset-0 bg-gradient-to-t from-indigo-900/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500' />
         </div>
-        <div className='mb-4'>
-          <span className='inline-block text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full capitalize'>
+
+        {/* Status Badges Container */}
+        <div className='absolute inset-0 p-3'>
+          {/* Availability Badge */}
+          <div className='flex justify-between items-start'>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-xl backdrop-blur-md border transition-all duration-300 ${
+                currentItem.available !== false
+                  ? 'bg-emerald-500/90 text-white border-emerald-400/50 shadow-lg shadow-emerald-500/25'
+                  : 'bg-red-500/90 text-white border-red-400/50 shadow-lg shadow-red-500/25 animate-pulse'
+              }`}>
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${
+                  currentItem.available !== false
+                    ? 'bg-emerald-200'
+                    : 'bg-red-200'
+                }`}
+              />
+              {currentItem.available !== false ? 'Available' : 'Unavailable'}
+            </span>
+
+            {/* Veg/Non-Veg Badge */}
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-xl backdrop-blur-md border transition-all duration-300 ${
+                currentItem.isVeg
+                  ? 'bg-green-500/90 text-white border-green-400/50 shadow-lg shadow-green-500/25'
+                  : 'bg-orange-500/90 text-white border-orange-400/50 shadow-lg shadow-orange-500/25'
+              }`}>
+              <Leaf
+                className={`w-2.5 h-2.5 ${
+                  !currentItem.isVeg ? 'rotate-180' : ''
+                }`}
+              />
+              {currentItem.isVeg ? 'Veg' : 'Non-Veg'}
+            </span>
+          </div>
+
+          {/* Ready Status Badge - Bottom */}
+          <div className='absolute bottom-3 left-3'>
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl backdrop-blur-md border transition-all duration-300 ${
+                currentItem.isReady
+                  ? 'bg-emerald-500/90 text-white border-emerald-400/50 shadow-lg shadow-emerald-500/25'
+                  : 'bg-amber-500/90 text-white border-amber-400/50 shadow-lg shadow-amber-500/25'
+              }`}>
+              {currentItem.isReady ? (
+                <>
+                  <CheckCircle className='w-3 h-3' />
+                  Ready
+                </>
+              ) : (
+                <>
+                  <Clock className='w-3 h-3' />
+                  Preparing
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Section */}
+      <CardContent className='relative p-4 space-y-3'>
+        {/* Header */}
+        <div className='space-y-1.5'>
+          <h3 className='font-bold text-lg text-slate-900 leading-tight line-clamp-1 group-hover:text-indigo-700 transition-colors duration-300'>
+            {currentItem.name}
+          </h3>
+          <p className='text-xs text-slate-600 line-clamp-2 leading-relaxed'>
+            {currentItem.description ||
+              'Delicious item crafted with care and quality ingredients'}
+          </p>
+        </div>
+
+        {/* Price and Category Row */}
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-1.5'>
+            <span className='text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent'>
+              ₹{currentItem.price}
+            </span>
+          </div>
+
+          <span className='inline-flex items-center text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg capitalize'>
             {currentItem.category}
           </span>
         </div>
-        <div className='mt-auto'>
-          <div className='flex gap-2'>
-            <Button
-              size='sm'
-              variant='outline'
-              className='flex-1 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 flex items-center justify-center font-medium transition-all duration-200 shadow-sm'
-              onClick={() => onEdit(currentItem)}>
-              <Edit className='w-4 h-4 mr-1' /> Edit
-            </Button>
-            <Button
-              size='sm'
-              variant='outline'
-              className='flex-1 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 flex items-center justify-center font-medium transition-all duration-200 shadow-sm'
-              onClick={() => onDelete(currentItem._id)}>
-              <Trash2 className='w-4 h-4 mr-1' /> Delete
-            </Button>
+
+        {/* Ready Status Toggle */}
+        <div className='flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100'>
+          <div className='flex items-center gap-2'>
+            <div
+              className={`w-1.5 h-1.5 rounded-full ${
+                currentItem.isReady ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            />
+            <span className='text-xs font-medium text-slate-700'>
+              {currentItem.isReady ? 'Ready to serve' : 'Mark when ready'}
+            </span>
           </div>
+
+          <Switch
+            checked={currentItem.isReady || false}
+            onCheckedChange={handleToggleReady}
+            disabled={togglingReady}
+            className={`
+              transition-all duration-300
+              ${togglingReady ? 'opacity-50 cursor-not-allowed' : ''}
+              data-[state=checked]:bg-emerald-600 
+              data-[state=unchecked]:bg-slate-300
+            `}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className='flex gap-2 pt-1'>
+          <Button
+            size='sm'
+            variant='outline'
+            className='flex-1 h-8 bg-gradient-to-r from-blue-50 to-indigo-50 text-indigo-700 border-indigo-200 hover:from-indigo-100 hover:to-blue-100 hover:border-indigo-300 hover:text-indigo-800 font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-indigo-200/50 rounded-lg text-xs'
+            onClick={() => onEdit(currentItem)}>
+            <Edit className='w-3 h-3 mr-1.5' />
+            Edit
+          </Button>
+
+          <Button
+            size='sm'
+            variant='outline'
+            className='flex-1 h-8 bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200 hover:from-red-100 hover:to-pink-100 hover:border-red-300 hover:text-red-800 font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-red-200/50 rounded-lg text-xs'
+            onClick={() => onDelete(currentItem._id)}>
+            <Trash2 className='w-3 h-3 mr-1.5' />
+            Remove
+          </Button>
         </div>
       </CardContent>
+
+      {/* Subtle corner accent */}
+      <div className='absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-100/30 to-transparent rounded-bl-2xl' />
     </Card>
   );
 };

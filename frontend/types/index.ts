@@ -6,7 +6,7 @@ export interface User {
   bio?: string;
   address?: string;
   dateOfBirth?: string;
-  role: "student" | "campus_store" | "admin";
+  role: 'student' | 'campus_store' | 'admin';
   isVerified: boolean;
   isBanned?: boolean;
   is_verified?: boolean;
@@ -25,9 +25,11 @@ export interface Canteen {
   isOpen: boolean;
   is_verified?: boolean;
   isBanned?: boolean;
+  owner:any,
   discount?: string;
   featured?: boolean;
   imageUrl?: string;
+  fssaiLicense?: string;
 }
 
 export interface Item {
@@ -41,11 +43,12 @@ export interface Item {
   rating: number;
   isVeg: boolean;
   canteen: string;
+  isReady: boolean;
 }
 
 export interface Order {
   _id: string;
-  student: string;
+  student: string | { _id: string; name: string };
   canteen: {
     _id: string;
     name: string;
@@ -61,10 +64,16 @@ export interface Order {
     quantity: number;
   }>;
   total: number;
-  status: "placed" | "preparing" | "ready" | "completed" | "cancelled";
+  status:
+    | 'placed'
+    | 'preparing'
+    | 'ready'
+    | 'completed'
+    | 'cancelled'
+    | 'payment_pending';
   payment?: {
-    method: "cod" | "upi" | "card";
-    status: "pending" | "completed" | "failed" | "refunded";
+    method: 'cod' | 'upi' | 'card';
+    status: 'pending' | 'completed' | 'failed' | 'refunded';
     transactionId?: string;
     upiDetails?: {
       upiId: string;
@@ -79,4 +88,50 @@ export interface Order {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Review {
+  _id: string;
+  student: {
+    _id: string;
+    name: string;
+  };
+  canteen: {
+    _id: string;
+    name: string;
+  };
+  item: {
+    _id: string;
+    name: string;
+    price: number;
+    image?: string;
+  };
+  rating: number;
+  comment: string;
+  isDeleted: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateReviewPayload {
+  canteenId: string;
+  itemId: string;
+  rating: number;
+  comment: string;
+}
+
+export interface ReviewsResponse {
+  success: boolean;
+  message: string;
+  data: Review[];
+}
+
+export interface AverageRatingResponse {
+  success: boolean;
+  message: string;
+  data: {
+    item?: Item;
+    canteen?: Canteen;
+    AverageRating: number;
+  };
 }

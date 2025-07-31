@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
   createMenuItem,
@@ -21,7 +22,6 @@ import {
 } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
 import { getOrderById } from '@/services/orderService';
-import { useNotificationToast } from '@/hooks/use-notification';
 import axios from 'axios';
 import { DashboardSidebar } from '@/app/campus/dashboard/DashboardSidebar';
 import { OverviewTab } from '@/app/campus/dashboard/OverviewTab';
@@ -46,12 +46,41 @@ import {
   DollarSign,
   RefreshCw,
   TrendingUp,
+  Home,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useMobile } from '@/hooks/use-mobile';
+import {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { Menu as MenuIcon } from 'lucide-react';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function Dashboard() {
+  // Move all hooks to the top
+  const router = useRouter();
+  const isMobile = useMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -63,12 +92,10 @@ export default function Dashboard() {
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [notApprovedDialog, setNotApprovedDialog] = useState(false);
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-
   const canteenId = localStorage.getItem('canteenId');
-
-  // Form state for new/edit item
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -80,16 +107,11 @@ export default function Dashboard() {
     portion: '',
     quantity: '',
   });
-
-  // Add search state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
-
-  // State for order details modal
+  const [readyFilter, setReadyFilter] = useState('all');
   const [orderDetails, setOrderDetails] = useState<any | null>(null);
-
-  // Personal details state
   const [personalData, setPersonalData] = useState({
     vendorName: '',
     contactPerson: '',
@@ -102,8 +124,6 @@ export default function Dashboard() {
   const [personalSuccess, setPersonalSuccess] = useState(false);
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [profilePicPreview, setProfilePicPreview] = useState('');
-
-  // Bank details state
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: '',
     accountNumber: '',
@@ -115,6 +135,136 @@ export default function Dashboard() {
   });
   const [bankSubmitting, setBankSubmitting] = useState(false);
   const [bankSuccess, setBankSuccess] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
+
+  // Type for breadcrumb items
+  type BreadcrumbItem = {
+    label: string;
+    href: string;
+    onClick: (() => void) | null;
+    icon: React.ComponentType<any> | undefined;
+  };
+
+  // Breadcrumb configuration
+  const getBreadcrumbItems = (): BreadcrumbItem[] => {
+    const baseItems: BreadcrumbItem[] = [
+      {
+        label: 'Dashboard',
+        href: '#',
+        onClick: () => setActiveTab('overview'),
+        icon: Home,
+      },
+    ];
+
+    if (activeTab === 'overview') {
+      return baseItems;
+    }
+
+    const tabLabels: { [key: string]: string } = {
+      menu: 'Menu Items',
+      orders: 'Orders',
+      analytics: 'Analytics',
+      profile: 'Profile',
+      payouts: 'Payouts',
+    };
+
+    // Add sub-navigation for specific tabs
+    const breadcrumbItems: BreadcrumbItem[] = [
+      ...baseItems,
+      {
+        label: tabLabels[activeTab] || activeTab,
+        href: '#',
+        onClick: null, // Current page, no click action
+        icon: undefined,
+      },
+    ];
+
+    // Add sub-navigation for menu items
+    if (activeTab === 'menu') {
+      if (isAddItemOpen) {
+        breadcrumbItems.push({
+          label: 'Add New Item',
+          href: '#',
+          onClick: () => {
+            setIsAddItemOpen(false);
+            resetForm();
+          },
+          icon: undefined,
+        });
+      } else if (isEditItemOpen && editingItem) {
+        breadcrumbItems.push({
+          label: `Edit ${editingItem.name}`,
+          href: '#',
+          onClick: () => {
+            setIsEditItemOpen(false);
+            setEditingItem(null);
+            resetForm();
+          },
+          icon: undefined,
+        });
+      }
+    }
+
+    // Add sub-navigation for orders
+    if (activeTab === 'orders' && orderDetails) {
+      breadcrumbItems.push({
+        label: `Order #${orderDetails._id?.slice(-6) || 'Details'}`,
+        href: '#',
+        onClick: () => setOrderDetails(null),
+        icon: undefined,
+      });
+    }
+
+    return breadcrumbItems;
+  };
+
+  // Form state for new/edit item
+  // const [formData, setFormData] = useState({
+  //   name: '',
+  //   price: '',
+  //   description: '',
+  //   category: '',
+  //   isVeg: false,
+  //   available: true,
+  //   image: '',
+  //   portion: '',
+  //   quantity: '',
+  // });
+
+  // Add search state
+  // const [searchTerm, setSearchTerm] = useState('');
+  // const [statusFilter, setStatusFilter] = useState('all');
+  // const [categoryFilter, setCategoryFilter] = useState('all');
+
+  // State for order details modal
+  // const [orderDetails, setOrderDetails] = useState<any | null>(null);
+
+  // Personal details state
+  // const [personalData, setPersonalData] = useState({
+  //   vendorName: '',
+  //   contactPerson: '',
+  //   mobileNumber: '',
+  //   email: '',
+  //   address: '',
+  //   profilePic: '',
+  // });
+  // const [personalSubmitting, setPersonalSubmitting] = useState(false);
+  // const [personalSuccess, setPersonalSuccess] = useState(false);
+  // const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
+  // const [profilePicPreview, setProfilePicPreview] = useState('');
+
+  // Bank details state
+  // const [bankDetails, setBankDetails] = useState({
+  //   accountHolderName: '',
+  //   accountNumber: '',
+  //   confirmAccountNumber: '',
+  //   ifscCode: '',
+  //   bankName: '',
+  //   branchName: '',
+  //   upiId: '',
+  // });
+  // const [bankSubmitting, setBankSubmitting] = useState(false);
+  // const [bankSuccess, setBankSuccess] = useState(false);
 
   // Handle profile picture upload
   const handleProfilePicUpload = async (
@@ -320,8 +470,19 @@ export default function Dashboard() {
           menuItemsArray
         );
         setMenuItems(menuItemsArray);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching menu data:', error);
+
+        // Check for canteen not approved error
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          setLoading(false); // Stop loading when showing dialog
+          return; // Exit early to prevent other error handling
+        }
+
         setMenuItems([]); // Clear menu items on error
         toast({
           title: 'Error',
@@ -339,8 +500,19 @@ export default function Dashboard() {
           ? ordersData.data
           : [];
         setOrders(ordersToSet);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching orders data:', error);
+
+        // Check for canteen not approved error
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          setLoading(false); // Stop loading when showing dialog
+          return; // Exit early to prevent other error handling
+        }
+
         toast({
           title: 'Error',
           description: 'Failed to fetch orders',
@@ -353,16 +525,38 @@ export default function Dashboard() {
         const statsData = await getCanteenStats(canteenIdToUse, token);
         const statsToSet = statsData?.data || null;
         setCanteenStats(statsToSet);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching stats data:', error);
+
+        // Check for canteen not approved error
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setNotApprovedDialog(true);
+          setLoading(false); // Stop loading when showing dialog
+          return; // Exit early to prevent other error handling
+        }
+
         toast({
           title: 'Error',
           description: 'Failed to fetch statistics',
           variant: 'destructive',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+
+      // Check for canteen not approved error
+      if (
+        error?.response?.status === 403 &&
+        error?.response?.data?.message?.toLowerCase().includes('not approved')
+      ) {
+        setNotApprovedDialog(true);
+        setLoading(false); // Stop loading when showing dialog
+        return;
+      }
+
       toast({
         title: 'Error',
         description: 'Failed to fetch data',
@@ -373,7 +567,7 @@ export default function Dashboard() {
     }
   };
 
-  const [imageUploading, setImageUploading] = useState(false);
+  // const [imageUploading, setImageUploading] = useState(false);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -574,6 +768,15 @@ export default function Dashboard() {
     }
   };
 
+  const handleToggleReady = (itemId: string, isReady: boolean) => {
+    // Update the menu item in the local state
+    setMenuItems((prevItems) =>
+      prevItems.map((item) =>
+        item._id === itemId ? { ...item, isReady } : item
+      )
+    );
+  };
+
   const resetForm = () => {
     // Clear any object URLs to prevent memory leaks
     if (imagePreview && imagePreview.startsWith('blob:')) {
@@ -601,8 +804,14 @@ export default function Dashboard() {
       const token = localStorage.getItem('token') || '';
       const response = await getOrderById(orderId, token);
       setOrderDetails(response.data);
-    } catch (error) {
-      // handle error (show toast, etc.)
+    } catch (error: any) {
+      console.error('Error fetching order details:', error);
+      toast({
+        title: 'Error',
+        description:
+          error.response?.data?.message || 'Failed to fetch order details',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -622,25 +831,13 @@ export default function Dashboard() {
     }
   };
 
-  // Debug: Add a timeout to prevent infinite loading
+  // Redirect to login if not authenticated
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn(
-          'Dashboard loading timeout reached - setting loading to false'
-        );
-        setLoading(false);
-        toast({
-          title: 'Loading Timeout',
-          description:
-            'Dashboard took too long to load. Please refresh the page.',
-          variant: 'destructive',
-        });
-      }
-    }, 10000); // 10 second timeout
-
-    return () => clearTimeout(timeout);
-  }, [loading, toast]);
+    if (!isAuthenticated || !user) {
+      router.push('/login');
+      return;
+    }
+  }, [isAuthenticated, user, router]);
 
   if (loading) {
     return (
@@ -666,14 +863,9 @@ export default function Dashboard() {
     );
   }
 
+  // Redirect handled by useEffect above
   if (!isAuthenticated || !user) {
-    // return (
-    //   <div className='flex items-center justify-center min-h-screen bg-white'>
-    //     <div className='text-gray-600'>
-    //       Please log in to access the dashboard
-    //     </div>
-    //   </div>
-    // );
+    return null; // Show nothing while redirecting
   }
 
   // Temporarily allow any authenticated user for testing
@@ -713,7 +905,13 @@ export default function Dashboard() {
       categoryFilter === 'all' ||
       (item.category && item.category.toLowerCase() === categoryFilter);
 
-    return matchesSearch && matchesStatus && matchesCategory;
+    // Ready filter
+    const matchesReady =
+      readyFilter === 'all' ||
+      (readyFilter === 'ready' && item.isReady === true) ||
+      (readyFilter === 'not-ready' && item.isReady === false);
+
+    return matchesSearch && matchesStatus && matchesCategory && matchesReady;
   });
 
   console.log('Filtered items for rendering:', filteredItems);
@@ -722,15 +920,94 @@ export default function Dashboard() {
     new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
   ).filter(Boolean);
 
-  useNotificationToast();
-
   return (
-    <div className='flex h-screen bg-gray-50'>
-      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
+    <div className='flex flex-col md:flex-row h-screen bg-gray-50 w-full'>
+      {/* Mobile: Hamburger + Drawer */}
+      {isMobile && (
+        <div className='flex md:hidden items-center p-2 bg-white border-b border-gray-200'>
+          <button
+            className='p-2 rounded-md text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500'
+            onClick={() => setDrawerOpen(true)}
+            aria-label='Open sidebar menu'>
+            <MenuIcon className='w-6 h-6' />
+          </button>
+          <span className='ml-3 font-bold text-lg text-blue-900'>
+            CampusBites
+          </span>
+        </div>
+      )}
+      {/* Sidebar: Always render both, hide one with display:none */}
+      <div style={{ display: isMobile ? 'block' : 'none' }}>
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetContent
+            side='left'
+            className='fixed z-50 inset-y-0 left-0 h-full w-full max-w-xs bg-transparent shadow-none border-none p-0 [&>button]:hidden'>
+            <DashboardSidebar
+              activeTab={activeTab}
+              setActiveTab={(tab) => {
+                setActiveTab(tab);
+                setDrawerOpen(false); // Close drawer on tab select
+              }}
+              onClose={() => setDrawerOpen(false)}
+              isMobile={true}
+            />
+          </SheetContent>
+        </Sheet>
+      </div>
+      <div style={{ display: isMobile ? 'none' : 'block' }}>
+        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      </div>
       {/* Main Content */}
-      <div className='flex-1 overflow-auto scrollbar-hide'>
-        <div className='p-8 max-w-7xl mx-auto'>
+      <div className='flex-1 overflow-auto scrollbar-hide w-full'>
+        <div className='p-4 sm:p-8 max-w-7xl mx-auto w-full'>
+          {/* Breadcrumb Navigation */}
+          <div className='mb-6'>
+            <div className='flex items-center justify-between'>
+              <Breadcrumb>
+                <BreadcrumbList className='text-sm'>
+                  {getBreadcrumbItems().map((item, index) => (
+                    <React.Fragment key={index}>
+                      <BreadcrumbItem>
+                        {item.onClick ? (
+                          <BreadcrumbLink
+                            href={item.href}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              item.onClick?.();
+                            }}
+                            className='flex items-center gap-2 hover:text-blue-600 transition-colors font-medium text-gray-600 dark:text-gray-400'>
+                            {item.icon && <item.icon className='w-4 h-4' />}
+                            {item.label}
+                          </BreadcrumbLink>
+                        ) : (
+                          <BreadcrumbPage className='flex items-center gap-2 font-semibold text-gray-600 dark:text-gray-400'>
+                            {item.icon && <item.icon className='w-4 h-4' />}
+                            {item.label}
+                          </BreadcrumbPage>
+                        )}
+                      </BreadcrumbItem>
+                      {index < getBreadcrumbItems().length - 1 && (
+                        <BreadcrumbSeparator className='text-gray-600 dark:text-gray-400' />
+                      )}
+                    </React.Fragment>
+                  ))}
+                </BreadcrumbList>
+              </Breadcrumb>
+
+              {/* Quick Navigation */}
+              {activeTab !== 'overview' && (
+                <Button
+                  variant='ghost'
+                  size='sm'
+                  onClick={() => setActiveTab('overview')}
+                  className='text-gray-600 hover:text-blue-600 transition-colors'>
+                  <Home className='w-4 h-4 mr-2' />
+                  Back to Overview
+                </Button>
+              )}
+            </div>
+          </div>
+
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <OverviewTab canteenStats={canteenStats} menuItems={menuItems} />
@@ -749,6 +1026,8 @@ export default function Dashboard() {
               setStatusFilter={setStatusFilter}
               categoryFilter={categoryFilter}
               setCategoryFilter={setCategoryFilter}
+              readyFilter={readyFilter}
+              setReadyFilter={setReadyFilter}
               isAddItemOpen={isAddItemOpen}
               setIsAddItemOpen={setIsAddItemOpen}
               isEditItemOpen={isEditItemOpen}
@@ -765,6 +1044,7 @@ export default function Dashboard() {
               onRefresh={() => canteenId && fetchData(canteenId)}
               resetForm={resetForm}
               canteenId={canteenId}
+              onToggleReady={handleToggleReady}
             />
           )}
 
@@ -780,7 +1060,9 @@ export default function Dashboard() {
           )}
 
           {/* Analytics Tab */}
-          {activeTab === 'analytics' && <AnalyticsTab orders={orders} />}
+          {activeTab === 'analytics' && canteenId && (
+            <AnalyticsTab canteenId={canteenId} />
+          )}
 
           {/* Profile Tab */}
           {activeTab === 'profile' && (
@@ -822,6 +1104,33 @@ export default function Dashboard() {
           onStatusUpdate={handleOrderStatusUpdate}
         />
       )}
+
+      {/* Not Approved Dialog */}
+      <Dialog
+        open={notApprovedDialog}
+        onOpenChange={(open) => {
+          if (!open) setNotApprovedDialog(false);
+        }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Canteen Not Approved</DialogTitle>
+            <DialogDescription>
+              Your canteen is not approved yet. Please wait for admin approval.
+              You can still view your dashboard, but some features may be
+              limited until approval.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              className='w-full bg-orange-600 hover:bg-orange-700'
+              onClick={() => {
+                setNotApprovedDialog(false);
+              }}>
+              Continue to Dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

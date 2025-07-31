@@ -7,7 +7,9 @@ const bcrypt = require("bcryptjs")
 const sendEmailVerificationOTP = require("../utils/sendVerificationOTP")
 const sendEmailVerificationModel = require("../models/emailVerification")
 const crypto = require("crypto")
+const axios=require("axios")
 const mongoose = require("mongoose")
+const { oauth2Client } = require("../utils/googleOAuthClient")
 
 exports.registerUser = async (req, res) => {
   try {
@@ -65,9 +67,65 @@ exports.registerUser = async (req, res) => {
       let message = "An account with this email already exists."
       const suggestions = []
 
-      if (userInfo.hasGoogleAuth) {
-        message = "You previously signed up using Google."
-        suggestions.push("Sign in with Google to access your account")
+      if (!existingUser.password && existingUser.googleId) {
+        const hashedPass=await bcrypt.hash(password,10);
+
+        const user=await User.findOneAndUpdate({email},{password:hashedPass,campus:campusDoc._id,...(role !== "canteen" ? { phone } : {})},{new:true});
+
+        sendEmailVerificationOTP(req, user)
+            const token = JWT.sign(
+            {
+              id: user._id.toString(), // Ensure consistent string format
+              email: user.email,
+              role: user.role,
+              campusId: campusDoc._id.toString(),
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "200h" },
+          )
+
+          const options = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            expires: new Date(Date.now() + 200 * 60 * 60 * 1000),
+          }
+
+          res.cookie("is_auth", true, options)
+          res.cookie("token", token, options)
+
+          // Consistent response format
+          return res.status(200).json({
+            success: true,
+            message:
+              role === "canteen"
+                ? "Vendor registered successfully. Please verify your email. Your canteen is pending admin approval."
+                : "User registered successfully. Please verify your email.",
+            user: {
+              id: user._id.toString(), // Consistent with token
+              _id: user._id, // Keep for backward compatibility
+              name: user.name,
+              email: user.email,
+              role: user.role,
+              campus: {
+                id: campusDoc._id.toString(),
+                name: campusDoc.name,
+                code: campusDoc.code,
+              },
+              canteenId: user.canteenId || null,
+              isVerified: user.is_verified,
+              approvalStatus: role === "canteen" ? "pending" : "approved",
+            },
+            token,
+            nextSteps:
+              role === "canteen"
+                ? [
+                    "Verify your email address",
+                    "Wait for admin approval of your canteen",
+                    "Once approved, you can start adding menu items",
+                  ]
+                : ["Verify your email address", "Complete your profile", "Start ordering from canteens"],
+          })
       } else if (!userInfo.isVerified) {
         message = "An unverified account exists with this email."
         suggestions.push("Check your email for verification link")
@@ -281,17 +339,6 @@ exports.loginUser = async (req, res, next) => {
     const user1 = await User.findOne({ email })
     if (!user1) {
       // Track failed login attempt
-      if (req.deviceInfo) {
-        // Create a temporary user record for tracking failed attempts
-        const failedAttempt = {
-          email,
-          ip: req.deviceInfo.location.ip,
-          deviceInfo: req.deviceInfo,
-          timestamp: new Date(),
-        }
-        console.log("Failed login attempt tracked:", failedAttempt)
-      }
-
       return res.status(400).json({
         success: false,
         message: "Invalid email or password",
@@ -304,70 +351,6 @@ exports.loginUser = async (req, res, next) => {
         success: false,
         message: "This account was created with Google. Please use 'Sign in with Google' option.",
       })
-    }
-
-    // Enforce email verification for all except Google OAuth and vendors (canteen role)
-    if (!user1.is_verified && user1.role !== "canteen") {
-      return res.status(403).json({
-        success: false,
-        message: "Please verify your email address before logging in.",
-      })
-    }
-
-    const comp = await bcrypt.compare(password, user1.password)
-    if (!comp) {
-      // Track failed password attempt
-      user1.addSecurityEvent(
-        "failed_login",
-        "Failed login attempt - incorrect password",
-        req.deviceInfo || { ip: req.ip },
-        "medium",
-      )
-      user1.suspiciousActivityCount += 1
-      await user1.save()
-
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email or password",
-      })
-    }
-
-    // 🔐 Smart Security Integration
-    let securityPrompt = null
-    let securityScore = 100
-
-    if (req.deviceInfo) {
-      // Register/update device
-      user1.addDevice(req.deviceInfo)
-
-      // Add successful login event
-      user1.addSecurityEvent(
-        "login",
-        `Successful login from ${req.deviceInfo.deviceName}`,
-        req.deviceInfo,
-        req.requiresVerification ? "medium" : "low",
-      )
-
-      // Calculate security score
-      securityScore = user1.calculateSecurityScore()
-
-      // Check if verification or prompts are needed
-      if (req.requiresVerification || req.isNewDevice) {
-        securityPrompt = {
-          type: req.requiresVerification ? "verification_recommended" : "new_device_detected",
-          message: req.requiresVerification
-            ? "We noticed some unusual activity. Would you like to verify this login?"
-            : "New device detected! Consider adding it to your trusted devices.",
-          severity: req.requiresVerification ? "medium" : "low",
-          actions: [
-            { type: "verify_email", label: "Verify via Email", endpoint: "/api/v1/security/verification/send" },
-            { type: "trust_device", label: "Trust this Device", endpoint: "/api/v1/security/devices/manage" },
-            { type: "dismiss", label: "Continue Normally" },
-          ],
-        }
-      }
-
-      await user1.save()
     }
 
     // Generate JWT token
@@ -408,13 +391,6 @@ exports.loginUser = async (req, res, next) => {
         profileImage: user1.profileImage,
       },
       token,
-      security: {
-        score: securityScore,
-        deviceRegistered: !!req.deviceInfo,
-        isNewDevice: req.isNewDevice || false,
-        requiresVerification: req.requiresVerification || false,
-        prompt: securityPrompt,
-      },
     }
 
     return res.status(200).json(response)
@@ -685,6 +661,37 @@ exports.uploadProfileImage = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: `Error uploading profile image: ${error.message}`,
+    })
+  }
+}
+exports.getUserDetails=async(req,res)=>{
+  try{
+    const {code}=req.body;
+    const googleRes=await oauth2Client.getToken(code);
+    const userRes= await axios.get(
+            `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
+        );
+        console.log(userRes)
+    const {id:googleId,name,email,picture}=userRes.data;
+    const isUser=await User.findOne({email});
+    if(isUser){
+      return res.status(400).json({
+        success:false,
+        message:"User with this email exist,Please try a new One"
+      })
+    }
+    const user=await User.create({googleId:googleId,name,email,profileImage:picture,role:"student"});
+    return res.status(200).json({
+      success:true,
+      message:"done",
+      data:user
+    })
+  }
+  catch(err){
+    return res.status(500).json({
+      success:false,
+      message:"internal server Error",
+      error:err.message
     })
   }
 }

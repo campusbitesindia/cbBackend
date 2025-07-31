@@ -13,19 +13,15 @@ passport.use(new GoogleStrategy(
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
-      // Find or create user
+      // Find or create userz
       let user = await User.findOne({ googleId: profile.id });
-      if (!user) {
-        user = await User.create({
-          googleId: profile.id,
-          name: profile.displayName,
-          email: profile.emails && profile.emails[0] && profile.emails[0].value,
-          role: 'student'
-        });
+      let token=null;
+      if (user) {
+        const payload = { id: user._id, email: user.email, role: user.role };
+      token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
       }
       // Issue JWT
-      const payload = { id: user._id, email: user.email, role: user.role };
-      const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+      
       console.log(token);
       done(null, token);
     } catch (err) {

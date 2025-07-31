@@ -21,7 +21,7 @@ export const usePushSubscription = (userId?: string) => {
 
         let subscription = await registration.pushManager.getSubscription();
 
-       console.log(subscription)
+       
 
       if(!subscription){
           const res = await axios.get("http://localhost:8080/api/v1/notifications/publicKey");
@@ -37,7 +37,7 @@ export const usePushSubscription = (userId?: string) => {
           userId,
           subscription: JSON.stringify(subscription.toJSON()),
         });
-        console.log(response)
+       
         console.log("Push subscription saved.");
       } catch (err) {
         console.error("Push subscription error:", err);
