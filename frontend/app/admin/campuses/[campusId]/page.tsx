@@ -17,8 +17,9 @@ export default function CampusDetailsPage() {
   const campusId = params.campusId as string;
 
   const [campus, setCampus] = useState<any>(null);
-  const [users, setUsers] = useState<any[]>([]);
+
   const [canteens, setCanteens] = useState<any[]>([]);
+  const [studentCount, setStudentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -34,10 +35,10 @@ export default function CampusDetailsPage() {
       setLoading(true);
       setError("");
       try {
-        const [campusRes, usersRes, canteensRes] = await Promise.all([
+        const [campusRes, canteensRes, usersRes] = await Promise.all([
           api.get(`/api/v1/admin/campuses-summary`),
-          api.get(`/api/v1/admin/campus/${campusId}/users`),
           api.get(`/api/v1/admin/campus/${campusId}/canteens`),
+          api.get(`/api/v1/admin/campus/${campusId}/users`),
         ]);
 
         const campusData = campusRes.data.campuses?.find((c: any) => c.campusId === campusId);
@@ -46,11 +47,10 @@ export default function CampusDetailsPage() {
           return;
         }
 
-        // Only include users with role 'student'
-        const studentUsers = (usersRes.data.users || []).filter((u: any) => u.role === 'student');
         setCampus(campusData);
-        setUsers(studentUsers);
         setCanteens(canteensRes.data.canteens || []);
+        const studentUsers = (usersRes.data.users || []).filter((u: any) => u.role === 'student');
+        setStudentCount(studentUsers.length);
       } catch (err: any) {
         setError(err.message || "Failed to load campus details");
       } finally {
@@ -100,7 +100,7 @@ export default function CampusDetailsPage() {
       {/* Header */}
       <div className="mb-8">
         <Button 
-          onClick={() => router.back()} 
+          onClick={() => router.push('/admin/campuses')} 
           variant="ghost" 
           className="mb-4 text-slate-400 hover:text-white"
         >
@@ -122,14 +122,17 @@ export default function CampusDetailsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="bg-white/10 border-white/20">
+        <Card 
+          className="bg-white/10 border-white/20 hover:bg-white/20 transition-colors cursor-pointer"
+          onClick={() => router.push(`/admin/campuses/${campusId}/users`)}
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-lg">Total Users</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Users className="w-6 h-6 text-blue-400" />
-              <span className="text-2xl font-bold text-white">{campus.userCount}</span>
+              <span className="text-2xl font-bold text-white">{studentCount}</span>
             </div>
           </CardContent>
         </Card>
@@ -156,37 +159,6 @@ export default function CampusDetailsPage() {
             </Badge>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Users Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-red-500 mb-4 flex items-center gap-2">
-          <Users className="w-6 h-6 text-blue-400" />
-          Users ({users.length})
-        </h2>
-        {users.length === 0 ? (
-          <Card className="bg-white/10 border-white/20">
-            <CardContent className="p-6">
-              <p className="text-slate-400 text-center">No users found for this campus.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {users.map((user) => (
-              <Card key={user._id} className="bg-white/10 border-white/20 hover:bg-white/20 transition-colors">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-white">{user.name}</h3>               
-                  </div>
-                  <p className="text-slate-300 text-sm">{user.email}</p>
-                  {user.phone && (
-                    <p className="text-slate-400 text-sm mt-1">{user.phone}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Canteens Section */}

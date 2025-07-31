@@ -156,13 +156,7 @@ export default function RegisterPage() {
         setOtpSuccess("Email verified successfully! You can now log in.");
         setTimeout(() => {
           setShowOtpDialog(false);
-          if(token){
-            router.push("/student/dashboard");
-          }
-          else{
-            router.push("/login");
-          }
-          
+          router.push("/login");
         }, 1500);
       } else {
         setOtpError(res.data.message || "Invalid OTP");
@@ -530,6 +524,75 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* Professional Existing User Dialog */}
+      <AlertDialog open={existingUserDialog.open} onOpenChange={(open) => setExistingUserDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-white/20 transition-all duration-500">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-900 dark:text-white transition-colors duration-500">
+              Account Already Exists
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-slate-300 transition-colors duration-500">
+              {existingUserDialog.message}
+              
+              {existingUserDialog.suggestions.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="font-medium text-gray-700 dark:text-slate-200">What you can do:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {existingUserDialog.suggestions.map((suggestion, index) => (
+                      <li key={index} className="text-gray-600 dark:text-slate-400">{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="space-x-2">
+            {existingUserDialog.userInfo?.hasGoogleAuth ? (
+              <>
+                <AlertDialogAction
+                  onClick={handleGoogleSignIn}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-300"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="20" height="20" className="mr-2">
+                    <path fill="#fbc02d" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                    <path fill="#e53935" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
+                    <path fill="#4caf50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.641-3.252-11.284-7.614l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
+                    <path fill="#1565c0" d="M43.611,20.083L43.595,20L42,20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C42.018,35.244,44,30.028,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
+                  </svg>
+                  Sign in with Google
+                </AlertDialogAction>
+              </>
+            ) : (
+              <>
+                <AlertDialogAction
+                  onClick={handleGoToSignIn}
+                  className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white transition-all duration-300"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In Instead
+                </AlertDialogAction>
+                {!existingUserDialog.userInfo?.isVerified && (
+                  <AlertDialogAction
+                    onClick={() => {
+                      setExistingUserDialog(prev => ({ ...prev, open: false }))
+                      toast({
+                        title: "Check your email",
+                        description: "Please check your email for the verification link or request a new one from the login page.",
+                      })
+                    }}
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white transition-all duration-300"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Verify Email
+                  </AlertDialogAction>
+                )}
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Request Campus Dialog */}
       <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
         <DialogContent className="max-w-md">
