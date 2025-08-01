@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -35,8 +35,6 @@ import { motion } from 'framer-motion';
 import axios from '@/lib/axios';
 import GlobalSearchDropdown from './global-search-dropdown';
 import NotificationList from './notification-list';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import ProfileImage from './ProfileImage';
 
 interface UserProfile {
   name: string;
@@ -102,21 +100,6 @@ function Navbar() {
   // Use fresh profile data if available, otherwise fallback to auth context
   const displayUser = userProfile || user;
   const profileImageSrc = displayUser?.profileImage || '/placeholder-user.jpg';
-  
-  const handleSearch = (query: string) => {
-    if (query.trim()) {
-      setSearchDropdownOpen(false)
-      setIsMenuOpen(false)  //  if in mobile menu
-    }
-  }
-
-  useEffect(() => {
-    function handleCloseMenu() {
-      setIsMenuOpen(false)
-    }
-    window.addEventListener("closeMobileMenu", handleCloseMenu)
-    return () => window.removeEventListener("closeMobileMenu", handleCloseMenu)
-  }, [])
 
   const navItems = [
     { name: 'Home', href: '/', icon: Home },
@@ -127,21 +110,18 @@ function Navbar() {
   const hideNavbar =
     pathname === '/campus/register' || pathname === '/campus/dashboard';
 
-
   if (hideNavbar) {
     return (
       <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
-        {/* <div className='container mx-auto px-4 sm:px-6 lg:px-8'> */}
-        <div className='w-full px-4'>
+        <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='flex h-20 items-center justify-between'>
             {/* Logo */}
             <Link
               href={`${
                 pathname === '/campus/dashboard' ? '/campus/dashboard' : '/'
               }`}
-              aria-label='Campus Bites Logo'
-              className='flex items-center group min-w-0'>
-              <div className='flex items-center space-x-3 min-w-0'>
+              className='flex items-center group'>
+              <div className='flex items-center space-x-3'>
                 <Image
                   src='/logo.png'
                   alt='Campus Bites Logo'
@@ -150,58 +130,60 @@ function Navbar() {
                   priority
                   className='transition-all duration-300 group-hover:brightness-110'
                 />
-                <div className='flex flex-col min-w-0'>
-                  <span className='truncate text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+                <div className='flex flex-col'>
+                  <span className='text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
                     Campus Bites
                   </span>
-                  <span className='truncate text-xs md:text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
+                  <span className='text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
                     Fast • Fresh • Delicious
                   </span>
                 </div>
               </div>
             </Link>
 
-           {/* Right side actions for hideNavbar - only show for dashboard, not register */}
-           {pathname === '/campus/dashboard' && (
-            <div className='flex items-center space-x-4'>
-
-              {isAuthenticated ? (
-                <>
-                  <div className='realtive'>
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      aria-label='Open notification'
-                      onClick={() => setNotificationList(!NotificationListShow)}
-                      className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                      <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
-                      {notificationCount > 0 && (
-                        <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
-                          {notificationCount}
-                        </Badge>
-                      )}
-                    </Button>
-                    {NotificationListShow && user?.id && (
-                      <NotificationList
-                        userId={user.id}
-                        isOpen={NotificationListShow}
-                        onClose={() => setNotificationList(false)}
-                      />
+            {/* Right side actions for hideNavbar - only show for dashboard, not register */}
+            {pathname === '/campus/dashboard' && (
+              <div className='flex items-center space-x-4'>
+                {/* Notification Icon */}
+                <div className='realtive'>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    onClick={() => setNotificationList(!NotificationListShow)}
+                    className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                    <Bell className='h-5 w-5 text-gray-700 dark:text-white' />
+                    {notificationCount > 0 && (
+                      <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
+                        {notificationCount}
+                      </Badge>
                     )}
-                  </div>
+                  </Button>
+                  {NotificationListShow && user?.id && (
+                    <NotificationList
+                      userId={user.id}
+                      isOpen={NotificationListShow}
+                      onClose={() => setNotificationList(false)}
+                    />
+                  )}
+                </div>
 
+                {/* Profile Icon */}
+                {isAuthenticated ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant='ghost'
-                        aria-label='Profile options'
                         className='relative p-0 rounded-full h-10 w-10'>
                         <div className='relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
-                          <ProfileImage
+                          <Image
                             src={profileImageSrc}
                             alt={displayUser?.name || 'User'}
                             fill
                             className='object-cover'
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-user.jpg';
+                            }}
                           />
                         </div>
                         <span className='absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
@@ -245,7 +227,6 @@ function Navbar() {
                         className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
                         <Link
                           href='/profile'
-                          aria-label='Open Profile'
                           className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
                           <User className='h-5 w-5' />
                           <span>View Profile</span>
@@ -257,7 +238,6 @@ function Navbar() {
                         className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
                         <Link
                           href='/orders'
-                          aria-label='Open Your Orders'
                           className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
                           <Package className='h-5 w-5' />
                           <span>My Orders</span>
@@ -274,18 +254,16 @@ function Navbar() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </>
                 ) : (
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  aria-label=''
-                  className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                  <User className='h-5 w-5 text-gray-700 dark:text-white' />
-                </Button>
-              )}
-            </div>
-           )}
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='relative rounded-full h-10 w-10 bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                    <User className='h-5 w-5 text-gray-700 dark:text-white' />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -293,116 +271,121 @@ function Navbar() {
   }
 
   return (
-    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
-      {/* <div className='container mx-auto px-4 sm:px-6 lg:px-8'> */}
-      <div className='w-full px-4'>
-        <div className='flex flex-wrap h-20 items-center justify-between'>
+    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500 overflow-x-hidden'>
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-x-hidden'>
+        <div className='flex h-20 items-center justify-between w-full max-w-full'>
           {/* Logo */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href='/' aria-label='Campus Bites Logo' className='flex items-center min-w-0'>
-                  <div className='flex items-center space-x-3'>
-                    <Image
-                      src='/logo.png'
-                      alt='Campus Bites Logo'
-                      width={50}
-                      height={50}
-                      priority
-                      className='transition-all duration-300 group-hover:brightness-110'
-                    />
-                    <div className='flex flex-col min-w-0 ml-2'>
-                      <span className='truncate text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
-                        Campus Bites
-                      </span>
-                      <span className='truncate text-xs md:text-sm text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
-                        Fast • Fresh • Delicious
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <span>Capmus Bites Home</span>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Global Search Bar (Desktop) - now left of nav */}
-          <div className='hidden lg:block relative w-96 mr-6'>
-            <GlobalSearchDropdown
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              open={searchDropdownOpen}
-              setOpen={setSearchDropdownOpen}
-              onSearch={handleSearch}
-            />
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className='hidden lg:flex'>
-            <div className='relative flex items-center bg-gray-100/70 dark:bg-gray-900/50 backdrop-blur-lg rounded-full p-3 border border-gray-300/50 dark:border-white/10 shadow-lg'>
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-label='Navigation Bar'
-                  className={`relative px-7 py-3 text-sm font-medium transition-colors duration-300 rounded-full ${
-                    pathname === item.href
-                      ? 'text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}>
-                  <span className='relative z-10'>{item.name}</span>
-                  {pathname === item.href && (
-                    <motion.div
-                      layoutId='activeNav'
-                      className='absolute inset-0 z-0 rounded-full bg-red-600'
-                      transition={{
-                        type: 'spring',
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                    />
-                  )}
-                </Link>
-              ))}
+          <Link href='/' className='flex items-center group'>
+            <div className='flex items-center space-x-3'>
+              <Image
+                src='/logo.png'
+                alt='Campus Bites Logo'
+                width={50}
+                height={50}
+                priority
+                className='transition-all duration-300 group-hover:brightness-110'
+              />
+              <div className='flex flex-col'>
+                <span className='text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+                  Campus Bites
+                </span>
+                <span className='text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
+                  Fast • Fresh • Delicious
+                </span>
+              </div>
             </div>
-          </nav>
+          </Link>
+
+          {/* Global Search Bar (Desktop) - only show when authenticated */}
+          {isAuthenticated && (
+            <div className='hidden md:block relative w-72 mr-6'>
+              <GlobalSearchDropdown
+                query={searchQuery}
+                setQuery={setSearchQuery}
+                open={searchDropdownOpen}
+                setOpen={setSearchDropdownOpen}
+              />
+            </div>
+          )}
+
+          {/* Desktop Navigation - only show when authenticated */}
+          {isAuthenticated && (
+            <nav className='hidden md:flex'>
+              <div className='relative flex items-center bg-gray-100/70 dark:bg-gray-900/50 backdrop-blur-lg rounded-full p-1 border border-gray-300/50 dark:border-white/10'>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`relative px-6 py-2 text-sm font-medium transition-colors duration-300 rounded-full ${
+                      pathname === item.href
+                        ? 'text-white'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}>
+                    <span className='relative z-10'>{item.name}</span>
+                    {pathname === item.href && (
+                      <motion.div
+                        layoutId='activeNav'
+                        className='absolute inset-0 z-0 rounded-full bg-red-600'
+                        transition={{
+                          type: 'spring',
+                          stiffness: 300,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          )}
 
           {/* Right side actions */}
           <div className='flex items-center space-x-4'>
             {/* Theme Toggle */}
             <ThemeToggle />
 
+            {/* Cart - only show when authenticated */}
+            {isAuthenticated && (
+              <Link href='/cart' className='relative group'>
+                <div className='relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                  <ShoppingCart className='w-5 h-5 text-gray-700 dark:text-white' />
+                  {cartItemsCount > 0 && (
+                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
+                      {cartItemsCount}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            )}
+
             {/* Authentication */}
             {isAuthenticated ? (
-              <>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link href='/cart' className='relative group' aria-label=' View Cart'>
-                        <div className='relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                          <ShoppingCart className='w-5 h-5 text-gray-700 dark:text-white' />
-                          {cartItemsCount > 0 && (
-                            <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
-                              {cartItemsCount}
-                            </Badge>
-                          )}
-                        </div>
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <span>View Cart</span>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      className='relative p-0 rounded-full h-10 w-10'
-                      aria-label='Profile Navigator'>
-                      <div className='relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    className='relative p-0 rounded-full h-10 w-10'>
+                    <div className='relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
+                      <Image
+                        src={profileImageSrc}
+                        alt={displayUser?.name || 'User'}
+                        fill
+                        className='object-cover'
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-user.jpg';
+                        }}
+                      />
+                    </div>
+                    <span className='absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align='end'
+                  className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
+                  <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
+                    <div className='flex items-center space-x-3'>
+                      <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
                         <Image
                           src={profileImageSrc}
                           alt={displayUser?.name || 'User'}
@@ -414,277 +397,157 @@ function Navbar() {
                           }}
                         />
                       </div>
-                      <span className='absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align='end'
-                    className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
-                    <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
-                      <div className='flex items-center space-x-3'>
-                        <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
-                          <Image
-                            src={profileImageSrc}
-                            alt={displayUser?.name || 'User'}
-                            fill
-                            className='object-cover'
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/placeholder-user.jpg';
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <p className='font-semibold text-gray-900 dark:text-white'>
-                            {displayUser?.name}
+                      <div>
+                        <p className='font-semibold text-gray-900 dark:text-white'>
+                          {displayUser?.name}
+                        </p>
+                        <p className='text-sm text-gray-600 dark:text-gray-400'>
+                          {displayUser?.email}
+                        </p>
+                        {displayUser?.role && (
+                          <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
+                            {displayUser.role}
                           </p>
-                          <p className='text-sm text-gray-600 dark:text-gray-400'>
-                            {displayUser?.email}
-                          </p>
-                          {displayUser?.role && (
-                            <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
-                              {displayUser.role}
-                            </p>
-                          )}
-                        </div>
+                        )}
                       </div>
                     </div>
+                  </div>
 
-                    <DropdownMenuItem
-                      asChild
-                      className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                      <Link
-                        href='/profile'
-                        aria-label='View Profile'
-                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                        <User className='h-5 w-5' />
-                        <span>View Profile</span>
-                      </Link>
-                    </DropdownMenuItem>
+                  <DropdownMenuItem
+                    asChild
+                    className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                    <Link
+                      href='/profile'
+                      className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                      <User className='h-5 w-5' />
+                      <span>View Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
 
-                    <DropdownMenuItem
-                      asChild
-                      className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                      <Link
-                        href='/orders'
-                        aria-label='View Your Orders'
-                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                        <Package className='h-5 w-5' />
-                        <span>My Orders</span>
-                      </Link>
-                    </DropdownMenuItem>
+                  <DropdownMenuItem
+                    asChild
+                    className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                    <Link
+                      href='/orders'
+                      className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                      <Package className='h-5 w-5' />
+                      <span>My Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
 
-                    <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
+                  <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
 
-                    <DropdownMenuItem
-                      onClick={logout}
-                      className='flex items-center space-x-3 w-full p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 focus:bg-red-50 dark:focus:bg-red-500/20 focus:text-red-600 dark:focus:text-red-400'>
-                      <LogOut className='h-5 w-5' />
-                      <span>Sign Out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+                  <DropdownMenuItem
+                    onClick={logout}
+                    className='flex items-center space-x-3 w-full p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-all duration-200 focus:bg-red-50 dark:focus:bg-red-500/20 focus:text-red-600 dark:focus:text-red-400'>
+                    <LogOut className='h-5 w-5' />
+                    <span>Sign Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               // Login/Signup buttons
               <div className='hidden sm:flex items-center space-x-2'>
                 <Button
                   asChild
                   variant='ghost'
-                  aria-label='Login'
                   className='text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700/50'>
-                  <Link href='/login' aria-label='Login'>Login</Link>
+                  <Link href='/login'>Login</Link>
                 </Button>
                 <Button
                   asChild
-                  aria-label='Sign Up'
                   className='bg-red-600 hover:bg-red-700 text-white rounded-full px-5 py-2'>
-                  <Link href='/register' aria-label='Sign Up'>Sign Up</Link>
+                  <Link href='/register'>Sign Up</Link>
                 </Button>
               </div>
             )}
 
             {/* Mobile Menu */}
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <SheetTrigger asChild className='lg:hidden'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          aria-label='Open Menu'
-                          className='text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full'>
-                          <Menu className='h-5 w-5' />
-                        </Button>
-                      </SheetTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <span>Menu</span>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
+              <SheetTrigger asChild className='md:hidden'>
+                <Button
+                  variant='ghost'
+                  size='icon'
+                  className='text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full'>
+                  <Menu className='h-5 w-5' />
+                </Button>
+              </SheetTrigger>
               <SheetContent
                 side='right'
-                className='w-full max-w-sm bg-white/45 dark:bg-gray-900/80 backdrop-blur-lg border-l border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white p-0 overflow-visible'>
+                className='w-full max-w-sm bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border-l border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white p-0'>
                 <div className='flex flex-col h-full'>
                   <div className='flex items-center justify-between p-6 border-b border-white/10'>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Link
-                          href='/'
-                          aria-label='Go to Campus Bites Home'
-                          className='flex items-center space-x-3'
-                          onClick={() => setIsMenuOpen(false)}>
-                          <div className='w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center'>
-                            <UtensilsCrossed className='w-4 h-4 text-white' />
-                          </div>
-                          <span className='font-semibold text-lg text-white'>
-                            Campus Bites
-                          </span>
-                        </Link>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <span>Campus Bites Home</span>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                    <Link
+                      href='/'
+                      className='flex items-center space-x-3'
+                      onClick={() => setIsMenuOpen(false)}>
+                      <div className='w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center'>
+                        <UtensilsCrossed className='w-4 h-4 text-white' />
+                      </div>
+                      <span className='font-semibold text-lg text-white'>
+                        Campus Bites
+                      </span>
+                    </Link>
+                    <Button
+                      variant='ghost'
+                      size='icon'
+                      onClick={() => setIsMenuOpen(false)}
+                      className='rounded-full text-white hover:bg-white/10'>
+                      <X className='h-5 w-5' />
+                    </Button>
                   </div>
 
-                  {/* Mobile Search Bar */}
-                  <div className="block lg:hidden">
-                    <GlobalSearchDropdown
-                      query={searchQuery}
-                      setQuery={setSearchQuery}
-                      open={searchDropdownOpen}
-                      setOpen={setSearchDropdownOpen}
-                      onSearch={handleSearch}
-                    />
-                  </div>
-
-                  {/* Cart, Notifications, Theme Toggle */}
-                  <div className="flex items-center space-x-4 px-6 py-2 border-b border-white/10">
-                    {isAuthenticated && (
-                      <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Link href="/cart" aria-label='View Cart' onClick={() => setIsMenuOpen(false)} className="relative">
-                                <ShoppingCart className="w-6 h-6" />
-                                {cartItemsCount > 0 && (
-                                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50">
-                                    {cartItemsCount}
-                                  </Badge>
-                                )}
-                              </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span>View Cart</span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-    
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label='Open Notification'
-                                onClick={() => setNotificationList(!NotificationListShow)}
-                                className="relative rounded-full h-10 w-10"
-                              >
-                                <Bell className="h-5 w-5" />
-                                {notificationCount > 0 && (
-                                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50">
-                                    {notificationCount}
-                                  </Badge>
-                                )}
-                                {NotificationListShow && user?.id && (
-                                  <NotificationList userId={user.id} />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <span>View Notifications</span>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </>
-                    )}  
-                    {/* Theme Toggle */}
-                    <ThemeToggle />
-                  </div>
-
-                  {/* Nav Links */}
                   <nav className='flex-1 p-6 space-y-2'>
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        aria-label='Side Navbar'
-                        onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-lg ${
-                          pathname === item.href
-                            ? 'bg-red-600 text-white'
-                            : 'text-gray-300 hover:bg-gray-800/80'
-                        }`}>
-                        <item.icon className='h-6 w-6' />
-                        <span>{item.name}</span>
-                      </Link>
-                    ))}
+                    {isAuthenticated &&
+                      navItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-lg ${
+                            pathname === item.href
+                              ? 'bg-red-600 text-white'
+                              : 'text-gray-300 hover:bg-gray-800/80'
+                          }`}>
+                          <item.icon className='h-6 w-6' />
+                          <span>{item.name}</span>
+                        </Link>
+                      ))}
+                    {!isAuthenticated && (
+                      <div className='text-center py-8'>
+                        <p className='text-gray-400 text-lg mb-4'>
+                          Welcome to Campus Bites
+                        </p>
+                        <p className='text-gray-500 text-sm'>
+                          Please login to access all features
+                        </p>
+                      </div>
+                    )}
                   </nav>
 
-                  {/* Profile/Account or Login?signup */}
-                  <div className='p-6 border-t border-white/10 space-y-4'>
-                    {isAuthenticated ? (
-                      <>
+                  {!isAuthenticated && (
+                    <div className='p-6 border-t border-white/10 space-y-4'>
+                      <Button
+                        asChild
+                        variant='outline'
+                        className='w-full h-12 rounded-xl border-white/20 text-lg text-white hover:bg-white/10 hover:text-white'>
                         <Link
-                          href="/profile"
-                          aria-label='View Profile'
-                          onClick={() => setIsMenuOpen(false)}
-                          className="flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200"
-                        >
-                          <User className="h-5 w-5" />
-                          <span>View Profile</span>
+                          href='/login'
+                          onClick={() => setIsMenuOpen(false)}>
+                          Login
                         </Link>
-                        <Button
-                          onClick={() => {
-                            logout();
-                            setIsMenuOpen(false);
-                          }}
-                          className="w-full h-12 bg-red-600 hover:bg-red-700 rounded-xl text-lg"
-                          aria-label='Sign Out'
-                        >
-                          Sign Out
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          asChild
-                          variant="outline"
-                          className="w-full h-12 rounded-xl border-white/20 text-lg text-foreboard hover:bg-white/10 hover:text-white"
-                          aria-label='Login'
-                        >
-                          <Link href="/login" aria-label='Login' onClick={() => setIsMenuOpen(false)}>
-                            Login
-                          </Link>
-                        </Button>
-                        <Button
-                          asChild
-                          className="w-full h-12 bg-red-600 hover:bg-red-700 rounded-xl text-lg"
-                          aria-label='Sign Up'
-                        >
-                          <Link href="/register" aria-label='Sign Up' onClick={() => setIsMenuOpen(false)}>
-                            Sign Up
-                          </Link>
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                      </Button>
+                      <Button
+                        asChild
+                        className='w-full h-12 bg-red-600 hover:bg-red-700 rounded-xl text-lg'>
+                        <Link
+                          href='/register'
+                          onClick={() => setIsMenuOpen(false)}>
+                          Sign Up
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>

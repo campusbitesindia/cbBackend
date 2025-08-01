@@ -26,9 +26,10 @@ import Link from 'next/link';
 import { Canteen } from '@/types';
 import { useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
+import { StudentOnlyRoute } from '@/components/RouteProtection';
 import NotificationList from '@/components/notification-list';
 
-export default function StudentDashboard() {
+function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [restaurants, setRestaurants] = useState<Canteen[]>([]);
@@ -55,14 +56,14 @@ export default function StudentDashboard() {
             },
           }
         );
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch user profile');
         }
-        
+
         const data = await response.json();
         console.log('User Profile:', data);
-        
+
         if (data.success && data.user?.campus?._id) {
           setUserCampusId(data.user.campus._id);
         }
@@ -81,7 +82,7 @@ export default function StudentDashboard() {
       try {
         setLoading(true);
         setError(null);
-        
+
         let url = 'http://localhost:8080/api/v1/canteens';
         if (userCampusId) {
           url += `?campus=${userCampusId}`;
@@ -91,14 +92,18 @@ export default function StudentDashboard() {
         if (!response.ok) {
           throw new Error('Failed to fetch canteens');
         }
-       
+
         const data = await response.json();
-        
-        const processedCanteens = data.canteens?.map((canteen: any) => ({
-          ...canteen,
-          image: canteen.owner?.profileImage || canteen.image || '/placeholder.svg'
-        })) || [];
-        
+
+        const processedCanteens =
+          data.canteens?.map((canteen: any) => ({
+            ...canteen,
+            image:
+              canteen.owner?.profileImage ||
+              canteen.image ||
+              '/placeholder.svg',
+          })) || [];
+
         console.log('Processed Canteens:', processedCanteens);
         setRestaurants(processedCanteens);
       } catch (error) {
@@ -122,15 +127,16 @@ export default function StudentDashboard() {
     { id: 'chinese', name: 'Chinese', icon: '🥡' },
   ];
 
-  const filteredRestaurants = restaurants?.filter((restaurant) => {
-    const matchesSearch =
-      restaurant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      restaurant?.cuisine?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory =
-      selectedCategory === 'all' ||
-      restaurant?.cuisine?.toLowerCase() === selectedCategory;
-    return matchesSearch && matchesCategory;
-  }) || [];
+  const filteredRestaurants =
+    restaurants?.filter((restaurant) => {
+      const matchesSearch =
+        restaurant?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        restaurant?.cuisine?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        restaurant?.cuisine?.toLowerCase() === selectedCategory;
+      return matchesSearch && matchesCategory;
+    }) || [];
 
   // Loading state
   if (loading) {
@@ -147,10 +153,9 @@ export default function StudentDashboard() {
       <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
         <div className='text-center'>
           <div className='text-red-400 text-xl mb-4'>{error}</div>
-          <Button 
+          <Button
             onClick={() => window.location.reload()}
-            className='bg-gradient-to-r from-blue-500 to-purple-600'
-          >
+            className='bg-gradient-to-r from-blue-500 to-purple-600'>
             Retry
           </Button>
         </div>
@@ -422,5 +427,13 @@ export default function StudentDashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function StudentDashboard() {
+  return (
+    <StudentOnlyRoute>
+      <StudentDashboardContent />
+    </StudentOnlyRoute>
   );
 }

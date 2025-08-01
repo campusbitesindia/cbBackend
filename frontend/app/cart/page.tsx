@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
+import { RouteProtection } from '@/components/RouteProtection';
 import Image from 'next/image';
 import {
   Trash2,
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
-export default function CartPage() {
+function CartPageContent() {
   const { cart, updateQuantity, removeFromCart, clearCart, totalPrice } =
     useCart();
   const { toast } = useToast();
@@ -80,7 +81,7 @@ export default function CartPage() {
       // Check canteen consistency
       const data = cart.map((item) => item.canteenId);
       const canteenId = data[0];
-     
+
       data.forEach((id) => {
         if (id !== canteenId) {
           throw new Error('Items From Different Canteens Are not allowed');
@@ -103,7 +104,7 @@ export default function CartPage() {
         pickUpTime: selectedPickupTime.toISOString(),
         canteenId,
       };
-      console.log(Newdata)
+      console.log(Newdata);
       const response = await axios.post(
         'http://localhost:8080/api/v1/order/CreateOrder',
         Newdata,
@@ -444,5 +445,13 @@ export default function CartPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <RouteProtection>
+      <CartPageContent />
+    </RouteProtection>
   );
 }

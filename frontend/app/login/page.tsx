@@ -76,6 +76,7 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       await login(values.email, values.password);
+
       // Get the token and decode user role immediately
       const token = localStorage.getItem('token');
       let loggedInRole = null;
@@ -85,6 +86,7 @@ export default function LoginPage() {
           loggedInRole = decoded.role;
         } catch {}
       }
+
       if (loggedInRole === 'admin') {
         toast({
           variant: 'destructive',
@@ -94,12 +96,39 @@ export default function LoginPage() {
         router.push('/admin/login');
         return;
       }
-      // Redirect based on role
-      if (values.role === 'student' || !values.role) {
-        router.push('/student/dashboard');
-      } else if (values.role === 'campus') {
-        router.push('/campus/dashboard');
+
+      // Check for redirect parameter
+      const redirectParam = searchParams.get('redirect');
+      let redirectPath = '';
+
+      if (redirectParam) {
+        // Use the redirect parameter if it exists
+        redirectPath = decodeURIComponent(redirectParam);
+      } else {
+        // Default role-based redirection
+        switch (loggedInRole) {
+          case 'student':
+            redirectPath = '/student/dashboard';
+            break;
+          case 'campus':
+            redirectPath = '/campus/dashboard';
+            break;
+          default:
+            // Fallback based on selected role if token role is not clear
+            if (values.role === 'student' || !values.role) {
+              redirectPath = '/student/dashboard';
+            } else if (values.role === 'campus') {
+              redirectPath = '/campus/dashboard';
+            } else {
+              redirectPath = '/';
+            }
+            break;
+        }
       }
+
+      // Perform the redirect
+      router.push(redirectPath);
+
       toast({
         title: 'Success',
         description: 'Successfully logged in!',

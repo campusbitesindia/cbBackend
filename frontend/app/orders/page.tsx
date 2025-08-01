@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { RouteProtection } from '@/components/RouteProtection';
 import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/context/cart-context';
 import Image from 'next/image';
@@ -179,7 +180,7 @@ function AnimatedCounter({
   return <motion.span>{display}</motion.span>;
 }
 
-export default function OrdersPage() {
+function OrdersPageContent() {
   const { isAuthenticated, token } = useAuth();
   const { addToCart, clearCart } = useCart();
   const router = useRouter();
@@ -1980,5 +1981,14 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+// Main page component with route protection
+export default function OrdersPage() {
+  return (
+    <RouteProtection requireAuth={true}>
+      <OrdersPageContent />
+    </RouteProtection>
   );
 }
