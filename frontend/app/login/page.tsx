@@ -36,8 +36,12 @@ import {
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { jwtDecode } from 'jwt-decode';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -277,9 +281,7 @@ export default function LoginPage() {
                             Join us here
                           </Link>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          Sign up
-                        </TooltipContent>
+                        <TooltipContent>Sign up</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   </p>
@@ -300,15 +302,9 @@ export default function LoginPage() {
                             onValueChange={field.onChange}
                             value={field.value}
                             defaultValue={field.value}>
-                            <SelectTrigger className='bg-white/10 border-white/20 text-white rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-100 focus:border-transparent w-full'>
+                            <SelectTrigger className='bg-gray-200 dark:bg-input border-foreground text-foreground rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-300 dark:focus:ring-red-100 focus:border-transparent w-full transition-all duration-500'>
                               <SelectValue placeholder='Select your role' />
                             </SelectTrigger>
-                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                              <SelectTrigger
-                              className="bg-gray-200 dark:bg-input border-foreground text-foreground rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-300 dark:focus:ring-red-100 focus:border-transparent w-full transition-all duration-500"
-                            >
-                              <SelectValue placeholder="Select your role" />
-                              </SelectTrigger>
                             <SelectContent>
                               <SelectItem value='student'>Student</SelectItem>
                               <SelectItem value='campus'>
@@ -331,7 +327,7 @@ export default function LoginPage() {
                           </FormLabel>
                           <FormControl>
                             <div className='relative'>
-                              <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 w-6 h-6 transition-all duration-500 drop-shadow" />
+                              <Mail className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 w-6 h-6 transition-all duration-500 drop-shadow' />
                               <Input
                                 suppressHydrationWarning
                                 placeholder='Enter your email'
@@ -366,7 +362,7 @@ export default function LoginPage() {
                           </div>
                           <FormControl>
                             <div className='relative'>
-                              <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 w-6 h-6 transition-all duration-500 drop-shadow" />
+                              <Lock className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 w-6 h-6 transition-all duration-500 drop-shadow' />
                               <Input
                                 suppressHydrationWarning
                                 placeholder='Enter your password'
@@ -383,7 +379,9 @@ export default function LoginPage() {
                                       suppressHydrationWarning
                                       type='button'
                                       aria-label='show password'
-                                      onClick={() => setShowPassword(!showPassword)}
+                                      onClick={() =>
+                                        setShowPassword(!showPassword)
+                                      }
                                       className='absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors'>
                                       {showPassword ? (
                                         <EyeOff className='w-6 h-6' />
@@ -449,7 +447,7 @@ export default function LoginPage() {
                       type='button'
                       variant='outline'
                       aria-label='sign in with google'
-                      className="
+                      className='
                         w-full
                         bg-gradient-to-r
                         from-yellow-400
@@ -469,29 +467,28 @@ export default function LoginPage() {
                         transition-all
                         shadow-md
                         duration-500
-                      "
+                      '
                       onClick={() =>
                         (window.location.href =
                           'http://localhost:8080/api/v1/users/auth/google')
-                      }
-                      >
+                      }>
                       <svg className='w-6 h-6 mr-3' viewBox='0 0 48 48'>
-                          <path
-                            fill='#FFC107'
-                            d='M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.804 12.04C34.553 7.784 29.577 5 24 5C13.522 5 5 13.522 5 24s8.522 19 19 19s19-8.522 19-19c0-1.332-.136-2.626-.389-3.917z'
-                          />
-                          <path
-                            fill='#FF3D00'
-                            d='M6.306 14.691c-1.321 2.355-2.071 5.12-2.071 8.003s.75 5.648 2.071 8.003l-5.362 4.152C1.528 31.979 0 28.182 0 24s1.528-7.979 4.02-11.832L6.306 14.691z'
-                          />
-                          <path
-                            fill='#4CAF50'
-                            d='M24 44c5.166 0 9.773-1.789 13.04-4.788l-5.362-4.152c-1.921 1.284-4.322 2.04-6.914 2.04c-5.022 0-9.284-3.473-10.825-8.125l-5.378 4.162C8.751 39.528 15.827 44 24 44z'
-                          />
-                          <path
-                            fill='#1976D2'
-                            d='M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.584l5.362 4.152c3.354-3.109 5.419-7.587 5.419-12.735c0-1.332-.136-2.626-.389-3.917z'
-                          />
+                        <path
+                          fill='#FFC107'
+                          d='M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8c-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039L38.804 12.04C34.553 7.784 29.577 5 24 5C13.522 5 5 13.522 5 24s8.522 19 19 19s19-8.522 19-19c0-1.332-.136-2.626-.389-3.917z'
+                        />
+                        <path
+                          fill='#FF3D00'
+                          d='M6.306 14.691c-1.321 2.355-2.071 5.12-2.071 8.003s.75 5.648 2.071 8.003l-5.362 4.152C1.528 31.979 0 28.182 0 24s1.528-7.979 4.02-11.832L6.306 14.691z'
+                        />
+                        <path
+                          fill='#4CAF50'
+                          d='M24 44c5.166 0 9.773-1.789 13.04-4.788l-5.362-4.152c-1.921 1.284-4.322 2.04-6.914 2.04c-5.022 0-9.284-3.473-10.825-8.125l-5.378 4.162C8.751 39.528 15.827 44 24 44z'
+                        />
+                        <path
+                          fill='#1976D2'
+                          d='M43.611 20.083H24v8h11.303c-.792 2.237-2.231 4.16-4.082 5.584l5.362 4.152c3.354-3.109 5.419-7.587 5.419-12.735c0-1.332-.136-2.626-.389-3.917z'
+                        />
                       </svg>
                       Sign in with Google
                     </Button>
@@ -513,7 +510,11 @@ export default function LoginPage() {
                       variant='outline'
                       aria-label='register your vendor'
                       className='border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 transition-all duration-500 bg-transparent'>
-                      <Link href='/campus/register' aria-label='Register your vendor'>Register Your Vendor</Link>
+                      <Link
+                        href='/campus/register'
+                        aria-label='Register your vendor'>
+                        Register Your Vendor
+                      </Link>
                     </Button>
                   </div>
                 </div>
