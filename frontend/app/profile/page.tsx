@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { RouteProtection } from '@/components/RouteProtection';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 import {

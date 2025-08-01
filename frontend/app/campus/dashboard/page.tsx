@@ -21,6 +21,7 @@ import {
   createImagePreview,
 } from '@/services/imageService';
 import { useAuth } from '@/context/auth-context';
+import { CampusOnlyRoute } from '@/components/RouteProtection';
 import { getOrderById } from '@/services/orderService';
 import axios from 'axios';
 import { DashboardSidebar } from '@/app/campus/dashboard/DashboardSidebar';
@@ -76,7 +77,7 @@ import {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-export default function Dashboard() {
+function DashboardContent() {
   // Move all hooks to the top
   const router = useRouter();
   const isMobile = useMobile();
@@ -1132,5 +1133,13 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <CampusOnlyRoute>
+      <DashboardContent />
+    </CampusOnlyRoute>
   );
 }
