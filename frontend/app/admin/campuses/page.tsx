@@ -37,9 +37,23 @@ export default function AdminCampusesPage() {
       setError("");
       try {
         const res = await api.get("/api/v1/admin/campuses-summary");
-        const data = res.data;
-        setCampuses(data.campuses || []);
-        setFilteredCampuses(data.campuses || []);
+        const campusSummaries = res.data.campuses || [];
+
+        const campusesWithStudentCount = await Promise.all(
+          campusSummaries.map(async (campus: any) => {
+            try {
+              const usersRes = await api.get(`/api/v1/admin/campus/${campus.campusId}/users`);
+              const studentUsers = (usersRes.data.users || []).filter((u: any) => u.role === 'student');
+              return { ...campus, userCount: studentUsers.length };
+            } catch (error) {
+              console.error(`Failed to fetch users for campus ${campus.name}:`, error);
+              return { ...campus }; 
+            }
+          })
+        );
+
+        setCampuses(campusesWithStudentCount);
+        setFilteredCampuses(campusesWithStudentCount);
       } catch (err: any) {
         setError(err.message || "Unknown error");
       } finally {
