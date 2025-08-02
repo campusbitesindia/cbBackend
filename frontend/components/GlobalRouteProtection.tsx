@@ -23,14 +23,18 @@ export function GlobalRouteProtection({
     '/verify-email',
   ];
 
+  // Check if current route is an admin route
+  const isAdminRoute = pathname.startsWith('/admin');
+  
   // Check if current route is public
   const isPublicRoute = publicRoutes.includes(pathname);
 
-  // For public routes, don't require authentication
-  if (isPublicRoute) {
+  // For public or admin routes, don't apply global protection
+  // Admin routes have their own protection in admin/layout.tsx
+  if (isPublicRoute || isAdminRoute) {
     return <RouteProtection requireAuth={false}>{children}</RouteProtection>;
   }
 
-  // For protected routes, require authentication with role-based access
+  // For other protected routes, require authentication with role-based access
   return <RouteProtection requireAuth={true}>{children}</RouteProtection>;
 }
