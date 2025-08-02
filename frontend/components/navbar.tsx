@@ -113,15 +113,16 @@ function Navbar() {
   if (hideNavbar) {
     return (
       <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
-        <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
+        {/* <div className='container mx-auto px-4 sm:px-6 lg:px-8'> */}
+        <div className='w-full px-4'>
           <div className='flex h-20 items-center justify-between'>
             {/* Logo */}
             <Link
               href={`${
                 pathname === '/campus/dashboard' ? '/campus/dashboard' : '/'
               }`}
-              className='flex items-center group'>
-              <div className='flex items-center space-x-3'>
+              className='flex items-center group min-w-0'>
+              <div className='flex items-center space-x-3 min-w-0'>
                 <Image
                   src='/logo.png'
                   alt='Campus Bites Logo'
@@ -131,10 +132,10 @@ function Navbar() {
                   className='transition-all duration-300 group-hover:brightness-110'
                 />
                 <div className='flex flex-col'>
-                  <span className='text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+                   <span className='truncate text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
                     Campus Bites
                   </span>
-                  <span className='text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
+                  <span className='truncate text-xs md:text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
                     Fast • Fresh • Delicious
                   </span>
                 </div>
@@ -271,25 +272,26 @@ function Navbar() {
   }
 
   return (
-    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500 overflow-x-hidden'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-x-hidden'>
-        <div className='flex h-20 items-center justify-between w-full max-w-full'>
+    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
+      <div className='w-full px-4'>
+        <div className='flex h-20 items-center justify-between'>
           {/* Logo */}
-          <Link href='/' className='flex items-center group'>
+          <Link href='/' className='flex items-center min-w-0'>
             <div className='flex items-center space-x-3'>
               <Image
                 src='/logo.png'
                 alt='Campus Bites Logo'
-                width={50}
-                height={50}
+                width={40}
+                height={40}
                 priority
                 className='transition-all duration-300 group-hover:brightness-110'
               />
-              <div className='flex flex-col'>
-                <span className='text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+              {/* Only show name on mobile, show motto on md+ */}
+              <div className='flex flex-col min-w-0 ml-2'>
+                <span className='truncate text-base md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
                   Campus Bites
                 </span>
-                <span className='text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
+                <span className='hidden md:block truncate text-xs md:text-sm text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
                   Fast • Fresh • Delicious
                 </span>
               </div>
@@ -298,12 +300,13 @@ function Navbar() {
 
           {/* Global Search Bar (Desktop) - only show when authenticated */}
           {isAuthenticated && (
-            <div className='hidden md:block relative w-72 mr-6'>
+            <div className='hidden lg:block relative w-96 mr-6'>
               <GlobalSearchDropdown
                 query={searchQuery}
                 setQuery={setSearchQuery}
                 open={searchDropdownOpen}
                 setOpen={setSearchDropdownOpen}
+                // onSearch={handleSearch}
               />
             </div>
           )}
@@ -342,7 +345,10 @@ function Navbar() {
           {/* Right side actions */}
           <div className='flex items-center space-x-4'>
             {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Theme Toggle - only show on desktop */}
+            <div className="hidden md:block">
+              <ThemeToggle />
+            </div>
 
             {/* Cart - only show when authenticated */}
             {isAuthenticated && (
@@ -476,26 +482,50 @@ function Navbar() {
                 side='right'
                 className='w-full max-w-sm bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border-l border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white p-0'>
                 <div className='flex flex-col h-full'>
-                  <div className='flex items-center justify-between p-6 border-b border-white/10'>
+                  {/* <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80"> */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80">
                     <Link
-                      href='/'
-                      className='flex items-center space-x-3'
-                      onClick={() => setIsMenuOpen(false)}>
-                      <div className='w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center'>
-                        <UtensilsCrossed className='w-4 h-4 text-white' />
+                      href="/"
+                      className="flex items-center space-x-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Image
+                        src="/logo.png"
+                        alt="Campus Bites Logo"
+                        width={36}
+                        height={36}
+                        priority
+                        className="rounded"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-base font-bold text-gray-900 dark:text-white tracking-wide">
+                          Campus Bites
+                        </span>
+                        <span className="text-xs text-gray-600 dark:text-gray-300 font-light tracking-wider">
+                          Fast • Fresh • Delicious
+                        </span>
                       </div>
-                      <span className='font-semibold text-lg text-white'>
-                        Campus Bites
-                      </span>
                     </Link>
                     <Button
-                      variant='ghost'
-                      size='icon'
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setIsMenuOpen(false)}
-                      className='rounded-full text-white hover:bg-white/10'>
-                      <X className='h-5 w-5' />
+                      className="rounded-full text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
+                    >
                     </Button>
                   </div>
+
+                  {/* Add search bar here, only on mobile */}
+                  {isAuthenticated && (
+                    <div className="my-4">
+                      <GlobalSearchDropdown
+                        query={searchQuery}
+                        setQuery={setSearchQuery}
+                        open={searchDropdownOpen}
+                        setOpen={setSearchDropdownOpen}
+                      />
+                    </div>
+                  )}
 
                   <nav className='flex-1 p-6 space-y-2'>
                     {isAuthenticated &&
@@ -504,10 +534,10 @@ function Navbar() {
                           key={item.href}
                           href={item.href}
                           onClick={() => setIsMenuOpen(false)}
-                          className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-lg ${
+                          className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-base font-medium ${
                             pathname === item.href
                               ? 'bg-red-600 text-white'
-                              : 'text-gray-300 hover:bg-gray-800/80'
+                              : 'text-gray-900 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/80'
                           }`}>
                           <item.icon className='h-6 w-6' />
                           <span>{item.name}</span>
@@ -548,6 +578,9 @@ function Navbar() {
                       </Button>
                     </div>
                   )}
+                  <div className="mt-auto p-6 flex justify-center">
+                    <ThemeToggle />
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
