@@ -19,6 +19,7 @@ import {
   MapPin,
   Filter,
   Heart,
+  Users,
   Zap,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -28,6 +29,10 @@ import { useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
 import { StudentOnlyRoute } from '@/components/RouteProtection';
 import NotificationList from '@/components/notification-list';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,8 +41,17 @@ function StudentDashboardContent() {
   const [userCampusId, setUserCampusId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGroupOrderModalOpen, setIsGroupOrderModalOpen] = useState(false);
+  const [selectedCanteen, setSelectedCanteen] = useState<string | null>(null);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [newGroupOrderDetails, setNewGroupOrderDetails] = useState<{
+    groupOrderId: string;
+    groupLink: string;
+    qrCodeUrl: string;
+  } | null>(null);
   const { cart } = useCart();
-  const { token } = useAuth();
+  const { token, isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -75,6 +89,67 @@ function StudentDashboardContent() {
 
     fetchUserProfile();
   }, [token]);
+
+  const handleCreateGroupOrder = async () => {
+    if (!selectedCanteen) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Please select a canteen to create a group order.',
+      });
+      return;
+    }
+
+    if (!isAuthenticated) {
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Required',
+        description: 'Please log in to create a group order.',
+      });
+      return;
+    }
+
+    setIsCreatingOrder(true);
+    try {
+      const res = await fetch(
+        'http://localhost:8080/api/v1/groupOrder/create-order',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ canteen: selectedCanteen }),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to create group order');
+      }
+
+      const data = await res.json();
+      setNewGroupOrderDetails(data.data);
+      toast({
+        title: 'Group Order Created!',
+        description: 'Share the link or QR code with your friends.',
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error creating group order',
+        description: (error as Error).message,
+      });
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
+
+  const resetGroupOrderFlow = () => {
+    setSelectedCanteen(null);
+    setNewGroupOrderDetails(null);
+    setIsGroupOrderModalOpen(false);
+  };
 
   // Fetch canteens based on campus
   useEffect(() => {
@@ -241,88 +316,175 @@ function StudentDashboardContent() {
             </div>
           </div>
 
-          {/* Featured Section */}
+          {/* Group Order Banner */}
           <div className='mb-12'>
-            <h2 className='text-2xl font-bold text-white mb-6 flex items-center gap-3'>
-              <Zap className='w-6 h-6 text-yellow-400' />
-              Featured Restaurants
-            </h2>
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {filteredRestaurants
-                ?.filter((restaurant) => restaurant.featured)
-                ?.map((restaurant) => (
-                  <Card
-                    key={restaurant._id}
-                    className='bg-gray-800/30 border-gray-700/30 backdrop-blur-xl hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden'>
-                    <div className='relative'>
-                      <Image
-                        src={restaurant.image || '/placeholder.svg'}
-                        alt={restaurant.name || 'Restaurant'}
-                        width={300}
-                        height={200}
-                        className='w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300'
-                      />
-                      {restaurant.discount && (
-                        <Badge className='absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1'>
-                          {restaurant.discount}
-                        </Badge>
-                      )}
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        className='absolute top-3 right-3 border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'>
-                        <Heart className='w-4 h-4' />
-                      </Button>
-                      {!restaurant.isOpen && (
-                        <div className='absolute inset-0 bg-black/60 flex items-center justify-center'>
-                          <Badge
-                            variant='destructive'
-                            className='text-lg px-4 py-2'>
-                            Closed
-                          </Badge>
-                        </div>
-                      )}
+            <Card className='border border-red-500 bg-red-600 shadow-xl text-white'>
+              <CardContent className='flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 gap-4'>
+                <div className='flex items-center gap-4'>
+                  <Users className='w-8 h-8' />
+                  <div>
+                    <h3 className='text-xl font-bold'>Order with Friends!</h3>
+                    <p className='text-sm opacity-90'>
+                      Start a group order and save on delivery fees. Everyone pays
+                      for their own items!
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setIsGroupOrderModalOpen(true)}
+                  variant='secondary'
+                  className='bg-white text-red-600 hover:bg-gray-100 font-semibold py-2 px-4 rounded-lg shadow-md transition-all duration-200 transform hover:scale-105'>
+                  <Users className='w-4 h-4 mr-2' />
+                  Create Group Order
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Group Order Modal */}
+            <Dialog open={isGroupOrderModalOpen} onOpenChange={setIsGroupOrderModalOpen}>
+              <DialogContent className='sm:max-w-[425px] bg-gray-800 text-white border-gray-700'>
+                <DialogHeader>
+                  <DialogTitle className='text-2xl font-bold text-center bg-gradient-to-r from-red-500 to-red-500 bg-clip-text text-transparent pb-2'>
+                    Start a New Group Order
+                  </DialogTitle>
+                  <DialogDescription className='text-gray-300 text-center'>
+                    {newGroupOrderDetails
+                      ? 'Share this link or QR code with your friends to join the order.'
+                      : 'Select a canteen to create a group order.'}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {!newGroupOrderDetails ? (
+                  <div className='space-y-6 py-4'>
+                    <div>
+                      <Label htmlFor='canteen-select' className='mb-2 block text-gray-300'>
+                        Select Canteen
+                      </Label>
+                      <Select
+                        value={selectedCanteen || ''}
+                        onValueChange={setSelectedCanteen}
+                      >
+                        <SelectTrigger
+                          id='canteen-select'
+                          className='w-full bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent'>
+                          <SelectValue placeholder='Choose a Canteen' className='text-gray-200' />
+                        </SelectTrigger>
+                        <SelectContent className='bg-gray-800 border-gray-700 text-gray-200'>
+                          {restaurants.map((canteen) => (
+                            <SelectItem
+                              key={canteen._id}
+                              value={canteen._id}
+                              className='hover:bg-gray-700 focus:bg-gray-700'>
+                              {canteen.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <CardHeader className='pb-3'>
-                      <div className='flex items-start justify-between'>
-                        <div>
-                          <CardTitle className='text-xl text-white mb-1'>
-                            {restaurant.name}
-                          </CardTitle>
-                          <CardDescription className='text-gray-400'>
-                            {restaurant.cuisine}
-                          </CardDescription>
+
+                    <div className='flex justify-end gap-3 pt-2'>
+                      <Button
+                        variant='outline'
+                        onClick={() => setIsGroupOrderModalOpen(false)}
+                        className='text-gray-300 border-gray-600 hover:bg-gray-700'>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateGroupOrder}
+                        disabled={isCreatingOrder || !selectedCanteen}
+                        className='bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex-1'>
+                        {isCreatingOrder ? (
+                          <>
+                            <svg
+                              className='animate-spin -ml-1 mr-2 h-5 w-5 text-white'
+                              xmlns='http://www.w3.org/2000/svg'
+                              fill='none'
+                              viewBox='0 0 24 24'>
+                              <circle
+                                className='opacity-25'
+                                cx='12'
+                                cy='12'
+                                r='10'
+                                stroke='currentColor'
+                                strokeWidth='4'></circle>
+                              <path
+                                className='opacity-75'
+                                fill='currentColor'
+                                d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
+                            </svg>
+                            Creating...
+                          </>
+                        ) : (
+                          'Create Group Order'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className='space-y-6 text-center py-4'>
+                    <h2 className='text-2xl font-bold bg-gradient-to-r from-green-500 to-emerald-400 bg-clip-text text-transparent'>
+                      Group Order Created! 🎉
+                    </h2>
+                    {newGroupOrderDetails.qrCodeUrl && (
+                      <div className='mt-4 flex flex-col items-center'>
+                        <div className='p-4 bg-white rounded-lg shadow-lg'>
+                          <Image
+                            src={newGroupOrderDetails.qrCodeUrl}
+                            alt='Group Order QR Code'
+                            width={200}
+                            height={200}
+                            className='rounded'
+                          />
                         </div>
-                        <div className='flex items-center gap-1'>
-                          <Star className='w-4 h-4 text-yellow-400 fill-current' />
-                          <span className='text-white font-semibold'>
-                            {restaurant.rating}
-                          </span>
-                        </div>
+                        <p className='text-sm text-gray-400 mt-3'>
+                          Scan QR code to join
+                        </p>
                       </div>
-                    </CardHeader>
-                    <CardContent className='pt-0'>
-                      <div className='flex items-center justify-between text-sm text-gray-400 mb-4'>
-                        <div className='flex items-center gap-1'>
-                          <Clock className='w-4 h-4' />
-                          <span>{restaurant.deliveryTime}</span>
-                        </div>
-                        <div className='flex items-center gap-1'>
-                          <MapPin className='w-4 h-4' />
-                          <span>{restaurant.distance}</span>
-                        </div>
+                    )}
+
+                    <div className='bg-gray-700 p-4 rounded-lg border border-gray-600 break-words'>
+                      <Label className='block text-gray-300 text-sm font-medium mb-2'>
+                        Group Link:
+                      </Label>
+                      <div className='bg-gray-800 p-3 rounded border border-gray-600 mb-3'>
+                        <p className='text-red-400 font-mono text-sm break-all'>
+                          {`http://localhost:3000/group-order?link=${newGroupOrderDetails.groupLink}`}
+                        </p>
                       </div>
-                      <Link href={`/menu/${restaurant._id}`}>
+                      <div className='flex gap-3 justify-center'>
                         <Button
-                          className='w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-2 rounded-xl transition-all duration-300'
-                          disabled={!restaurant.isOpen}>
-                          {restaurant.isOpen ? 'Order Now' : 'Closed'}
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              `http://localhost:3000/group-order?link=${newGroupOrderDetails.groupLink}`
+                            );
+                            toast({
+                              description: 'Link copied to clipboard!',
+                              className: 'bg-green-600 text-white border-0',
+                            });
+                          }}
+                          variant='outline'
+                          size='sm'
+                          className='text-gray-300 border-gray-600 hover:bg-gray-700 flex items-center gap-2'>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                          Copy Link
                         </Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
+                        <Link
+                          href={`/group-order?link=${newGroupOrderDetails.groupLink}`}
+                          passHref>
+                          <Button
+                            size='sm'
+                            className='bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-semibold'>
+                            Go to Group Order
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* All Restaurants */}
