@@ -102,8 +102,8 @@ function Navbar() {
   const profileImageSrc = displayUser?.profileImage || '/placeholder-user.jpg';
 
   const navItems = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Outlets', href: '/menu', icon: UtensilsCrossed },
+    { name: 'Home', href: '/student/dashboard', icon: Home },
+    { name: 'QuickBites', href: '/quickbite', icon: UtensilsCrossed },
     { name: 'Orders', href: '/orders', icon: Package },
   ];
 

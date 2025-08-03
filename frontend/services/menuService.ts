@@ -4,7 +4,7 @@ export interface MenuItem {
   _id: string;
   name: string;
   price: number;
-  canteen: string;
+  canteen: string | { _id: string; name: string; [key: string]: any };
   available?: boolean;
   image?: string;
   isDeleted?: boolean;
@@ -200,6 +200,17 @@ export async function getItemsByPriceRange(
 
 export async function getReadyItems(canteenId: string): Promise<MenuItem[]> {
   const res = await axios.get(`/api/v1/items/ready/${canteenId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem('token')}`,
+    },
+  });
+  return res.data.data;
+}
+
+export async function getReadyItemsOfAllCanteens(
+  campus: string
+): Promise<MenuItem[]> {
+  const res = await axios.get(`/api/v1/items/allReadyItems?campus=${campus}`, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem('token')}`,
     },
