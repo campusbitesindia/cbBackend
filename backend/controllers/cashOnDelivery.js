@@ -40,7 +40,7 @@ exports.CreateCODTransaction = async (req, res) => {
       orderId,
       { paymentStatus: "COD", status: "placed" },
       { new: true }
-    );
+    ).populate("canteen student");
 
     const transaction = await Transaction.create({
       orderId: order._id,
@@ -60,13 +60,14 @@ exports.CreateCODTransaction = async (req, res) => {
         `New Order has arrived with Order ID ${order.OrderNumber}`
       );
     }
-
+    global.io.to(order.canteen.toString()).emit("New_Order",updatedOrder);
     return res.status(200).json({
       success: true,
       message: "Transaction created successfully",
       data: { transaction, order: updatedOrder },
     });
   } catch (err) {
+    console.log(err.message)
     return res.status(500).json({
       success: false,
       message: "Internal server error",

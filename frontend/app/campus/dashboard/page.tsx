@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -30,7 +30,7 @@ import { MenuTab } from '@/app/campus/dashboard/MenuTab';
 import { OrdersTab } from '@/app/campus/dashboard/OrdersTab';
 import { AnalyticsTab } from '@/app/campus/dashboard/AnalyticsTab';
 import { ProfileTab } from '@/app/campus/dashboard/ProfileTab';
-import { PayoutsTab } from '@/app/campus/dashboard/PayoutsTab'; // Re-added placeholder component
+import { PayoutsTab } from '@/app/campus/dashboard/PayoutsTab';
 import { OrderDetailsDialog } from '@/app/campus/dashboard/OrderDetailsDialog';
 import {
   Card,
@@ -74,6 +74,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { useSocket } from '@/context/socket-context';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -94,9 +95,11 @@ function DashboardContent() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [notApprovedDialog, setNotApprovedDialog] = useState(false);
+
+  const [canteenId, setCanteenId] = useState("");
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-  const canteenId = localStorage.getItem('canteenId');
+  
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -137,6 +140,84 @@ function DashboardContent() {
   const [bankSubmitting, setBankSubmitting] = useState(false);
   const [bankSuccess, setBankSuccess] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
+  const { getSocket, connectSocket, disconnectSocket } = useSocket();
+
+  useEffect(() => {
+    const canteenId = localStorage.getItem('canteenId');
+    if (canteenId) {
+      setCanteenId(canteenId);
+    }
+  }, []);
+
+  // Fixed Socket Connection Effect
+  useEffect(() => {
+    if (!canteenId) {
+      
+      return;
+    }
+    
+    
+    
+    connectSocket();
+    const socket = getSocket();
+    
+    if (!socket) {
+      console.error("Socket not available");
+      return;
+    }
+    
+    // Join the canteen room
+    socket.emit('Join_Room', canteenId);
+   
+
+    // Handle new orders
+    const handleNewOrder = (data: any) => {
+      
+      
+      // Validate order data
+      if (!data || !data._id) {
+        
+        return;
+      }
+      
+      // Transform the data if needed to match your Order type
+      const transformedOrder = {
+        ...data,
+        status: data.status || 'pending',
+        createdAt: data.createdAt || new Date().toISOString(),
+      };
+      
+      setOrders((prevOrders) => {
+       
+        
+        // Check for duplicates
+        const orderExists = prevOrders.some(order => order._id === data._id);
+        if (orderExists) {
+         
+          return prevOrders;
+        }
+        
+        const newOrders = [transformedOrder, ...prevOrders]; // Add to beginning for latest first
+       
+        return newOrders;
+      });
+      
+      // Show toast notification
+      toast({
+        title: 'New Order Received!',
+        description: `Order #${data._id?.slice(-6)} has been placed.`,
+      });
+    };
+
+    socket.on("New_Order", handleNewOrder);
+    
+    // Cleanup function
+    return () => {
+      
+      socket.off("New_Order", handleNewOrder);
+      disconnectSocket();
+    };
+  }, [canteenId, toast, connectSocket, disconnectSocket, getSocket]);
 
   // Type for breadcrumb items
   type BreadcrumbItem = {
@@ -219,54 +300,6 @@ function DashboardContent() {
     return breadcrumbItems;
   };
 
-  // Form state for new/edit item
-  // const [formData, setFormData] = useState({
-  //   name: '',
-  //   price: '',
-  //   description: '',
-  //   category: '',
-  //   isVeg: false,
-  //   available: true,
-  //   image: '',
-  //   portion: '',
-  //   quantity: '',
-  // });
-
-  // Add search state
-  // const [searchTerm, setSearchTerm] = useState('');
-  // const [statusFilter, setStatusFilter] = useState('all');
-  // const [categoryFilter, setCategoryFilter] = useState('all');
-
-  // State for order details modal
-  // const [orderDetails, setOrderDetails] = useState<any | null>(null);
-
-  // Personal details state
-  // const [personalData, setPersonalData] = useState({
-  //   vendorName: '',
-  //   contactPerson: '',
-  //   mobileNumber: '',
-  //   email: '',
-  //   address: '',
-  //   profilePic: '',
-  // });
-  // const [personalSubmitting, setPersonalSubmitting] = useState(false);
-  // const [personalSuccess, setPersonalSuccess] = useState(false);
-  // const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
-  // const [profilePicPreview, setProfilePicPreview] = useState('');
-
-  // Bank details state
-  // const [bankDetails, setBankDetails] = useState({
-  //   accountHolderName: '',
-  //   accountNumber: '',
-  //   confirmAccountNumber: '',
-  //   ifscCode: '',
-  //   bankName: '',
-  //   branchName: '',
-  //   upiId: '',
-  // });
-  // const [bankSubmitting, setBankSubmitting] = useState(false);
-  // const [bankSuccess, setBankSuccess] = useState(false);
-
   // Handle profile picture upload
   const handleProfilePicUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
@@ -318,21 +351,6 @@ function DashboardContent() {
     }
   };
 
-  // useEffect(() => {
-  //   console.log('useEffect triggered:', {
-  //     isAuthenticated,
-  //     user: user?.id,
-  //     activeTab,
-  //   });
-  //   if (isAuthenticated && user) {
-  //     console.log('Starting fetchCanteenData...');
-  //     // fetchCanteenData();
-  //   } else {
-  //     console.log('Not authenticated or no user, setting loading to false');
-  //     setLoading(false);
-  //   }
-  // }, [activeTab, isAuthenticated, user]);
-
   // Additional useEffect to refetch data when canteenId changes
   useEffect(() => {
     console.log('canteenId changed:', canteenId);
@@ -340,55 +358,7 @@ function DashboardContent() {
       console.log('Fetching data due to canteenId change...');
       fetchData(canteenId);
     }
-  }, [canteenId]);
-
-  // Fetch canteen data associated with the current user
-  // const fetchCanteenData = async () => {
-  //   try {
-  //     console.log('fetchCanteenData called for user:', user?.id);
-
-  //     if (!user?.id) {
-  //       console.error('No user ID available');
-  //       setLoading(false); // Add this line to stop loading
-  //       toast({
-  //         title: 'Error',
-  //         description: 'User session invalid. Please login again.',
-  //         variant: 'destructive',
-  //       });
-  //       return;
-  //     }
-
-  //     console.log('Fetching canteen data for user:', user.id);
-  //     const canteenData = await getCanteenByOwner(user.id);
-  //     console.log('Canteen data received:', canteenData);
-
-  //     if (canteenData && canteenData._id) {
-  //       const dynamicCanteenId = canteenData._id;
-  //       console.log('Setting canteenId to:', dynamicCanteenId);
-  //       setCanteenId(dynamicCanteenId);
-
-  //       // Don't call fetchData here since the useEffect will handle it
-  //       console.log('Canteen ID set, useEffect will trigger data fetch');
-  //     } else {
-  //       console.error('No canteen data received:', canteenData);
-  //       setLoading(false); // Add this line to stop loading
-  //       toast({
-  //         title: 'Error',
-  //         description:
-  //           'No canteen associated with your account. Please contact support.',
-  //         variant: 'destructive',
-  //       });
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching canteen data:', error);
-  //     setLoading(false); // Add this line to stop loading
-  //     toast({
-  //       title: 'Error',
-  //       description: 'Failed to fetch canteen information',
-  //       variant: 'destructive',
-  //     });
-  //   }
-  // };
+  }, [canteenId, isAuthenticated, user]);
 
   // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
   const fetchData = async (currentCanteenId?: string) => {
@@ -403,17 +373,6 @@ function DashboardContent() {
         });
         return;
       }
-
-      // Temporarily allow any authenticated user for testing (role check removed)
-      // if (user?.role !== 'canteen') {
-      //   setLoading(false);
-      //   toast({
-      //     title: 'Error',
-      //     description: 'You must be logged in as a canteen user',
-      //     variant: 'destructive',
-      //   });
-      //   return;
-      // }
 
       // Use the passed canteenId parameter or fallback to state canteenId
       const canteenIdToUse = currentCanteenId || canteenId;
@@ -567,8 +526,6 @@ function DashboardContent() {
       setLoading(false);
     }
   };
-
-  // const [imageUploading, setImageUploading] = useState(false);
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -868,17 +825,6 @@ function DashboardContent() {
   if (!isAuthenticated || !user) {
     return null; // Show nothing while redirecting
   }
-
-  // Temporarily allow any authenticated user for testing
-  // if (user.role !== 'canteen') {
-  //   return (
-  //     <div className='flex items-center justify-center min-h-screen bg-white'>
-  //       <div className='text-gray-600'>
-  //         Access denied. Only canteen users can access this dashboard.
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   // Filter items by search term (case-insensitive)
   console.log('Current menuItems before filtering:', menuItems);

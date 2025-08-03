@@ -43,21 +43,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("cart", JSON.stringify(cart))
   }, [cart])
 
-  const addToCart = (item: CartItem) => {
-    setCart((prevCart) => {
-      const existingItemIndex = prevCart.findIndex((cartItem) => cartItem.id === item.id)
+const addToCart = (item: CartItem) => {
+  setCart((prevCart) => {
+    const existingItem = prevCart.find((cartItem) => cartItem.id === item.id)
 
-      if (existingItemIndex !== -1) {
-        // Item already exists, update quantity
-        const updatedCart = [...prevCart]
-        updatedCart[existingItemIndex].quantity += item.quantity
-        return updatedCart
-      } else {
-        // Item doesn't exist, add it
-        return [...prevCart, item]
-      }
-    })
-  }
+    if (existingItem) {
+      // Map through and update the quantity of the existing item
+      return prevCart.map((cartItem) =>
+        cartItem.id === item.id
+          ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+          : cartItem
+      )
+    }
+
+    // Item not in cart, add it to the list
+    return [...prevCart, item]
+  })
+}
+
 
   const updateQuantity = (id: string, quantity: number) => {
     setCart((prevCart) => prevCart.map((item) => (item.id === id ? { ...item, quantity } : item)))

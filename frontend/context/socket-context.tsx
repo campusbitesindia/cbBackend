@@ -1,32 +1,54 @@
 'use client';
 
-import { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 
-const SocketContext = createContext<Socket | null>(null);
+interface ISocketContext {
+  connectSocket: () => void;
+  disconnectSocket: () => void;
+  getSocket: () => Socket | null;
+}
 
-export function SocketProvider({ children, userId, isVendor }: any) {
+const SocketContext = createContext<ISocketContext | null>(null);
+
+export const useSocket = (): ISocketContext => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
+  return context;
+};
+
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const socketRef = useRef<Socket | null>(null);
 
-  useEffect(() => {
-    if (!userId) return;
+  const connectSocket = () => {
+    if (!socketRef.current) {
+      console.log("connected")
+      socketRef.current = io('http://localhost:8080');
 
-    socketRef.current = io('http://localhost:8080'); //  change this in production
+      socketRef.current.on("connect", () => {
+        console.log("Socket connected:", socketRef.current?.id);
+      });
 
-    const room = isVendor ? `vendor_${userId}` : `user_${userId}`;
+      socketRef.current.on("disconnect", () => {
+        console.log("Socket disconnected");
+      });
+    }
+  };
 
-    socketRef.current.emit('join_room', room);
+  const disconnectSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+  };
 
-    return () => {
-      socketRef.current?.disconnect();
-    };
-  }, [userId]);
+  const getSocket = () => socketRef.current;
 
   return (
-    <SocketContext.Provider value={socketRef.current}>
+    <SocketContext.Provider value={{ connectSocket, disconnectSocket, getSocket }}>
       {children}
     </SocketContext.Provider>
   );
-}
-
-export const useSocket = () => useContext(SocketContext);
+};

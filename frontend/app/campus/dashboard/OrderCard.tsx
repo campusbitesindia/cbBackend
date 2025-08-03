@@ -225,7 +225,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </span>
         </div>
         <p className='text-blue-900 font-medium'>
-          {order.payment?.method?.toUpperCase() || 'N/A'}
+          {order.payment?.method?.toUpperCase() || order?.paymentStatus?.toUpperCase() || 'N/A'}
         </p>
       </div>
 

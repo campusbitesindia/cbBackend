@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,12 +30,13 @@ import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { API_ENDPOINTS } from '@/lib/constants';
+import { useSocket } from '@/context/socket-context';
 
 const CanteenMenuPage = () => {
   const params = useParams();
   const { canteenId } = params;
   const { toast } = useToast();
-
+  const {getSocket,connectSocket,disconnectSocket}=useSocket();
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
 
   const [canteen, setCanteen] = useState<Canteen | null>(null);
@@ -47,6 +48,27 @@ const CanteenMenuPage = () => {
   const [isReadyFilter, setIsReadyFilter] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const [loading, setLoading] = useState(true);
+
+  const cartref=useRef(cart);
+
+  useEffect(()=>{
+    cartref.current=cart
+  },[cart])
+
+  useEffect(()=>{
+    connectSocket();
+    const socket=getSocket();
+    socket?.emit("Join_Room",canteenId);
+
+    return ()=>{
+      console.log(cartref.current)
+      if(cartref.current.length===0){
+        disconnectSocket();
+
+      }
+    }
+  },[canteenId])
+
 
   useEffect(() => {
     if (canteenId) {

@@ -28,6 +28,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/auth-context";
+import { useSocket } from "@/context/socket-context";
+import { disconnect } from "node:process";
+import { useCart } from "@/context/cart-context";
 
 interface OrderDetailsType {
   id: string;
@@ -40,8 +43,9 @@ export default function PaymentPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { token } = useAuth();
-
+    const {disconnectSocket}=useSocket()
   // State
+  const {clearCart}=useCart()
   const [orderDetails, setOrderDetails] = useState<OrderDetailsType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "upi">("cod");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -117,6 +121,7 @@ export default function PaymentPage() {
         title: "Order placed successfully",
         description: "Your COD order is confirmed.",
       });
+      disconnectSocket();
       router.push("/orders"); // Redirect after success
     } catch (err: any) {
       toast({
@@ -142,6 +147,7 @@ export default function PaymentPage() {
           title: "Payment Successful",
           description: "Thank you for your payment!",
         });
+        disconnectSocket();
         router.push("/orders");
       }
     } catch (err) {
@@ -245,7 +251,7 @@ export default function PaymentPage() {
       else {
         await openRazorpay(paymentData);
       }
-
+      clearCart();
     } 
     catch (error: any) {
       toast({

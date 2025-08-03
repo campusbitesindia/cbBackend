@@ -88,6 +88,7 @@ export interface Order {
   };
   createdAt: string;
   updatedAt: string;
+  paymentStatus:string
 }
 
 export interface Review {
