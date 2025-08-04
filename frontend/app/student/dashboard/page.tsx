@@ -29,8 +29,20 @@ import { useCart } from '@/context/cart-context';
 import { useAuth } from '@/context/auth-context';
 import { StudentOnlyRoute } from '@/components/RouteProtection';
 import NotificationList from '@/components/notification-list';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 
@@ -325,8 +337,8 @@ function StudentDashboardContent() {
                   <div>
                     <h3 className='text-xl font-bold'>Order with Friends!</h3>
                     <p className='text-sm opacity-90'>
-                      Start a group order and save on delivery fees. Everyone pays
-                      for their own items!
+                      Start a group order and save on delivery fees. Everyone
+                      pays for their own items!
                     </p>
                   </div>
                 </div>
@@ -341,7 +353,9 @@ function StudentDashboardContent() {
             </Card>
 
             {/* Group Order Modal */}
-            <Dialog open={isGroupOrderModalOpen} onOpenChange={setIsGroupOrderModalOpen}>
+            <Dialog
+              open={isGroupOrderModalOpen}
+              onOpenChange={setIsGroupOrderModalOpen}>
               <DialogContent className='sm:max-w-[425px] bg-gray-800 text-white border-gray-700'>
                 <DialogHeader>
                   <DialogTitle className='text-2xl font-bold text-center bg-gradient-to-r from-red-500 to-red-500 bg-clip-text text-transparent pb-2'>
@@ -357,17 +371,21 @@ function StudentDashboardContent() {
                 {!newGroupOrderDetails ? (
                   <div className='space-y-6 py-4'>
                     <div>
-                      <Label htmlFor='canteen-select' className='mb-2 block text-gray-300'>
+                      <Label
+                        htmlFor='canteen-select'
+                        className='mb-2 block text-gray-300'>
                         Select Canteen
                       </Label>
                       <Select
                         value={selectedCanteen || ''}
-                        onValueChange={setSelectedCanteen}
-                      >
+                        onValueChange={setSelectedCanteen}>
                         <SelectTrigger
                           id='canteen-select'
                           className='w-full bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent'>
-                          <SelectValue placeholder='Choose a Canteen' className='text-gray-200' />
+                          <SelectValue
+                            placeholder='Choose a Canteen'
+                            className='text-gray-200'
+                          />
                         </SelectTrigger>
                         <SelectContent className='bg-gray-800 border-gray-700 text-gray-200'>
                           {restaurants.map((canteen) => (
@@ -465,8 +483,18 @@ function StudentDashboardContent() {
                           variant='outline'
                           size='sm'
                           className='text-gray-300 border-gray-600 hover:bg-gray-700 flex items-center gap-2'>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          <svg
+                            xmlns='http://www.w3.org/2000/svg'
+                            className='h-4 w-4'
+                            fill='none'
+                            viewBox='0 0 24 24'
+                            stroke='currentColor'>
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth={2}
+                              d='M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3'
+                            />
                           </svg>
                           Copy Link
                         </Button>
@@ -492,7 +520,7 @@ function StudentDashboardContent() {
             <h2 className='text-2xl font-bold text-white mb-6'>
               All Restaurants
             </h2>
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
               {filteredRestaurants?.map((restaurant) => (
                 <Card
                   key={restaurant._id}
@@ -503,7 +531,7 @@ function StudentDashboardContent() {
                       alt={restaurant.name || 'Restaurant'}
                       width={300}
                       height={200}
-                      className='w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300'
+                      className='w-full h-32 sm:h-48 object-cover group-hover:scale-110 transition-transform duration-300'
                     />
                     {restaurant.discount && (
                       <Badge className='absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1'>

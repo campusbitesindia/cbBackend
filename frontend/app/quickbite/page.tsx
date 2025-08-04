@@ -74,7 +74,7 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
   currentQuantity,
 }) => {
   return (
-    <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full min-w-[240px]'>
+    <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full'>
       {/* Enhanced Image Section */}
       <div className='relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-800'>
         <div className='aspect-[5/4] relative overflow-hidden'>
@@ -88,49 +88,54 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
         </div>
 
         {/* Enhanced Status Badges */}
-        <div className='absolute top-4 left-4 right-4 flex justify-between items-start'>
+        <div className='absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-0'>
           {/* Ready Badge */}
-          <span className='inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border border-emerald-400/50 backdrop-blur-sm shadow-lg shadow-emerald-500/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-emerald-500/40'>
-            <CheckCircle className='w-3.5 h-3.5 animate-pulse' />
-            Ready Now!
+          <span className='inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border border-emerald-400/50 backdrop-blur-sm shadow-lg shadow-emerald-500/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-emerald-500/40'>
+            <CheckCircle className='w-3 h-3 sm:w-3.5 sm:h-3.5 animate-pulse' />
+            <span className='hidden sm:inline'>Ready Now!</span>
+            <span className='sm:hidden'>Ready</span>
           </span>
 
           {/* Enhanced Veg/Non-Veg Badge */}
           <span
-            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl backdrop-blur-sm border shadow-lg transition-all duration-300 group-hover:scale-105 ${
+            className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-sm border shadow-lg transition-all duration-300 group-hover:scale-105 ${
               item.isVeg
                 ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400/50 shadow-green-500/25 group-hover:shadow-green-500/40'
                 : 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-orange-400/50 shadow-orange-500/25 group-hover:shadow-orange-500/40'
             }`}>
             <Leaf
-              className={`w-3 h-3 ${
+              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${
                 !item.isVeg ? 'rotate-180' : ''
               } transition-transform duration-300`}
             />
-            {item.isVeg ? '🥬 Veg' : '🍖 Non-Veg'}
-          </span>
-        </div>
-
-        {/* Enhanced Canteen Name Badge */}
-        <div className='absolute bottom-4 left-4'>
-          <span className='inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-xl bg-black/70 text-white backdrop-blur-sm border border-white/20 shadow-lg transition-all duration-300 group-hover:bg-black/80 group-hover:scale-105'>
-            <MapPin className='w-3.5 h-3.5' />
-            {typeof item.canteen === 'object' &&
-            item.canteen &&
-            'name' in item.canteen
-              ? item.canteen.name
-              : 'Canteen'}
+            <span className='hidden sm:inline'>
+              {item.isVeg ? '🥬 Veg' : '🍖 Non-Veg'}
+            </span>
+            <span className='sm:hidden'>{item.isVeg ? '🥬' : '🍖'}</span>
           </span>
         </div>
       </div>
 
       {/* Enhanced Content Section */}
-      <CardContent className='p-4 space-y-3'>
+      <CardContent className='p-3 sm:p-4 space-y-2 sm:space-y-3'>
         {/* Enhanced Header */}
         <div className='space-y-2'>
-          <h3 className='font-bold text-lg text-slate-900 dark:text-slate-100 leading-tight line-clamp-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-300'>
-            {item.name}
-          </h3>
+          <div className='space-y-1'>
+            <h3 className='font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100 leading-tight line-clamp-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-300'>
+              {item.name}
+            </h3>
+            {/* Canteen Name */}
+            <div className='flex items-center gap-1'>
+              <MapPin className='w-3 h-3 text-slate-400 dark:text-slate-500' />
+              <p className='text-xs text-slate-500 dark:text-slate-400 font-medium truncate'>
+                {typeof item.canteen === 'object' &&
+                item.canteen &&
+                'name' in item.canteen
+                  ? item.canteen.name
+                  : 'Canteen'}
+              </p>
+            </div>
+          </div>
           {item.description && (
             <p className='text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed'>
               {item.description}
@@ -142,12 +147,10 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
         <div className='space-y-2'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center gap-2'>
-              <span className='text-xl font-bold bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 bg-clip-text text-transparent'>
+              <span className='text-lg sm:text-xl font-bold bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 bg-clip-text text-transparent'>
                 ₹{item.price}
               </span>
-              <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'>
-                
-              </span>
+              <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'></span>
             </div>
 
             {/* Rating Display */}
@@ -159,12 +162,14 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
             </div>
           </div>
 
-          <div className='flex items-center justify-between'>
+          <div className='flex items-center justify-between gap-1'>
             {item.category && (
               <Badge
                 variant='secondary'
-                className='text-xs bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-3 py-1 rounded-full font-medium'>
-                {item.category}
+                className='text-xs bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2 sm:px-3 py-1 rounded-full font-medium truncate flex-shrink-0'>
+                <span className='truncate max-w-[60px] sm:max-w-none'>
+                  {item.category}
+                </span>
               </Badge>
             )}
 
@@ -172,20 +177,20 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
             {getItemCuisine(item) !== 'Continental' && (
               <Badge
                 variant='outline'
-                className='text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 px-3 py-1 rounded-full font-medium'>
-                {getItemCuisine(item)}
+                className='text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 px-2 sm:px-3 py-1 rounded-full font-medium truncate flex-shrink-0'>
+                <span className='truncate max-w-[60px] sm:max-w-none'>
+                  {getItemCuisine(item)}
+                </span>
               </Badge>
             )}
           </div>
-
-          
         </div>
 
         {/* Enhanced Add to Cart Button or Quantity Controls */}
         {currentQuantity === 0 ? (
           <Button
             onClick={() => onAddToCart(item)}
-            className='w-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 dark:from-red-600 dark:via-red-700 dark:to-red-800 dark:hover:from-red-700 dark:hover:via-red-800 dark:hover:to-red-900 text-white font-bold transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl hover:shadow-red-500/25 dark:hover:shadow-red-400/25 hover:scale-105 py-2.5 text-sm'
+            className='w-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 dark:from-red-600 dark:via-red-700 dark:to-red-800 dark:hover:from-red-700 dark:hover:via-red-800 dark:hover:to-red-900 text-white font-bold transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl hover:shadow-red-500/25 dark:hover:shadow-red-400/25 hover:scale-105 py-2 sm:py-2.5 text-xs sm:text-sm'
             size='sm'>
             <div className='flex items-center gap-2'>
               <span></span>
@@ -193,17 +198,17 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
             </div>
           </Button>
         ) : (
-          <div className='flex items-center justify-between bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-600/50 rounded-xl p-2.5 border border-slate-200/50 dark:border-slate-600/50'>
+          <div className='flex items-center justify-between bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-600/50 rounded-xl p-2 sm:p-2.5 border border-slate-200/50 dark:border-slate-600/50'>
             <Button
               onClick={() => onUpdateQuantity(item, currentQuantity - 1)}
               variant='ghost'
               size='sm'
-              className='h-8 w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-500 border border-red-200 dark:border-red-700/50 transition-all duration-300 hover:scale-110'>
+              className='h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-500 border border-red-200 dark:border-red-700/50 transition-all duration-300 hover:scale-110'>
               <Minus className='h-4 w-4' />
             </Button>
 
-            <div className='flex flex-col items-center px-3'>
-              <span className='text-base font-bold text-slate-900 dark:text-slate-100'>
+            <div className='flex flex-col items-center px-2 sm:px-3'>
+              <span className='text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100'>
                 {currentQuantity}
               </span>
               <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'>
@@ -215,7 +220,7 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
               onClick={() => onUpdateQuantity(item, currentQuantity + 1)}
               variant='ghost'
               size='sm'
-              className='h-8 w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-500 border border-emerald-200 dark:border-emerald-700/50 transition-all duration-300 hover:scale-110'>
+              className='h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-500 border border-emerald-200 dark:border-emerald-700/50 transition-all duration-300 hover:scale-110'>
               <Plus className='h-4 w-4' />
             </Button>
           </div>
@@ -905,28 +910,25 @@ export default function QuickBitePage() {
                     </span>
                   </div>
                 </div>
-                <div className="w-full px-4 py-10">
-  <div className="mx-auto max-w-screen-xl">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      {Array.from({ length: 8 }).map((_, index) => (
-        <div
-          key={index}
-          className="w-full max-w-[250px] mx-auto animate-pulse bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-2xl overflow-hidden"
-        >
-          <div className="aspect-[5/4] bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700" />
-          <div className="p-4 space-y-3">
-            <div className="h-6 w-3/4 bg-slate-200 dark:bg-slate-600 rounded-lg" />
-            <div className="h-4 w-full bg-slate-200 dark:bg-slate-600 rounded" />
-            <div className="h-4 w-2/3 bg-slate-200 dark:bg-slate-600 rounded" />
-            <div className="h-10 w-full bg-slate-200 dark:bg-slate-600 rounded-xl" />
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-</div>
-
-
+                <div className='w-full px-2 sm:px-4 py-10'>
+                  <div className='mx-auto max-w-screen-2xl'>
+                    <div className='grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6'>
+                      {Array.from({ length: 8 }).map((_, index) => (
+                        <div
+                          key={index}
+                          className='w-full animate-pulse bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg rounded-2xl overflow-hidden'>
+                          <div className='aspect-[5/4] bg-gradient-to-br from-slate-200 via-slate-100 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-700' />
+                          <div className='p-3 sm:p-4 space-y-2 sm:space-y-3'>
+                            <div className='h-4 sm:h-6 w-3/4 bg-slate-200 dark:bg-slate-600 rounded-lg' />
+                            <div className='h-3 sm:h-4 w-full bg-slate-200 dark:bg-slate-600 rounded' />
+                            <div className='h-3 sm:h-4 w-2/3 bg-slate-200 dark:bg-slate-600 rounded' />
+                            <div className='h-8 sm:h-10 w-full bg-slate-200 dark:bg-slate-600 rounded-xl' />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className='text-center py-20'>
@@ -985,24 +987,21 @@ export default function QuickBitePage() {
                 </div>
 
                 {/* Enhanced Items Grid */}
-               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 max-w-screen-2xl mx-auto px-4 py-10">
-  {filteredItems.map((item, index) => (
-    <div
-      key={item._id}
-      className="w-full animate-fade-in-up"
-      style={{ animationDelay: `${index * 100}ms` }}
-    >
-      <QuickBiteItemCard
-        item={item}
-        onAddToCart={handleAddToCart}
-        onUpdateQuantity={handleUpdateQuantity}
-        currentQuantity={cartItems[item._id] || 0}
-      />
-    </div>
-  ))}
-</div>
-
-
+                <div className='grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
+                  {filteredItems.map((item, index) => (
+                    <div
+                      key={item._id}
+                      className='w-full animate-fade-in-up'
+                      style={{ animationDelay: `${index * 100}ms` }}>
+                      <QuickBiteItemCard
+                        item={item}
+                        onAddToCart={handleAddToCart}
+                        onUpdateQuantity={handleUpdateQuantity}
+                        currentQuantity={cartItems[item._id] || 0}
+                      />
+                    </div>
+                  ))}
+                </div>
 
                 {/* Motivational Footer */}
                 <div className='text-center mt-16 py-8'>
