@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
   createMenuItem,
@@ -81,9 +81,28 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 function DashboardContent() {
   // Move all hooks to the top
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isMobile = useMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Check for tab parameter in URL
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (
+      tabParam &&
+      [
+        'overview',
+        'orders',
+        'menu',
+        'analytics',
+        'profile',
+        'payouts',
+      ].includes(tabParam)
+    ) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [canteenStats, setCanteenStats] = useState<CanteenStats | null>(null);
@@ -96,10 +115,10 @@ function DashboardContent() {
   const [imagePreview, setImagePreview] = useState<string>('');
   const [notApprovedDialog, setNotApprovedDialog] = useState(false);
 
-  const [canteenId, setCanteenId] = useState("");
+  const [canteenId, setCanteenId] = useState('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -152,56 +171,46 @@ function DashboardContent() {
   // Fixed Socket Connection Effect
   useEffect(() => {
     if (!canteenId) {
-      
       return;
     }
-    
-    
-    
+
     connectSocket();
     const socket = getSocket();
-    
+
     if (!socket) {
-      console.error("Socket not available");
+      console.error('Socket not available');
       return;
     }
-    
+
     // Join the canteen room
     socket.emit('Join_Room', canteenId);
-   
 
     // Handle new orders
     const handleNewOrder = (data: any) => {
-      
-      
       // Validate order data
       if (!data || !data._id) {
-        
         return;
       }
-      
+
       // Transform the data if needed to match your Order type
       const transformedOrder = {
         ...data,
         status: data.status || 'pending',
         createdAt: data.createdAt || new Date().toISOString(),
       };
-      
+
       setOrders((prevOrders) => {
-       
-        
         // Check for duplicates
-        const orderExists = prevOrders.some(order => order._id === data._id);
+        const orderExists = prevOrders.some((order) => order._id === data._id);
         if (orderExists) {
-         
           return prevOrders;
         }
-        
+
         const newOrders = [transformedOrder, ...prevOrders]; // Add to beginning for latest first
-       
+
         return newOrders;
       });
-      
+
       // Show toast notification
       toast({
         title: 'New Order Received!',
@@ -209,12 +218,11 @@ function DashboardContent() {
       });
     };
 
-    socket.on("New_Order", handleNewOrder);
-    
+    socket.on('New_Order', handleNewOrder);
+
     // Cleanup function
     return () => {
-      
-      socket.off("New_Order", handleNewOrder);
+      socket.off('New_Order', handleNewOrder);
       disconnectSocket();
     };
   }, [canteenId, toast, connectSocket, disconnectSocket, getSocket]);

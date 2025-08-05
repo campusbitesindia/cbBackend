@@ -101,14 +101,27 @@ function Navbar() {
   const displayUser = userProfile || user;
   const profileImageSrc = displayUser?.profileImage || '/placeholder-user.jpg';
 
-  const navItems = [
-    { name: 'Home', href: '/student/dashboard', icon: Home },
-    { name: 'QuickBites', href: '/quickbite', icon: UtensilsCrossed },
-    { name: 'Orders', href: '/orders', icon: Package },
-  ];
+  // Navigation items based on user role
+  const getNavItems = () => {
+    if (displayUser?.role === 'student') {
+      return [
+        { name: 'Home', href: '/student/dashboard', icon: Home },
+        { name: 'QuickBites', href: '/quickbite', icon: UtensilsCrossed },
+        { name: 'Orders', href: '/orders', icon: Package },
+      ];
+    }
+    // For campus partners, return minimal navigation or empty array
+    // They primarily use their own dashboard at /campus/dashboard
+    return [];
+  };
+
+  const navItems = getNavItems();
 
   const hideNavbar =
-    pathname === '/campus/register' || pathname === '/campus/dashboard';
+    pathname === '/campus/register' ||
+    pathname === '/campus/dashboard' ||
+    (displayUser?.role === 'campus' && pathname !== '/profile') ||
+    (displayUser?.role === 'canteen' && pathname !== '/profile');
 
   if (hideNavbar) {
     return (
@@ -132,7 +145,7 @@ function Navbar() {
                   className='transition-all duration-300 group-hover:brightness-110'
                 />
                 <div className='flex flex-col'>
-                   <span className='truncate text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+                  <span className='truncate text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
                     Campus Bites
                   </span>
                   <span className='truncate text-xs md:text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
@@ -227,23 +240,31 @@ function Navbar() {
                         asChild
                         className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
                         <Link
-                          href='/profile'
+                          href={
+                            displayUser?.role === 'campus' ||
+                            displayUser?.role === 'canteen'
+                              ? '/campus/dashboard?tab=profile'
+                              : '/profile'
+                          }
                           className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
                           <User className='h-5 w-5' />
                           <span>View Profile</span>
                         </Link>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem
-                        asChild
-                        className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                        <Link
-                          href='/orders'
-                          className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                          <Package className='h-5 w-5' />
-                          <span>My Orders</span>
-                        </Link>
-                      </DropdownMenuItem>
+                      {/* Only show My Orders for students */}
+                      {displayUser?.role === 'student' && (
+                        <DropdownMenuItem
+                          asChild
+                          className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                          <Link
+                            href='/orders'
+                            className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                            <Package className='h-5 w-5' />
+                            <span>My Orders</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
 
                       <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
 
@@ -346,12 +367,12 @@ function Navbar() {
           <div className='flex items-center space-x-4'>
             {/* Theme Toggle */}
             {/* Theme Toggle - only show on desktop */}
-            <div className="hidden md:block">
+            <div className='hidden md:block'>
               <ThemeToggle />
             </div>
 
-            {/* Cart - only show when authenticated */}
-            {isAuthenticated && (
+            {/* Cart - only show for students */}
+            {isAuthenticated && displayUser?.role === 'student' && (
               <Link href='/cart' className='relative group'>
                 <div className='relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
                   <ShoppingCart className='w-5 h-5 text-gray-700 dark:text-white' />
@@ -423,23 +444,30 @@ function Navbar() {
                     asChild
                     className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
                     <Link
-                      href='/profile'
+                      href={
+                        displayUser?.role === 'campus-partner'
+                          ? '/campus/dashboard?tab=profile'
+                          : '/profile'
+                      }
                       className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
                       <User className='h-5 w-5' />
                       <span>View Profile</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem
-                    asChild
-                    className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                    <Link
-                      href='/orders'
-                      className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                      <Package className='h-5 w-5' />
-                      <span>My Orders</span>
-                    </Link>
-                  </DropdownMenuItem>
+                  {/* Only show My Orders for students */}
+                  {displayUser?.role === 'student' && (
+                    <DropdownMenuItem
+                      asChild
+                      className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                      <Link
+                        href='/orders'
+                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                        <Package className='h-5 w-5' />
+                        <span>My Orders</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
 
                   <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
 
@@ -483,41 +511,38 @@ function Navbar() {
                 className='w-full max-w-sm bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border-l border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white p-0'>
                 <div className='flex flex-col h-full'>
                   {/* <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80"> */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80">
+                  <div className='flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80'>
                     <Link
-                      href="/"
-                      className="flex items-center space-x-2"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
+                      href='/'
+                      className='flex items-center space-x-2'
+                      onClick={() => setIsMenuOpen(false)}>
                       <Image
-                        src="/logo.png"
-                        alt="Campus Bites Logo"
+                        src='/logo.png'
+                        alt='Campus Bites Logo'
                         width={36}
                         height={36}
                         priority
-                        className="rounded"
+                        className='rounded'
                       />
-                      <div className="flex flex-col">
-                        <span className="text-base font-bold text-gray-900 dark:text-white tracking-wide">
+                      <div className='flex flex-col'>
+                        <span className='text-base font-bold text-gray-900 dark:text-white tracking-wide'>
                           Campus Bites
                         </span>
-                        <span className="text-xs text-gray-600 dark:text-gray-300 font-light tracking-wider">
+                        <span className='text-xs text-gray-600 dark:text-gray-300 font-light tracking-wider'>
                           Fast • Fresh • Delicious
                         </span>
                       </div>
                     </Link>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant='ghost'
+                      size='icon'
                       onClick={() => setIsMenuOpen(false)}
-                      className="rounded-full text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10"
-                    >
-                    </Button>
+                      className='rounded-full text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'></Button>
                   </div>
 
                   {/* Add search bar here, only on mobile */}
                   {isAuthenticated && (
-                    <div className="my-4">
+                    <div className='my-4'>
                       <GlobalSearchDropdown
                         query={searchQuery}
                         setQuery={setSearchQuery}
@@ -578,7 +603,7 @@ function Navbar() {
                       </Button>
                     </div>
                   )}
-                  <div className="mt-auto p-6 flex justify-center">
+                  <div className='mt-auto p-6 flex justify-center'>
                     <ThemeToggle />
                   </div>
                 </div>
