@@ -25,7 +25,7 @@ export interface Canteen {
   isOpen: boolean;
   is_verified?: boolean;
   isBanned?: boolean;
-  owner:any,
+  owner: any;
   discount?: string;
   featured?: boolean;
   imageUrl?: string;
@@ -48,6 +48,7 @@ export interface Item {
 
 export interface Order {
   _id: string;
+  OrderNumber?: string;
   student: string | { _id: string; name: string };
   canteen: {
     _id: string;
@@ -88,7 +89,7 @@ export interface Order {
   };
   createdAt: string;
   updatedAt: string;
-  paymentStatus:string
+  paymentStatus: string;
 }
 
 export interface Review {

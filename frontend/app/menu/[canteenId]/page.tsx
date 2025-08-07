@@ -31,12 +31,22 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { API_ENDPOINTS } from '@/lib/constants';
 import { useSocket } from '@/context/socket-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const CanteenMenuPage = () => {
   const params = useParams();
   const { canteenId } = params;
   const { toast } = useToast();
-  const {getSocket,connectSocket,disconnectSocket}=useSocket();
+  const { getSocket, connectSocket, disconnectSocket } = useSocket();
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
 
   const [canteen, setCanteen] = useState<Canteen | null>(null);
@@ -48,27 +58,28 @@ const CanteenMenuPage = () => {
   const [isReadyFilter, setIsReadyFilter] = useState(false);
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const [loading, setLoading] = useState(true);
+  const [showCanteenConflictDialog, setShowCanteenConflictDialog] =
+    useState(false);
+  const [pendingItem, setPendingItem] = useState<Item | null>(null);
 
-  const cartref=useRef(cart);
+  const cartref = useRef(cart);
 
-  useEffect(()=>{
-    cartref.current=cart
-  },[cart])
+  useEffect(() => {
+    cartref.current = cart;
+  }, [cart]);
 
-  useEffect(()=>{
+  useEffect(() => {
     connectSocket();
-    const socket=getSocket();
-    socket?.emit("Join_Room",canteenId);
+    const socket = getSocket();
+    socket?.emit('Join_Room', canteenId);
 
-    return ()=>{
-      console.log(cartref.current)
-      if(cartref.current.length===0){
+    return () => {
+      console.log(cartref.current);
+      if (cartref.current.length === 0) {
         disconnectSocket();
-
       }
-    }
-  },[canteenId])
-
+    };
+  }, [canteenId]);
 
   useEffect(() => {
     if (canteenId) {
@@ -121,9 +132,10 @@ const CanteenMenuPage = () => {
     { label: `All Items (${menuItems.length})`, value: 'all' },
   ];
 
-  const maxPrice = menuItems.length > 0 
-    ? Math.ceil(Math.max(...menuItems.map(item => item.price || 0)))
-    : 1000;
+  const maxPrice =
+    menuItems.length > 0
+      ? Math.ceil(Math.max(...menuItems.map((item) => item.price || 0)))
+      : 1000;
 
   const filteredMenuItems = menuItems.filter((item) => {
     const matchesCategory =
@@ -133,25 +145,67 @@ const CanteenMenuPage = () => {
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesUnder99 = !under99Filter || (item.price && item.price < 99);
-    const matchesPriceRange = 
+    const matchesPriceRange =
       item.price && item.price >= priceRange[0] && item.price <= priceRange[1];
     const matchesIsReady = !isReadyFilter || item.isReady === true;
-    return matchesCategory && matchesSearch && matchesUnder99 && matchesPriceRange && matchesIsReady;
+    return (
+      matchesCategory &&
+      matchesSearch &&
+      matchesUnder99 &&
+      matchesPriceRange &&
+      matchesIsReady
+    );
   });
 
   const getCartItemQuantity = (itemId: string) =>
     cart.find((item) => item.id === itemId)?.quantity || 0;
 
   const handleAddToCart = (item: Item) => {
-    addToCart({
-      canteenId: item.canteen,
-      id: item._id,
-      name: item.name,
-      price: item.price,
-      quantity: 1,
-      image: item.image || '/placeholder.svg',
-    });
-    toast({ title: 'Added to cart', description: `${item.name} was added.` });
+    addToCart(
+      {
+        canteenId: item.canteen,
+        id: item._id,
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        image: item.image || '/placeholder.svg',
+      },
+      () => {
+        // Handle canteen conflict
+        setPendingItem(item);
+        setShowCanteenConflictDialog(true);
+      }
+    );
+
+    // Only show success toast if no conflict (item was actually added)
+    const wasAdded = cart.length === 0 || cart[0].canteenId === item.canteen;
+    if (wasAdded) {
+      toast({ title: 'Added to cart', description: `${item.name} was added.` });
+    }
+  };
+
+  const handleConfirmCanteenSwitch = () => {
+    if (pendingItem) {
+      // Clear cart and add the new item
+      cart.forEach((cartItem) => removeFromCart(cartItem.id));
+
+      addToCart({
+        canteenId: pendingItem.canteen,
+        id: pendingItem._id,
+        name: pendingItem.name,
+        price: pendingItem.price,
+        quantity: 1,
+        image: pendingItem.image || '/placeholder.svg',
+      });
+
+      toast({
+        title: 'Cart cleared and item added',
+        description: `Previous items removed. ${pendingItem.name} was added.`,
+      });
+    }
+
+    setShowCanteenConflictDialog(false);
+    setPendingItem(null);
   };
 
   const handleIncrement = (item: Item) => {
@@ -421,6 +475,36 @@ const CanteenMenuPage = () => {
           </main>
         </div>
       </div>
+
+      {/* Canteen Conflict Dialog */}
+      <AlertDialog
+        open={showCanteenConflictDialog}
+        onOpenChange={setShowCanteenConflictDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Different Canteen Detected</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have items from a different canteen in your cart. You can only
+              order from one canteen at a time. Would you like to clear your
+              current cart and add this item from {canteen?.name}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowCanteenConflictDialog(false);
+                setPendingItem(null);
+              }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCanteenSwitch}
+              className='bg-red-600 hover:bg-red-700'>
+              Clear Cart & Add Item
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
