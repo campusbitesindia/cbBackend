@@ -59,7 +59,7 @@ export const getCanteenReviews = async (
 // Get all reviews for an item
 export const getItemReviews = async (itemId: string): Promise<Review[]> => {
   try {
-    const response = await api.get(`/api/v1/reviews/ItemReviews/${itemId}`);
+    const response = await api.get(`/api/v1/reviews/item-reviews/${itemId}`);
     if (response.data.success) {
       return response.data.data;
     }
@@ -76,7 +76,7 @@ export const getItemReviews = async (itemId: string): Promise<Review[]> => {
 export const getItemAverageRating = async (itemId: string): Promise<number> => {
   try {
     const response = await api.get(
-      `/api/v1/reviews/ItemAverageReview/${itemId}`
+      `/api/v1/reviews/item-average-rating/${itemId}`
     );
     if (response.data.success) {
       return response.data.data.AverageRating;
@@ -96,7 +96,7 @@ export const getCanteenAverageRating = async (
 ): Promise<number> => {
   try {
     const response = await api.get(
-      `/api/v1/reviews/CanteenAverageReview/${canteenId}`
+      `/api/v1/reviews/canteen-average-rating/${canteenId}`
     );
     if (response.data.success) {
       return response.data.data.AverageRating;

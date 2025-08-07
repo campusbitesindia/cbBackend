@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useCart } from '@/context/cart-context';
 import { useToast } from '@/hooks/use-toast';
+import { RouteProtection } from '@/components/RouteProtection';
 import Image from 'next/image';
 import {
   Trash2,
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
-export default function CartPage() {
+function CartPageContent() {
   const { cart, updateQuantity, removeFromCart, clearCart, totalPrice } =
     useCart();
   const { toast } = useToast();
@@ -80,7 +81,7 @@ export default function CartPage() {
       // Check canteen consistency
       const data = cart.map((item) => item.canteenId);
       const canteenId = data[0];
-     
+
       data.forEach((id) => {
         if (id !== canteenId) {
           throw new Error('Items From Different Canteens Are not allowed');
@@ -103,7 +104,7 @@ export default function CartPage() {
         pickUpTime: selectedPickupTime.toISOString(),
         canteenId,
       };
-      console.log(Newdata)
+      console.log(Newdata);
       const response = await axios.post(
         'http://localhost:8080/api/v1/order/CreateOrder',
         Newdata,
@@ -397,15 +398,13 @@ export default function CartPage() {
                   <span className='text-gray-600 dark:text-gray-400'>
                     Delivery Fee
                   </span>
-                  <span className='text-gray-900 dark:text-white'>₹25</span>
+                  <span className='text-gray-900 dark:text-white'>₹0</span>
                 </div>
                 <div className='flex justify-between text-sm'>
                   <span className='text-gray-600 dark:text-gray-400'>
                     Taxes & Charges
                   </span>
-                  <span className='text-gray-900 dark:text-white'>
-                    ₹{(totalPrice * 0.05).toFixed(2)}
-                  </span>
+                  <span className='text-gray-900 dark:text-white'>₹0</span>
                 </div>
               </div>
 
@@ -413,7 +412,7 @@ export default function CartPage() {
                 <div className='flex justify-between font-bold text-lg'>
                   <span className='text-gray-900 dark:text-white'>To Pay</span>
                   <span className='text-gray-900 dark:text-white'>
-                    ₹{(totalPrice - discount + 25).toFixed(2)}
+                    ₹{(totalPrice - discount).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -444,5 +443,13 @@ export default function CartPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <RouteProtection>
+      <CartPageContent />
+    </RouteProtection>
   );
 }

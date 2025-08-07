@@ -28,6 +28,9 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "@/context/auth-context";
+import { useSocket } from "@/context/socket-context";
+import { disconnect } from "node:process";
+import { useCart } from "@/context/cart-context";
 
 interface OrderDetailsType {
   id: string;
@@ -40,14 +43,14 @@ export default function PaymentPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { token } = useAuth();
-
+    const {disconnectSocket}=useSocket()
   // State
+  const {clearCart}=useCart()
   const [orderDetails, setOrderDetails] = useState<OrderDetailsType | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "upi">("cod");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Added: allow user or backend to set a custom transaction ID
-  const customTransactionId = `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+ 
 
   // Query param
   const orderId = searchParams.get("orderId");
@@ -65,7 +68,7 @@ export default function PaymentPage() {
             },
           }
         );
-
+        
         if (!response.data.success) {
           throw new Error(response.data.message || "Failed to get order details");
         }
@@ -75,7 +78,7 @@ export default function PaymentPage() {
         };
         setOrderDetails(filteredData);
       } catch (err: any) {
-        console.error(err);
+        console.log(err);
         toast({
           variant: "destructive",
           title: "Error fetching order",
@@ -118,6 +121,7 @@ export default function PaymentPage() {
         title: "Order placed successfully",
         description: "Your COD order is confirmed.",
       });
+      disconnectSocket();
       router.push("/orders"); // Redirect after success
     } catch (err: any) {
       toast({
@@ -143,6 +147,7 @@ export default function PaymentPage() {
           title: "Payment Successful",
           description: "Thank you for your payment!",
         });
+        disconnectSocket();
         router.push("/orders");
       }
     } catch (err) {
@@ -219,6 +224,7 @@ export default function PaymentPage() {
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err: any) {
+      console.log(err)
       toast({
         variant: "destructive",
         title: "Payment Initialization Failed",
@@ -245,10 +251,7 @@ export default function PaymentPage() {
       else {
         await openRazorpay(paymentData);
       }
-      toast({
-        title: "Payment submitted",
-        description: `Payment method: ${paymentMethod.toUpperCase()}`,
-      });
+      clearCart();
     } 
     catch (error: any) {
       toast({

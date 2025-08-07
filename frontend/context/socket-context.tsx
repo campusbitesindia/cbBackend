@@ -1,30 +1,54 @@
-import { createContext, useContext, useEffect, useRef } from 'react'
-import { io, Socket } from 'socket.io-client'
+'use client';
 
-const SocketContext = createContext<Socket | null>(null)
+import React, { createContext, useContext, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 
-export function SocketProvider({ children, userId, isVendor }: any) {
-    const socketRef = useRef<Socket | null>(null)
-
-    useEffect(() => {
-        if (!userId) return;
-
-        socketRef.current = io('http://localhost:8080')         //  change this in production
-
-        const room = isVendor ? `vendor_${userId}` : `user_${userId}`;
-
-        socketRef.current.emit('join_room', room)
-
-        return () => {
-            socketRef.current?.disconnect()
-        }
-    }, [userId])
-
-    return (
-        <SocketContext.Provider value={socketRef.current}>
-            {children}
-        </SocketContext.Provider>
-    )
+interface ISocketContext {
+  connectSocket: () => void;
+  disconnectSocket: () => void;
+  getSocket: () => Socket | null;
 }
 
-export const useSocket = () => useContext(SocketContext);
+const SocketContext = createContext<ISocketContext | null>(null);
+
+export const useSocket = (): ISocketContext => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error("useSocket must be used within a SocketProvider");
+  }
+  return context;
+};
+
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const socketRef = useRef<Socket | null>(null);
+
+  const connectSocket = () => {
+    if (!socketRef.current) {
+      console.log("connected")
+      socketRef.current = io('http://localhost:8080');
+
+      socketRef.current.on("connect", () => {
+        console.log("Socket connected:", socketRef.current?.id);
+      });
+
+      socketRef.current.on("disconnect", () => {
+        console.log("Socket disconnected");
+      });
+    }
+  };
+
+  const disconnectSocket = () => {
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+  };
+
+  const getSocket = () => socketRef.current;
+
+  return (
+    <SocketContext.Provider value={{ connectSocket, disconnectSocket, getSocket }}>
+      {children}
+    </SocketContext.Provider>
+  );
+};

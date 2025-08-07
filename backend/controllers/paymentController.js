@@ -31,18 +31,10 @@ const createPaymentOrder = async (req, res) => {
     }
 
     // Check if user owns the order
-    if (order.student._id.toString() !== userId) {
+       if (order.student._id.toString() !== userId) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized access to order",
-      })
-    }
-
-    // Check if order is in correct status
-    if (order.status !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "please Create a New Order",
       })
     }
 
@@ -192,18 +184,20 @@ const verifyPayment = async (req, res) => {
     await transaction.save()
 
     // Update order status
-    const order = transaction.orderId
+    const order = await Order.findById(transaction.orderId).populate("canteen student")
     order.status = "placed"
     order.paymentStatus = "paid"
     order.paidAt = new Date()
     await order.save()
     await SendNotification(order.student, "Order Placed", "Your Order has been Placed");
-    const canteenOwner=await User.findOne({canteenId:order.canteen})
+    const canteenOwner=await User.findOne({canteenId:order.canteen._id})
      await SendNotification(
             canteenOwner._id,
             "New Order",
             `New Order has arrived with Order ID ${order.OrderNumber}`
           );
+
+    global.io.to(order.canteen._id.toString()).emit("New_Order",order);
     res.status(200).json({
       success: true,
       message: "UPI payment verified successfully",

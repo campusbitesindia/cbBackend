@@ -2,7 +2,7 @@ const Reviews = require('../models/Review');
 const Canteen = require("../models/Canteen");
 const User = require("../models/User");
 const Item = require("../models/Item");
-
+const mongoose=require("mongoose")
 // GET all reviews for a canteen
 exports.getReviews = async (req, res) => {
   try {
@@ -11,7 +11,7 @@ exports.getReviews = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(canteenId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid canteen ID"
+        message: 'Invalid canteen ID',
       });
     }
 
@@ -19,34 +19,37 @@ exports.getReviews = async (req, res) => {
     if (!canteen) {
       return res.status(404).json({
         success: false,
-        message: "Canteen not found"
+        message: 'Canteen not found',
       });
     }
 
-    const reviews = await Reviews.find({ canteen: canteen._id, isDeleted: false })
-      .populate({ path: "student", select: "name" })
-      .populate({ path: "canteen", select: "name" })
-      .populate({ path: "item", select: "name" });
+    const reviews = await Reviews.find({
+      canteen: canteen._id,
+      isDeleted: false,
+    })
+      .populate({ path: 'student', select: 'name' })
+      .populate({ path: 'canteen', select: 'name' })
+      .populate({ path: 'item', select: 'name' });
 
     if (!reviews || reviews.length === 0) {
       return res.status(200).json({
         success: true,
-        message: "No reviews found for this canteen",
-        data: []
+        message: 'No reviews found for this canteen',
+        data: [],
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "All reviews fetched successfully",
-      data: reviews
+      message: 'All reviews fetched successfully',
+      data: reviews,
     });
   } catch (err) {
-    console.error("Get reviews error:", err);
+    console.error('Get reviews error:', err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message
+      message: 'Internal server error',
+      error: err.message,
     });
   }
 };
@@ -61,21 +64,24 @@ exports.createReview = async (req, res) => {
     if (!canteenId || !rating) {
       return res.status(400).json({
         success: false,
-        message: "Canteen ID and rating are required"
+        message: 'Canteen ID and rating are required',
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(canteenId) || (itemId && !mongoose.Types.ObjectId.isValid(itemId))) {
+    if (
+      !mongoose.Types.ObjectId.isValid(canteenId) ||
+      (itemId && !mongoose.Types.ObjectId.isValid(itemId))
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid canteen or item ID"
+        message: 'Invalid canteen or item ID',
       });
     }
 
     if (!userId) {
       return res.status(401).json({
         success: false,
-        message: "User ID not found"
+        message: 'User ID not found',
       });
     }
 
@@ -83,7 +89,7 @@ exports.createReview = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found"
+        message: 'User not found',
       });
     }
 
@@ -91,7 +97,7 @@ exports.createReview = async (req, res) => {
     if (!canteen) {
       return res.status(404).json({
         success: false,
-        message: "Canteen not found"
+        message: 'Canteen not found',
       });
     }
 
@@ -101,7 +107,7 @@ exports.createReview = async (req, res) => {
       if (!item) {
         return res.status(404).json({
           success: false,
-          message: "Item not found"
+          message: 'Item not found',
         });
       }
     }
@@ -111,20 +117,20 @@ exports.createReview = async (req, res) => {
       canteen: canteen._id,
       item: item ? item._id : null,
       rating,
-      comment
+      comment,
     });
 
     return res.status(201).json({
       success: true,
-      message: "Review created successfully",
-      data: newReview
+      message: 'Review created successfully',
+      data: newReview,
     });
   } catch (err) {
-    console.error("Create review error:", err);
+    console.error('Create review error:', err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message
+      message: 'Internal server error',
+      error: err.message,
     });
   }
 };
@@ -137,7 +143,7 @@ exports.getAllReviewForItem = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid item ID"
+        message: 'Invalid item ID',
       });
     }
 
@@ -145,34 +151,34 @@ exports.getAllReviewForItem = async (req, res) => {
     if (!item) {
       return res.status(404).json({
         success: false,
-        message: "Item not found"
+        message: 'Item not found',
       });
     }
 
     const reviews = await Reviews.find({ item: item._id, isDeleted: false })
-      .populate({ path: "student", select: "name" })
-      .populate({ path: "canteen", select: "name" })
-      .populate({ path: "item", select: "name" });
+      .populate({ path: 'student', select: 'name' })
+      .populate({ path: 'canteen', select: 'name' })
+      .populate({ path: 'item', select: 'name' });
 
     if (!reviews || reviews.length === 0) {
       return res.status(200).json({
         success: true,
-        message: "No reviews found for this item",
-        data: []
+        message: 'No reviews found for this item',
+        data: [],
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Item reviews fetched successfully",
-      data: reviews
+      message: 'Item reviews fetched successfully',
+      data: reviews,
     });
   } catch (err) {
-    console.error("Get item reviews error:", err);
+    console.error('Get item reviews error:', err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message
+      message: 'Internal server error',
+      error: err.message,
     });
   }
 };
@@ -185,7 +191,7 @@ exports.getCanteenAverageRating = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(canteenId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid canteen ID"
+        message: 'Invalid canteen ID',
       });
     }
 
@@ -193,7 +199,7 @@ exports.getCanteenAverageRating = async (req, res) => {
     if (!canteen) {
       return res.status(404).json({
         success: false,
-        message: "Canteen not found"
+        message: 'Canteen not found',
       });
     }
 
@@ -201,33 +207,36 @@ exports.getCanteenAverageRating = async (req, res) => {
       {
         $match: {
           canteen: new mongoose.Types.ObjectId(canteenId),
-          isDeleted: false
-        }
+          isDeleted: false,
+        },
       },
       {
         $group: {
           _id: null,
-          averageRating: { $avg: "$rating" }
-        }
-      }
+          averageRating: { $avg: '$rating' },
+        },
+      },
     ]);
 
-    const averageRating = averageReview.length > 0 ? averageReview[0].averageRating.toFixed(2) : "0.00";
+    const averageRating =
+      averageReview.length > 0
+        ? averageReview[0].averageRating.toFixed(2)
+        : '0.00';
 
     return res.status(200).json({
       success: true,
-      message: "Average rating fetched successfully",
+      message: 'Average rating fetched successfully',
       data: {
         canteen: { _id: canteen._id, name: canteen.name },
-        averageRating
-      }
+        averageRating,
+      },
     });
   } catch (err) {
-    console.error("Get canteen average rating error:", err);
+    console.error('Get canteen average rating error:', err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message
+      message: 'Internal server error',
+      error: err.message,
     });
   }
 };
@@ -240,7 +249,7 @@ exports.getItemAverageRating = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid item ID"
+        message: 'Invalid item ID',
       });
     }
 
@@ -248,7 +257,7 @@ exports.getItemAverageRating = async (req, res) => {
     if (!item) {
       return res.status(404).json({
         success: false,
-        message: "Item not found"
+        message: 'Item not found',
       });
     }
 
@@ -256,33 +265,36 @@ exports.getItemAverageRating = async (req, res) => {
       {
         $match: {
           item: new mongoose.Types.ObjectId(itemId),
-          isDeleted: false
-        }
+          isDeleted: false,
+        },
       },
       {
         $group: {
           _id: null,
-          averageRating: { $avg: "$rating" }
-        }
-      }
+          averageRating: { $avg: '$rating' },
+        },
+      },
     ]);
 
-    const averageRating = averageReview.length > 0 ? averageReview[0].averageRating.toFixed(2) : "0.00";
+    const averageRating =
+      averageReview.length > 0
+        ? averageReview[0].averageRating.toFixed(2)
+        : '0.00';
 
     return res.status(200).json({
       success: true,
-      message: "Average rating of item fetched successfully",
+      message: 'Average rating of item fetched successfully',
       data: {
         item: { _id: item._id, name: item.name },
-        averageRating
-      }
+        averageRating,
+      },
     });
   } catch (err) {
-    console.error("Get item average rating error:", err);
+    console.error('Get item average rating error:', err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message
+      message: 'Internal server error',
+      error: err.message,
     });
   }
 };
@@ -294,7 +306,7 @@ exports.deleteReview = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(reviewId)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid review ID"
+        message: 'Invalid review ID',
       });
     }
 
@@ -302,7 +314,7 @@ exports.deleteReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({
         success: false,
-        message: "Review not found or not authorized"
+        message: 'Review not found or not authorized',
       });
     }
 
@@ -311,14 +323,14 @@ exports.deleteReview = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Review deleted successfully"
+      message: 'Review deleted successfully',
     });
   } catch (err) {
-    console.error("Delete review error:", err);
+    console.error('Delete review error:', err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: err.message
+      message: 'Internal server error',
+      error: err.message,
     });
   }
 };

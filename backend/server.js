@@ -25,7 +25,7 @@ global.io = io;
 io.on('connection', (socket) => {
     console.log("🚀 Connected: ", socket.id);
     
-    socket.on('join_room', (roomId) => {
+    socket.on('Join_Room', (roomId) => {
         socket.join(roomId);
         console.log(`Joined room: ${roomId}`);
     });
@@ -36,7 +36,7 @@ io.on('connection', (socket) => {
 });
 
 // Start server
-app.listen(process.env.PORT, ()=>{
+server.listen(process.env.PORT, ()=>{
     console.log(`Server is up on port: ${process.env.PORT}`);
 })
 connectDB();

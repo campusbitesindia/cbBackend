@@ -319,7 +319,7 @@ exports.getAllCanteens = async (req, res) => {
 
     const canteens = await Canteen.find(filter)
       .populate("campus", "name code city")
-      .populate("owner", "name email")
+      .populate("owner", "name email profileImage")
       .select("-__v")
       .sort({ createdAt: -1 })
 

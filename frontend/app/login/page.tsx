@@ -36,6 +36,12 @@ import {
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { jwtDecode } from 'jwt-decode';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -70,6 +76,7 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       await login(values.email, values.password);
+
       // Get the token and decode user role immediately
       const token = localStorage.getItem('token');
       let loggedInRole = null;
@@ -79,6 +86,7 @@ export default function LoginPage() {
           loggedInRole = decoded.role;
         } catch {}
       }
+
       if (loggedInRole === 'admin') {
         toast({
           variant: 'destructive',
@@ -88,12 +96,39 @@ export default function LoginPage() {
         router.push('/admin/login');
         return;
       }
-      // Redirect based on role
-      if (values.role === 'student' || !values.role) {
-        router.push('/student/dashboard');
-      } else if (values.role === 'campus') {
-        router.push('/campus/dashboard');
+
+      // Check for redirect parameter
+      const redirectParam = searchParams.get('redirect');
+      let redirectPath = '';
+
+      if (redirectParam) {
+        // Use the redirect parameter if it exists
+        redirectPath = decodeURIComponent(redirectParam);
+      } else {
+        // Default role-based redirection
+        switch (loggedInRole) {
+          case 'student':
+            redirectPath = '/student/dashboard';
+            break;
+          case 'campus':
+            redirectPath = '/campus/dashboard';
+            break;
+          default:
+            // Fallback based on selected role if token role is not clear
+            if (values.role === 'student' || !values.role) {
+              redirectPath = '/student/dashboard';
+            } else if (values.role === 'campus') {
+              redirectPath = '/campus/dashboard';
+            } else {
+              redirectPath = '/';
+            }
+            break;
+        }
       }
+
+      // Perform the redirect
+      router.push(redirectPath);
+
       toast({
         title: 'Success',
         description: 'Successfully logged in!',
@@ -159,7 +194,7 @@ export default function LoginPage() {
   return (
     <div
       suppressHydrationWarning
-      className='min-h-screen bg-gradient-to-br from-[#0a192f] via-[#1e3a5f] to-[#0f172a] flex items-center justify-center relative overflow-hidden'>
+      className='min-h-screen bg-background flex items-center justify-center relative overflow-hidden transition-all duration-500'>
       {/* Professional Navy Background */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
         {/* Animated Background Elements */}
@@ -188,19 +223,31 @@ export default function LoginPage() {
               <div className='relative'>
                 <div className='w-32 h-32 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-gentle shadow-2xl relative overflow-hidden'>
                   <div className='absolute inset-0 bg-gradient-to-r from-orange-400 to-red-400 rounded-full animate-spin-slow opacity-20'></div>
-                  <Image
-                    src='/placeholder.svg?height=80&width=80'
-                    alt='Campus Bites Logo'
-                    width={80}
-                    height={80}
-                    className='rounded-full relative z-10'
-                  />
+                  <div className='relative z-10 flex items-center justify-center w-full h-full'>
+                    <span className='text-5xl font-black text-white relative select-none'>
+                      <span
+                        className='absolute inset-0 text-5xl font-black bg-gradient-to-r from-white via-yellow-200 to-white bg-clip-text text-transparent animate-pulse'
+                        style={{
+                          filter: 'blur(1px)',
+                        }}>
+                        CB
+                      </span>
+                      <span
+                        className='relative text-white'
+                        style={{
+                          textShadow:
+                            '0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.7), 0 0 30px rgba(255,255,255,0.5), 0 0 40px rgba(255,204,0,0.8), 0 0 70px rgba(255,204,0,0.6), 0 0 80px rgba(255,204,0,0.4), 0 0 100px rgba(255,204,0,0.3)',
+                        }}>
+                        CB
+                      </span>
+                    </span>
+                  </div>
                 </div>
                 {/* Orbiting Elements */}
                 <div className='absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 w-4 h-4 bg-yellow-400 rounded-full animate-orbit'></div>
                 <div className='absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-4 w-3 h-3 bg-green-400 rounded-full animate-orbit-reverse'></div>
               </div>
-              <h1 className='text-5xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent mb-3'>
+              <h1 className='text-5xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent mb-3 transition-all duration-500'>
                 Campus Bites
               </h1>
               <p className='text-gray-400 text-lg'>
@@ -210,7 +257,7 @@ export default function LoginPage() {
 
             {/* Role-Based Features */}
             <div className='space-y-8'>
-              <div className='flex items-center gap-6 text-left group hover:scale-105 transition-transform duration-300'>
+              <div className='flex items-center gap-6 text-left group hover:scale-105 transition-transform duration-500'>
                 <div className='w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-blue-500/25'>
                   <GraduationCap className='w-8 h-8 text-white' />
                 </div>
@@ -222,7 +269,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className='flex items-center gap-6 text-left group hover:scale-105 transition-transform duration-300'>
+              <div className='flex items-center gap-6 text-left group hover:scale-105 transition-transform duration-500'>
                 <div className='w-16 h-16 bg-gradient-to-r from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-green-500/25'>
                   <Users className='w-8 h-8 text-white' />
                 </div>
@@ -242,22 +289,30 @@ export default function LoginPage() {
         {/* Right Side - Enhanced Login Form */}
         <div className='w-full lg:w-1/2 flex items-center justify-center p-8'>
           <div className='w-full max-w-md'>
-            <div className='bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-10 shadow-2xl animate-slide-in-right relative overflow-hidden'>
+            <div className='bg-card backdrop-blur-xl border border-border rounded-3xl p-10 shadow-2xl animate-slide-in-right relative overflow-hidden transition-all duration-500'>
               {/* Animated Background Pattern */}
               <div className='absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-blue-500/5 rounded-3xl'></div>
 
               <div className='relative z-10'>
                 <div className='text-center mb-10'>
-                  <h2 className='text-4xl font-bold text-white mb-3'>
+                  <h2 className='text-4xl font-bold text-foreground mb-3 transition-all duration-500'>
                     Welcome Back!
                   </h2>
-                  <p className='text-slate-300 text-lg'>
+                  <p className='text-muted-foreground text-lg transition-all duration-500'>
                     New to Campus Bites?{' '}
-                    <Link
-                      href='/register'
-                      className='text-red-400 hover:text-red-300 font-semibold transition-colors hover:underline'>
-                      Join us here
-                    </Link>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link
+                            href='/register'
+                            aria-label='register here'
+                            className='text-red-400 hover:text-red-300 font-semibold hover:underline transition-all duration-500'>
+                            Join us here
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>Sign up</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </p>
                 </div>
 
@@ -272,15 +327,18 @@ export default function LoginPage() {
                       render={({ field }) => (
                         <FormItem>
                           {/* Remove the label for visual consistency */}
-                          <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                              <SelectTrigger
-                              className="bg-white/10 border-white/20 text-white rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-100 focus:border-transparent w-full"
-                            >
-                              <SelectValue placeholder="Select your role" />
-                              </SelectTrigger>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            defaultValue={field.value}>
+                            <SelectTrigger className='bg-gray-200 dark:bg-input border-foreground text-foreground rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-300 dark:focus:ring-red-100 focus:border-transparent w-full transition-all duration-500'>
+                              <SelectValue placeholder='Select your role' />
+                            </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="student">Student</SelectItem>
-                              <SelectItem value="campus">Campus Partner</SelectItem>
+                              <SelectItem value='student'>Student</SelectItem>
+                              <SelectItem value='campus'>
+                                Campus Partner
+                              </SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -293,18 +351,19 @@ export default function LoginPage() {
                       name='email'
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className='text-slate-300 text-lg font-semibold'>
+                          <FormLabel className='text-foreground text-lg font-semibold transition-all duration-500'>
                             Email Address
                           </FormLabel>
                           <FormControl>
                             <div className='relative'>
-                              <Mail className='absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-6 h-6' />
+                              <Mail className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 w-6 h-6 transition-all duration-500 drop-shadow' />
                               <Input
                                 suppressHydrationWarning
                                 placeholder='Enter your email'
                                 type='email'
+                                aria-label='enter your email here'
                                 autoComplete='email'
-                                className='pl-12 bg-white/10 border-white/20 text-white placeholder-slate-400 rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all'
+                                className='pl-12 bg-input border-border text-foreground placeholder-muted-foreground rounded-xl h-14 text-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-500'
                                 {...field}
                               />
                             </div>
@@ -320,37 +379,51 @@ export default function LoginPage() {
                       render={({ field }) => (
                         <FormItem>
                           <div className='flex items-center justify-between'>
-                            <FormLabel className='text-slate-300 text-lg font-semibold'>
+                            <FormLabel className='text-foreground text-lg font-semibold transition-all duration-500'>
                               Password
                             </FormLabel>
                             <Link
                               href='/forgot-password'
-                              className='text-sm text-red-400 hover:text-red-300 transition-colors hover:underline'>
+                              aria-label='forgot password'
+                              className='text-sm text-red-400 hover:text-red-300 hover:underline transition-all duration-500'>
                               Forgot password?
                             </Link>
                           </div>
                           <FormControl>
                             <div className='relative'>
-                              <Lock className='absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 w-6 h-6' />
+                              <Lock className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-400 w-6 h-6 transition-all duration-500 drop-shadow' />
                               <Input
                                 suppressHydrationWarning
                                 placeholder='Enter your password'
+                                aria-label='enter your password here'
                                 type={showPassword ? 'text' : 'password'}
                                 autoComplete='current-password'
-                                className='pl-12 pr-12 bg-white/10 border-white/20 text-white placeholder-slate-400 rounded-xl h-14 text-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all'
+                                className='pl-12 bg-input border-border text-foreground placeholder-muted-foreground rounded-xl h-14 text-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-500'
                                 {...field}
                               />
-                              <button
-                                suppressHydrationWarning
-                                type='button'
-                                onClick={() => setShowPassword(!showPassword)}
-                                className='absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors'>
-                                {showPassword ? (
-                                  <EyeOff className='w-6 h-6' />
-                                ) : (
-                                  <Eye className='w-6 h-6' />
-                                )}
-                              </button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      suppressHydrationWarning
+                                      type='button'
+                                      aria-label='show password'
+                                      onClick={() =>
+                                        setShowPassword(!showPassword)
+                                      }
+                                      className='absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors'>
+                                      {showPassword ? (
+                                        <EyeOff className='w-6 h-6' />
+                                      ) : (
+                                        <Eye className='w-6 h-6' />
+                                      )}
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Show/Hide password
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             </div>
                           </FormControl>
                           <FormMessage className='text-red-400' />
@@ -362,11 +435,12 @@ export default function LoginPage() {
                       suppressHydrationWarning
                       type='submit'
                       disabled={isLoading}
+                      aria-label='sign in button'
                       className={`w-full ${
                         selectedRole
                           ? `bg-gradient-to-r ${getRoleColor(selectedRole)}`
                           : 'bg-gradient-to-r from-red-500 to-rose-500'
-                      } hover:scale-105 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-lg text-lg group`}>
+                      } hover:scale-105 text-white font-bold py-4 rounded-xl transition-all duration-500 shadow-lg text-lg group`}>
                       {isLoading ? (
                         <div className='flex items-center gap-3'>
                           <div className='w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin'></div>
@@ -376,7 +450,7 @@ export default function LoginPage() {
                         <div className='flex items-center gap-3'>
                           {selectedRole && getRoleIcon(selectedRole)}
                           Sign In
-                          <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-transform' />
+                          <ArrowRight className='w-5 h-5 group-hover:translate-x-1 transition-all duration-500' />
                         </div>
                       )}
                     </Button>
@@ -388,10 +462,10 @@ export default function LoginPage() {
                   <>
                     <div className='relative my-6'>
                       <div className='absolute inset-0 flex items-center'>
-                        <span className='w-full border-t border-white/20' />
+                        <span className='w-full border-t border-border transition-all duration-500' />
                       </div>
                       <div className='relative flex justify-center text-xs uppercase'>
-                        <span className='bg-white/10 backdrop-blur-xl px-2 text-slate-400'>
+                        <span className='bg-card backdrop-blur-xl px-2 text-muted-foreground transition-all duration-500'>
                           Or continue with
                         </span>
                       </div>
@@ -401,7 +475,28 @@ export default function LoginPage() {
                       suppressHydrationWarning
                       type='button'
                       variant='outline'
-                      className='w-full bg-white/10 border-white/20 hover:bg-white/20 text-white rounded-xl h-14 text-lg backdrop-blur-sm transition-all'
+                      aria-label='sign in with google'
+                      className='
+                        w-full
+                        bg-gradient-to-r
+                        from-yellow-400
+                        to-blue-500
+                        dark:from-yellow-600
+                        dark:to-blue-800
+                        border-0
+                        hover:from-yellow-500
+                        hover:to-blue-600
+                        dark:hover:from-yellow-700
+                        dark:hover:to-blue-900
+                        text-white
+                        rounded-xl
+                        h-14
+                        text-lg
+                        backdrop-blur-sm
+                        transition-all
+                        shadow-md
+                        duration-500
+                      '
                       onClick={() =>
                         (window.location.href =
                           'http://localhost:8080/api/v1/users/auth/google')
@@ -430,9 +525,9 @@ export default function LoginPage() {
                 )}
 
                 {/* Campus Registration CTA */}
-                <div className='mt-8 p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-2xl'>
+                <div className='mt-8 p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-500/20 dark:border-green-900/40 rounded-2xl transition-all duration-500'>
                   <div className='text-center'>
-                    <h3 className='text-white font-semibold mb-2'>
+                    <h3 className='text-foreground font-semibold mb-2 transition-all duration-500'>
                       Want to partner with us?
                     </h3>
                     <p className='text-gray-400 text-sm mb-4'>
@@ -442,8 +537,13 @@ export default function LoginPage() {
                       suppressHydrationWarning
                       asChild
                       variant='outline'
-                      className='border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 transition-all duration-300 bg-transparent'>
-                      <Link href='/campus/register'>Register Your Vendor</Link>
+                      aria-label='register your vendor'
+                      className='border-green-500/50 text-green-400 hover:bg-green-500/10 hover:text-green-300 transition-all duration-500 bg-transparent'>
+                      <Link
+                        href='/campus/register'
+                        aria-label='Register your vendor'>
+                        Register Your Vendor
+                      </Link>
                     </Button>
                   </div>
                 </div>

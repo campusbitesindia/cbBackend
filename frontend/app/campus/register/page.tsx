@@ -55,6 +55,8 @@ import {
   getMyCanteen,
 } from '@/services/canteenService';
 import { register as registerUser } from '@/services/authService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 // Validation schema
 const vendorSchema = z
@@ -529,6 +531,7 @@ export default function VendorOnboardingForm() {
           </DialogHeader>
           <DialogFooter>
             <Button
+              aria-label='Go to Dashboard'
               className='w-full bg-orange-600 hover:bg-orange-700'
               onClick={handleGoToSignIn}>
               Go to dashboard
@@ -552,6 +555,7 @@ export default function VendorOnboardingForm() {
           </DialogHeader>
           <DialogFooter>
             <Button
+              aria-label='Go to Dashboard'
               className='w-full bg-orange-600 hover:bg-orange-700'
               onClick={() => {
                 setNotApprovedDialog(false);
@@ -581,6 +585,7 @@ export default function VendorOnboardingForm() {
           </DialogHeader>
           <DialogFooter>
             <Button
+            aria-label='Go to Dashboard'
               className='w-full bg-orange-600 hover:bg-orange-700'
               onClick={() => {
                 router.push('/campus/dashboard');
@@ -621,6 +626,7 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='vendorName'>Vendor Name / Canteen Name *</Label>
                 <Input
                   id='vendorName'
+                  aria-label='Write Vendor Name or Canteen name'
                   placeholder=''
                   {...register('vendorName')}
                   className='bg-white'
@@ -635,6 +641,7 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='contactPerson'>Contact Person Name *</Label>
                 <Input
                   id='contactPerson'
+                  aria-label='Enter contact person name'
                   placeholder=''
                   {...register('contactPerson')}
                   className='bg-white'
@@ -652,6 +659,7 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='mobileNumber'>Mobile Number *</Label>
                 <Input
                   id='mobileNumber'
+                  arial-label='enter mobile number'
                   placeholder=''
                   {...register('mobileNumber')}
                   className='bg-white'
@@ -675,6 +683,7 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='email'>Email Address *</Label>
                 <Input
                   id='email'
+                  aria-label='enter email address'
                   placeholder=''
                   {...register('email')}
                   className='bg-white'
@@ -708,22 +717,33 @@ export default function VendorOnboardingForm() {
                 <div className='relative'>
                   <Input
                     id='password'
+                    aria-label='enter password'
                     type={showPassword ? 'text' : 'password'}
                     placeholder=''
                     {...register('password')}
                     className='bg-white'
                   />
-                  <button
-                    type='button'
-                    tabIndex={-1}
-                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
-                    onClick={() => setShowPassword((prev) => !prev)}>
-                    {showPassword ? (
-                      <EyeOff className='w-5 h-5' />
-                    ) : (
-                      <Eye className='w-5 h-5' />
-                    )}
-                  </button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          tabIndex={-1}
+                          aria-label='show password'
+                          className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
+                          onClick={() => setShowPassword((prev) => !prev)}>
+                          {showPassword ? (
+                            <EyeOff className='w-5 h-5' />
+                          ) : (
+                            <Eye className='w-5 h-5' />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Show/Hide Password
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {errors.password && (
                   <p className='text-sm text-red-500 mt-1'>
@@ -736,22 +756,33 @@ export default function VendorOnboardingForm() {
                 <div className='relative'>
                   <Input
                     id='confirmPassword'
+                    aria-label='enter confirm password'
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder=''
                     {...register('confirmPassword')}
                     className='bg-white'
                   />
-                  <button
-                    type='button'
-                    tabIndex={-1}
-                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
-                    onClick={() => setShowConfirmPassword((prev) => !prev)}>
-                    {showConfirmPassword ? (
-                      <EyeOff className='w-5 h-5' />
-                    ) : (
-                      <Eye className='w-5 h-5' />
-                    )}
-                  </button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          aria-label='show confirm password'
+                          tabIndex={-1}
+                          className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
+                          onClick={() => setShowConfirmPassword((prev) => !prev)}>
+                          {showConfirmPassword ? (
+                            <EyeOff className='w-5 h-5' />
+                          ) : (
+                            <Eye className='w-5 h-5' />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Show/Hide Password
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {errors.confirmPassword && (
                   <p className='text-sm text-red-500 mt-1'>
@@ -954,10 +985,13 @@ export default function VendorOnboardingForm() {
                 <Button
                   type='button'
                   variant='outline'
+                  aria-label='choose image'
                   onClick={() => fileInputRef.current?.click()}
                   className='w-full border-dashed border-2 border-gray-300 hover:border-gray-400'>
-                  <Upload className='h-4 w-4 mr-2' />
-                  Choose Images (Max 3)
+                  <Upload className='h-4 w-4 mr-2 text-foreground' />
+                  <div className='text-foreground'>
+                    Choose Images (Max 3)
+                  </div>
                 </Button>
               </div>
               <p className='text-xs text-gray-500 mt-1'>
@@ -978,6 +1012,7 @@ export default function VendorOnboardingForm() {
                     />
                     <button
                       type='button'
+                      aria-label='remove image'
                       onClick={() => removeImage(index)}
                       className='absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <X className='h-4 w-4' />
@@ -1004,6 +1039,7 @@ export default function VendorOnboardingForm() {
               <Label htmlFor='adhaarNumber'>Aadhar Number *</Label>
               <Input
                 id='adhaarNumber'
+                aria-label='enter your adhaar number'
                 placeholder='Enter 12-digit Aadhar number'
                 {...register('adhaarNumber')}
                 className='bg-white'
@@ -1032,6 +1068,7 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='panNumber'>PAN Number *</Label>
                 <Input
                   id='panNumber'
+                  aria-label='enter your PAN number'
                   placeholder='ABCDE1234F'
                   {...register('panNumber')}
                   className='bg-white'
@@ -1059,6 +1096,7 @@ export default function VendorOnboardingForm() {
                 <Label htmlFor='gstNumber'>GST Number *</Label>
                 <Input
                   id='gstNumber'
+                  aria-label='enter GST number'
                   placeholder='22ABCDE1234F1Z5'
                   {...register('gstNumber')}
                   className='bg-white'
@@ -1156,6 +1194,7 @@ export default function VendorOnboardingForm() {
           <Button
             type='submit'
             size='lg'
+            aria-label='Register'
             className='w-full md:w-auto px-8 py-3 bg-red-600 hover:bg-red-700'
             disabled={
               isSubmitting || isLoadingCampuses || selectedImages.length === 0
@@ -1177,7 +1216,7 @@ export default function VendorOnboardingForm() {
         <div className='text-center mt-8 text-sm text-gray-500'>
           <p>
             Already have an account?{' '}
-            <a href='/login' className='text-orange-600 hover:underline'>
+            <a href='/login' aria-label='sigin here' className='text-orange-600 hover:underline'>
               Sign In
             </a>
           </p>

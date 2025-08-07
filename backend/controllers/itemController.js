@@ -266,3 +266,55 @@ exports.toggleItemReadyStatus = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+
+exports.getReadyItemsofAllCanteens = async (req, res) => {
+  try {
+    const { campus } = req.query;
+
+    if (!campus) {
+      return res.status(400).json({
+        success: false,
+        message: "Campus ID not found"
+      });
+    }
+
+    const canteens = await Canteen.find({ campus, isApproved: true });
+
+    if (!canteens || canteens.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No canteen found in campus"
+      });
+    }
+
+    const itemPromises = canteens.map(canteen =>
+      Item.find({ canteen: canteen._id, isReady: true }).populate("canteen")
+    );
+
+    const itemsNested = await Promise.all(itemPromises);
+
+    // Flatten the nested array of arrays
+    const items = itemsNested.flat();
+
+    if (items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No items found in ready state"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Items fetched",
+      data: items
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message
+    });
+  }
+};

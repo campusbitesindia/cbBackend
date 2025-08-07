@@ -160,7 +160,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
           <div>
             <h3 className='font-bold text-xl text-gray-900'>
-              Order #{order._id.slice(-6)}
+              Order #
+              {order.OrderNumber
+                ? order.OrderNumber.replace(/[^0-9]/g, '')
+                : order._id.slice(-6)}
             </h3>
             <div className='flex items-center space-x-2 mt-1'>
               <Calendar className='w-3 h-3 text-gray-400' />
@@ -225,7 +228,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </span>
         </div>
         <p className='text-blue-900 font-medium'>
-          {order.payment?.method?.toUpperCase() || 'N/A'}
+          {order.payment?.method?.toUpperCase() ||
+            order?.paymentStatus?.toUpperCase() ||
+            'N/A'}
         </p>
       </div>
 

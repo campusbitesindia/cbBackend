@@ -101,27 +101,41 @@ function Navbar() {
   const displayUser = userProfile || user;
   const profileImageSrc = displayUser?.profileImage || '/placeholder-user.jpg';
 
-  const navItems = [
-    { name: 'Home', href: '/', icon: Home },
-    { name: 'Outlets', href: '/menu', icon: UtensilsCrossed },
-    { name: 'Orders', href: '/orders', icon: Package },
-  ];
+  // Navigation items based on user role
+  const getNavItems = () => {
+    if (displayUser?.role === 'student') {
+      return [
+        { name: 'Home', href: '/student/dashboard', icon: Home },
+        { name: 'QuickBites', href: '/quickbite', icon: UtensilsCrossed },
+        { name: 'Orders', href: '/orders', icon: Package },
+      ];
+    }
+    // For campus partners, return minimal navigation or empty array
+    // They primarily use their own dashboard at /campus/dashboard
+    return [];
+  };
+
+  const navItems = getNavItems();
 
   const hideNavbar =
-    pathname === '/campus/register' || pathname === '/campus/dashboard';
+    pathname === '/campus/register' ||
+    pathname === '/campus/dashboard' ||
+    (displayUser?.role === 'campus' && pathname !== '/profile') ||
+    (displayUser?.role === 'canteen' && pathname !== '/profile');
 
   if (hideNavbar) {
     return (
       <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
-        <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
+        {/* <div className='container mx-auto px-4 sm:px-6 lg:px-8'> */}
+        <div className='w-full px-4'>
           <div className='flex h-20 items-center justify-between'>
             {/* Logo */}
             <Link
               href={`${
                 pathname === '/campus/dashboard' ? '/campus/dashboard' : '/'
               }`}
-              className='flex items-center group'>
-              <div className='flex items-center space-x-3'>
+              className='flex items-center group min-w-0'>
+              <div className='flex items-center space-x-3 min-w-0'>
                 <Image
                   src='/logo.png'
                   alt='Campus Bites Logo'
@@ -131,10 +145,10 @@ function Navbar() {
                   className='transition-all duration-300 group-hover:brightness-110'
                 />
                 <div className='flex flex-col'>
-                  <span className='text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+                  <span className='truncate text-lg md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
                     Campus Bites
                   </span>
-                  <span className='text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
+                  <span className='truncate text-xs md:text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
                     Fast • Fresh • Delicious
                   </span>
                 </div>
@@ -226,23 +240,31 @@ function Navbar() {
                         asChild
                         className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
                         <Link
-                          href='/profile'
+                          href={
+                            displayUser?.role === 'campus' ||
+                            displayUser?.role === 'canteen'
+                              ? '/campus/dashboard?tab=profile'
+                              : '/profile'
+                          }
                           className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
                           <User className='h-5 w-5' />
                           <span>View Profile</span>
                         </Link>
                       </DropdownMenuItem>
 
-                      <DropdownMenuItem
-                        asChild
-                        className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                        <Link
-                          href='/orders'
-                          className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                          <Package className='h-5 w-5' />
-                          <span>My Orders</span>
-                        </Link>
-                      </DropdownMenuItem>
+                      {/* Only show My Orders for students */}
+                      {displayUser?.role === 'student' && (
+                        <DropdownMenuItem
+                          asChild
+                          className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                          <Link
+                            href='/orders'
+                            className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                            <Package className='h-5 w-5' />
+                            <span>My Orders</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
 
                       <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
 
@@ -271,86 +293,97 @@ function Navbar() {
   }
 
   return (
-    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500 overflow-x-hidden'>
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-x-hidden'>
-        <div className='flex h-20 items-center justify-between w-full max-w-full'>
+    <header className='fixed top-0 z-50 w-full bg-white/80 dark:bg-gradient-to-r dark:from-[#0a192f] dark:to-[#1e3a5f] backdrop-blur-md shadow-lg border-b border-gray-200/50 dark:border-white/10 transition-all duration-500'>
+      <div className='w-full px-4'>
+        <div className='flex h-20 items-center justify-between'>
           {/* Logo */}
-          <Link href='/' className='flex items-center group'>
+          <Link href='/' className='flex items-center min-w-0'>
             <div className='flex items-center space-x-3'>
               <Image
                 src='/logo.png'
                 alt='Campus Bites Logo'
-                width={50}
-                height={50}
+                width={40}
+                height={40}
                 priority
                 className='transition-all duration-300 group-hover:brightness-110'
               />
-              <div className='flex flex-col'>
-                <span className='text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
+              {/* Only show name on mobile, show motto on md+ */}
+              <div className='flex flex-col min-w-0 ml-2'>
+                <span className='truncate text-base md:text-xl font-bold text-gray-900 dark:text-white tracking-wide group-hover:text-red-500 transition-colors duration-300'>
                   Campus Bites
                 </span>
-                <span className='text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
+                <span className='hidden md:block truncate text-xs md:text-sm text-gray-600 dark:text-gray-300 font-medium tracking-wider'>
                   Fast • Fresh • Delicious
                 </span>
               </div>
             </div>
           </Link>
 
-          {/* Global Search Bar (Desktop) - now left of nav */}
-          <div className='hidden md:block relative w-72 mr-6'>
-            <GlobalSearchDropdown
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              open={searchDropdownOpen}
-              setOpen={setSearchDropdownOpen}
-            />
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className='hidden md:flex'>
-            <div className='relative flex items-center bg-gray-100/70 dark:bg-gray-900/50 backdrop-blur-lg rounded-full p-1 border border-gray-300/50 dark:border-white/10'>
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`relative px-6 py-2 text-sm font-medium transition-colors duration-300 rounded-full ${
-                    pathname === item.href
-                      ? 'text-white'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}>
-                  <span className='relative z-10'>{item.name}</span>
-                  {pathname === item.href && (
-                    <motion.div
-                      layoutId='activeNav'
-                      className='absolute inset-0 z-0 rounded-full bg-red-600'
-                      transition={{
-                        type: 'spring',
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                    />
-                  )}
-                </Link>
-              ))}
+          {/* Global Search Bar (Desktop) - only show when authenticated */}
+          {isAuthenticated && (
+            <div className='hidden lg:block relative w-96 mr-6'>
+              <GlobalSearchDropdown
+                query={searchQuery}
+                setQuery={setSearchQuery}
+                open={searchDropdownOpen}
+                setOpen={setSearchDropdownOpen}
+                // onSearch={handleSearch}
+              />
             </div>
-          </nav>
+          )}
+
+          {/* Desktop Navigation - only show when authenticated */}
+          {isAuthenticated && (
+            <nav className='hidden md:flex'>
+              <div className='relative flex items-center bg-gray-100/70 dark:bg-gray-900/50 backdrop-blur-lg rounded-full p-1 border border-gray-300/50 dark:border-white/10'>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`relative px-6 py-2 text-sm font-medium transition-colors duration-300 rounded-full ${
+                      pathname === item.href
+                        ? 'text-white'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}>
+                    <span className='relative z-10'>{item.name}</span>
+                    {pathname === item.href && (
+                      <motion.div
+                        layoutId='activeNav'
+                        className='absolute inset-0 z-0 rounded-full bg-red-600'
+                        transition={{
+                          type: 'spring',
+                          stiffness: 300,
+                          damping: 30,
+                        }}
+                      />
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          )}
 
           {/* Right side actions */}
           <div className='flex items-center space-x-4'>
             {/* Theme Toggle */}
-            <ThemeToggle />
+            {/* Theme Toggle - only show on desktop */}
+            <div className='hidden md:block'>
+              <ThemeToggle />
+            </div>
 
-            {/* Cart */}
-            <Link href='/cart' className='relative group'>
-              <div className='relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
-                <ShoppingCart className='w-5 h-5 text-gray-700 dark:text-white' />
-                {cartItemsCount > 0 && (
-                  <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
-                    {cartItemsCount}
-                  </Badge>
-                )}
-              </div>
-            </Link>
+            {/* Cart - only show for students */}
+            {isAuthenticated && displayUser?.role === 'student' && (
+              <Link href='/cart' className='relative group'>
+                <div className='relative flex items-center justify-center w-10 h-10 rounded-full bg-gray-100/70 dark:bg-gray-900/50 border border-gray-300/50 dark:border-white/10 hover:bg-gray-200/70 dark:hover:bg-gray-800/70 transition-colors duration-300'>
+                  <ShoppingCart className='w-5 h-5 text-gray-700 dark:text-white' />
+                  {cartItemsCount > 0 && (
+                    <Badge className='absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-600 text-white text-xs font-bold rounded-full border-2 border-white dark:border-black/50'>
+                      {cartItemsCount}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
+            )}
 
             {/* Authentication */}
             {isAuthenticated ? (
@@ -411,23 +444,30 @@ function Navbar() {
                     asChild
                     className='mt-2 focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
                     <Link
-                      href='/profile'
+                      href={
+                        displayUser?.role === 'campus-partner'
+                          ? '/campus/dashboard?tab=profile'
+                          : '/profile'
+                      }
                       className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
                       <User className='h-5 w-5' />
                       <span>View Profile</span>
                     </Link>
                   </DropdownMenuItem>
 
-                  <DropdownMenuItem
-                    asChild
-                    className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
-                    <Link
-                      href='/orders'
-                      className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
-                      <Package className='h-5 w-5' />
-                      <span>My Orders</span>
-                    </Link>
-                  </DropdownMenuItem>
+                  {/* Only show My Orders for students */}
+                  {displayUser?.role === 'student' && (
+                    <DropdownMenuItem
+                      asChild
+                      className='focus:bg-gray-100 dark:focus:bg-gray-800/80 focus:text-gray-900 dark:focus:text-white'>
+                      <Link
+                        href='/orders'
+                        className='flex items-center space-x-3 w-full p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800/80 hover:text-gray-900 dark:hover:text-white transition-all duration-200'>
+                        <Package className='h-5 w-5' />
+                        <span>My Orders</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
 
                   <DropdownMenuSeparator className='my-2 bg-gray-200/50 dark:bg-white/10' />
 
@@ -470,42 +510,74 @@ function Navbar() {
                 side='right'
                 className='w-full max-w-sm bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border-l border-gray-200/50 dark:border-white/10 text-gray-900 dark:text-white p-0'>
                 <div className='flex flex-col h-full'>
-                  <div className='flex items-center justify-between p-6 border-b border-white/10'>
+                  {/* <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80"> */}
+                  <div className='flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10 bg-white/90 dark:bg-gray-900/80'>
                     <Link
                       href='/'
-                      className='flex items-center space-x-3'
+                      className='flex items-center space-x-2'
                       onClick={() => setIsMenuOpen(false)}>
-                      <div className='w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center'>
-                        <UtensilsCrossed className='w-4 h-4 text-white' />
+                      <Image
+                        src='/logo.png'
+                        alt='Campus Bites Logo'
+                        width={36}
+                        height={36}
+                        priority
+                        className='rounded'
+                      />
+                      <div className='flex flex-col'>
+                        <span className='text-base font-bold text-gray-900 dark:text-white tracking-wide'>
+                          Campus Bites
+                        </span>
+                        <span className='text-xs text-gray-600 dark:text-gray-300 font-light tracking-wider'>
+                          Fast • Fresh • Delicious
+                        </span>
                       </div>
-                      <span className='font-semibold text-lg text-white'>
-                        Campus Bites
-                      </span>
                     </Link>
                     <Button
                       variant='ghost'
                       size='icon'
                       onClick={() => setIsMenuOpen(false)}
-                      className='rounded-full text-white hover:bg-white/10'>
-                      <X className='h-5 w-5' />
-                    </Button>
+                      className='rounded-full text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10'></Button>
                   </div>
 
+                  {/* Add search bar here, only on mobile */}
+                  {isAuthenticated && (
+                    <div className='my-4'>
+                      <GlobalSearchDropdown
+                        query={searchQuery}
+                        setQuery={setSearchQuery}
+                        open={searchDropdownOpen}
+                        setOpen={setSearchDropdownOpen}
+                      />
+                    </div>
+                  )}
+
                   <nav className='flex-1 p-6 space-y-2'>
-                    {navItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-lg ${
-                          pathname === item.href
-                            ? 'bg-red-600 text-white'
-                            : 'text-gray-300 hover:bg-gray-800/80'
-                        }`}>
-                        <item.icon className='h-6 w-6' />
-                        <span>{item.name}</span>
-                      </Link>
-                    ))}
+                    {isAuthenticated &&
+                      navItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setIsMenuOpen(false)}
+                          className={`flex items-center space-x-4 px-4 py-3 rounded-lg transition-all duration-300 text-base font-medium ${
+                            pathname === item.href
+                              ? 'bg-red-600 text-white'
+                              : 'text-gray-900 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/80'
+                          }`}>
+                          <item.icon className='h-6 w-6' />
+                          <span>{item.name}</span>
+                        </Link>
+                      ))}
+                    {!isAuthenticated && (
+                      <div className='text-center py-8'>
+                        <p className='text-gray-400 text-lg mb-4'>
+                          Welcome to Campus Bites
+                        </p>
+                        <p className='text-gray-500 text-sm'>
+                          Please login to access all features
+                        </p>
+                      </div>
+                    )}
                   </nav>
 
                   {!isAuthenticated && (
@@ -531,6 +603,9 @@ function Navbar() {
                       </Button>
                     </div>
                   )}
+                  <div className='mt-auto p-6 flex justify-center'>
+                    <ThemeToggle />
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
