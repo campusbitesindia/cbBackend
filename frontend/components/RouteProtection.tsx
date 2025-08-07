@@ -53,6 +53,22 @@ export function RouteProtection({
       return;
     }
 
+    // Redirect campus partners away from student-only routes
+    const studentOnlyRoutes = [
+      '/profile',
+      '/orders',
+      '/quickbite',
+      '/student/dashboard',
+    ];
+    if (
+      user &&
+      (user.role === 'campus' || user.role === 'canteen') &&
+      studentOnlyRoutes.some((route) => pathname.startsWith(route))
+    ) {
+      router.push('/campus/dashboard');
+      return;
+    }
+
     // If user is authenticated but doesn't have required role
     if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.role)) {
       // Redirect to appropriate dashboard based on user role

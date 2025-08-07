@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 // Add custom animations
 const customStyles = `
@@ -59,12 +60,23 @@ import { MenuItem, getReadyItemsOfAllCanteens } from '@/services/menuService';
 import { getAllCampuses, Campus } from '@/services/campusService';
 import { useAuth } from '@/context/auth-context';
 import { useCart } from '@/context/cart-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface QuickBiteItemProps {
   item: MenuItem;
   onAddToCart: (item: MenuItem) => void;
   onUpdateQuantity: (item: MenuItem, quantity: number) => void;
   currentQuantity: number;
+  onCanteenClick?: (canteenId: string) => void;
 }
 
 const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
@@ -72,7 +84,21 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
   onAddToCart,
   onUpdateQuantity,
   currentQuantity,
+  onCanteenClick,
 }) => {
+  const canteenId =
+    typeof item.canteen === 'object' && item.canteen && '_id' in item.canteen
+      ? item.canteen._id
+      : typeof item.canteen === 'string'
+      ? item.canteen
+      : '';
+
+  const canteenName =
+    typeof item.canteen === 'object' && item.canteen && 'name' in item.canteen
+      ? item.canteen.name
+      : 'Unknown Canteen';
+
+  const isCanteenValid = canteenId && canteenName !== 'Unknown Canteen';
   return (
     <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full'>
       {/* Enhanced Image Section */}
@@ -124,16 +150,29 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
             <h3 className='font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100 leading-tight line-clamp-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-300'>
               {item.name}
             </h3>
-            {/* Canteen Name */}
+            {/* Enhanced Canteen Name */}
             <div className='flex items-center gap-1'>
-              <MapPin className='w-3 h-3 text-slate-400 dark:text-slate-500' />
-              <p className='text-xs text-slate-500 dark:text-slate-400 font-medium truncate'>
-                {typeof item.canteen === 'object' &&
-                item.canteen &&
-                'name' in item.canteen
-                  ? item.canteen.name
-                  : 'Canteen'}
-              </p>
+              <MapPin
+                className={`w-3 h-3 ${
+                  isCanteenValid
+                    ? 'text-slate-400 dark:text-slate-500'
+                    : 'text-red-400 dark:text-red-500'
+                }`}
+              />
+              {isCanteenValid ? (
+                <button
+                  onClick={() => onCanteenClick?.(canteenId)}
+                  className='text-xs text-slate-500 dark:text-slate-400 font-medium truncate hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200 hover:underline cursor-pointer'>
+                  {canteenName}
+                </button>
+              ) : (
+                <div className='flex items-center gap-1'>
+                  <p className='text-xs text-red-500 dark:text-red-400 font-medium truncate'>
+                    Canteen Unavailable
+                  </p>
+                  <span className='text-xs text-red-400'>⚠️</span>
+                </div>
+              )}
             </div>
           </div>
           {item.description && (
@@ -190,11 +229,16 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
         {currentQuantity === 0 ? (
           <Button
             onClick={() => onAddToCart(item)}
-            className='w-full bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 dark:from-red-600 dark:via-red-700 dark:to-red-800 dark:hover:from-red-700 dark:hover:via-red-800 dark:hover:to-red-900 text-white font-bold transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl hover:shadow-red-500/25 dark:hover:shadow-red-400/25 hover:scale-105 py-2 sm:py-2.5 text-xs sm:text-sm'
+            disabled={!isCanteenValid}
+            className={`w-full font-bold transition-all duration-300 rounded-xl shadow-lg py-2 sm:py-2.5 text-xs sm:text-sm ${
+              isCanteenValid
+                ? 'bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 dark:from-red-600 dark:via-red-700 dark:to-red-800 dark:hover:from-red-700 dark:hover:via-red-800 dark:hover:to-red-900 text-white hover:shadow-xl hover:shadow-red-500/25 dark:hover:shadow-red-400/25 hover:scale-105'
+                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+            }`}
             size='sm'>
             <div className='flex items-center gap-2'>
               <span></span>
-              <span>Add</span>
+              <span>{isCanteenValid ? 'Add' : 'Unavailable'}</span>
             </div>
           </Button>
         ) : (
@@ -315,6 +359,9 @@ export default function QuickBitePage() {
   const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
+  const [showCanteenConflictDialog, setShowCanteenConflictDialog] =
+    useState(false);
+  const [pendingItem, setPendingItem] = useState<MenuItem | null>(null);
 
   const [availableCanteens, setAvailableCanteens] = useState<string[]>([]);
 
@@ -331,7 +378,8 @@ export default function QuickBitePage() {
 
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const { addToCart } = useCart();
+  const { addToCart, cart, removeFromCart } = useCart();
+  const router = useRouter();
 
   // Load ready items on mount
   useEffect(() => {
@@ -530,12 +578,36 @@ export default function QuickBitePage() {
         }
       }
 
-      setReadyItems(allItems);
+      // Filter out items with invalid canteen data
+      const validItems = allItems.filter((item) => {
+        const canteenId =
+          typeof item.canteen === 'object' &&
+          item.canteen &&
+          '_id' in item.canteen
+            ? item.canteen._id
+            : typeof item.canteen === 'string'
+            ? item.canteen
+            : '';
+
+        const canteenName =
+          typeof item.canteen === 'object' &&
+          item.canteen &&
+          'name' in item.canteen
+            ? item.canteen.name
+            : 'Unknown Canteen';
+
+        return canteenId && canteenName !== 'Unknown Canteen';
+      });
+
+      // Count invalid items for user feedback
+      const invalidItemsCount = allItems.length - validItems.length;
+
+      setReadyItems(validItems);
 
       // Extract available canteens
       const canteens = Array.from(
         new Set(
-          allItems
+          validItems
             .map((item) =>
               typeof item.canteen === 'object' &&
               item.canteen &&
@@ -548,8 +620,21 @@ export default function QuickBitePage() {
       );
       setAvailableCanteens(canteens);
 
-      // Show informative message if no items found
-      if (allItems.length === 0) {
+      // Show feedback about invalid items if any
+      if (invalidItemsCount > 0) {
+        toast({
+          title: 'Some Items Filtered Out',
+          description: `${invalidItemsCount} item${
+            invalidItemsCount > 1 ? 's' : ''
+          } with invalid canteen data ${
+            invalidItemsCount > 1 ? 'were' : 'was'
+          } filtered out.`,
+          variant: 'default',
+        });
+      }
+
+      // Show informative message if no valid items found
+      if (validItems.length === 0) {
         toast({
           title: 'No Ready Items',
           description:
@@ -599,6 +684,7 @@ export default function QuickBitePage() {
       return;
     }
 
+    // Validate canteen information
     const canteenId =
       typeof item.canteen === 'object' && item.canteen && '_id' in item.canteen
         ? item.canteen._id
@@ -606,25 +692,88 @@ export default function QuickBitePage() {
         ? item.canteen
         : '';
 
-    addToCart({
-      id: item._id,
-      name: item.name,
-      price: item.price,
-      image: item.image ?? '',
-      canteenId,
-      quantity: 1,
-    });
+    const canteenName =
+      typeof item.canteen === 'object' && item.canteen && 'name' in item.canteen
+        ? item.canteen.name
+        : 'Unknown Canteen';
 
-    // Update local state
-    setCartItems((prev) => ({
-      ...prev,
-      [item._id]: 1,
-    }));
+    // Prevent adding items with invalid canteen data
+    if (!canteenId || canteenName === 'Unknown Canteen') {
+      toast({
+        title: 'Canteen Not Available',
+        description:
+          'This item cannot be added to cart as the canteen information is not available. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-    toast({
-      title: 'Added to cart',
-      description: `${item.name} has been added to your cart`,
-    });
+    addToCart(
+      {
+        id: item._id,
+        name: item.name,
+        price: item.price,
+        image: item.image ?? '',
+        canteenId,
+        quantity: 1,
+      },
+      () => {
+        // Handle canteen conflict
+        setPendingItem(item);
+        setShowCanteenConflictDialog(true);
+      }
+    );
+
+    // Only update local state and show toast if no conflict
+    const wasAdded = cart.length === 0 || cart[0].canteenId === canteenId;
+    if (wasAdded) {
+      // Update local state
+      setCartItems((prev) => ({
+        ...prev,
+        [item._id]: 1,
+      }));
+
+      toast({
+        title: 'Added to cart',
+        description: `${item.name} has been added to your cart from ${canteenName}`,
+      });
+    }
+  };
+
+  const handleConfirmCanteenSwitch = () => {
+    if (pendingItem) {
+      // Clear cart and add the new item
+      cart.forEach((cartItem) => removeFromCart(cartItem.id));
+
+      const canteenId =
+        typeof pendingItem.canteen === 'object' &&
+        pendingItem.canteen &&
+        '_id' in pendingItem.canteen
+          ? pendingItem.canteen._id
+          : typeof pendingItem.canteen === 'string'
+          ? pendingItem.canteen
+          : '';
+
+      addToCart({
+        id: pendingItem._id,
+        name: pendingItem.name,
+        price: pendingItem.price,
+        image: pendingItem.image ?? '',
+        canteenId,
+        quantity: 1,
+      });
+
+      // Update local state
+      setCartItems({ [pendingItem._id]: 1 });
+
+      toast({
+        title: 'Cart cleared and item added',
+        description: `Previous items removed. ${pendingItem.name} was added.`,
+      });
+    }
+
+    setShowCanteenConflictDialog(false);
+    setPendingItem(null);
   };
 
   const handleUpdateQuantity = (item: MenuItem, quantity: number) => {
@@ -637,12 +786,29 @@ export default function QuickBitePage() {
       return;
     }
 
+    // Validate canteen information
     const canteenId =
       typeof item.canteen === 'object' && item.canteen && '_id' in item.canteen
         ? item.canteen._id
         : typeof item.canteen === 'string'
         ? item.canteen
         : '';
+
+    const canteenName =
+      typeof item.canteen === 'object' && item.canteen && 'name' in item.canteen
+        ? item.canteen.name
+        : 'Unknown Canteen';
+
+    // Prevent updating items with invalid canteen data
+    if (!canteenId || canteenName === 'Unknown Canteen') {
+      toast({
+        title: 'Canteen Not Available',
+        description:
+          'This item cannot be updated as the canteen information is not available. Please try refreshing the page.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (quantity <= 0) {
       // Remove item from cart
@@ -677,6 +843,10 @@ export default function QuickBitePage() {
         description: `${item.name} quantity updated to ${quantity}`,
       });
     }
+  };
+
+  const handleCanteenClick = (canteenId: string) => {
+    router.push(`/menu/${canteenId}`);
   };
 
   return (
@@ -998,6 +1168,7 @@ export default function QuickBitePage() {
                         onAddToCart={handleAddToCart}
                         onUpdateQuantity={handleUpdateQuantity}
                         currentQuantity={cartItems[item._id] || 0}
+                        onCanteenClick={handleCanteenClick}
                       />
                     </div>
                   ))}
@@ -1020,6 +1191,36 @@ export default function QuickBitePage() {
           </div>
         </div>
       </div>
+
+      {/* Canteen Conflict Dialog */}
+      <AlertDialog
+        open={showCanteenConflictDialog}
+        onOpenChange={setShowCanteenConflictDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Different Canteen Detected</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have items from a different canteen in your cart. You can only
+              order from one canteen at a time. Would you like to clear your
+              current cart and add this item?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowCanteenConflictDialog(false);
+                setPendingItem(null);
+              }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCanteenSwitch}
+              className='bg-red-600 hover:bg-red-700'>
+              Clear Cart & Add Item
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </React.Fragment>
   );
 }

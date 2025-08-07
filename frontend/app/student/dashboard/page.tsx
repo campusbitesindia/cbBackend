@@ -229,7 +229,7 @@ function StudentDashboardContent() {
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
-        <div className='text-white text-xl'>Loading restaurants...</div>
+        <div className='text-foreground text-xl'>Loading restaurants...</div>
       </div>
     );
   }
@@ -242,7 +242,7 @@ function StudentDashboardContent() {
           <div className='text-red-400 text-xl mb-4'>{error}</div>
           <Button
             onClick={() => window.location.reload()}
-            className='bg-gradient-to-r from-blue-500 to-purple-600'>
+            className='bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'>
             Retry
           </Button>
         </div>
@@ -251,21 +251,31 @@ function StudentDashboardContent() {
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black'>
+    <div className='min-h-screen bg-background'>
       {/* Background Elements */}
       <div className='absolute inset-0 overflow-hidden -z-10'>
-        <div className='absolute top-20 left-20 w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center animate-float'>
-          <span className='text-2xl'>🍕</span>
+        {/* Light mode background */}
+        <div className='absolute inset-0 bg-gradient-to-br from-white via-gray-50 to-blue-50 dark:opacity-0 opacity-100 transition-opacity duration-1000'>
+          <div className='absolute top-0 -left-4 w-72 h-72 bg-purple-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob'></div>
+          <div className='absolute top-0 -right-4 w-72 h-72 bg-yellow-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-2000'></div>
+          <div className='absolute -bottom-8 left-20 w-72 h-72 bg-pink-300/20 rounded-full mix-blend-multiply filter blur-xl animate-blob animation-delay-4000'></div>
         </div>
-        <div className='absolute top-40 right-32 w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center animate-float-delayed'>
-          <span className='text-xl'>🍔</span>
-        </div>
-        <div className='absolute bottom-32 left-16 w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center animate-bounce-slow'>
-          <span className='text-xl'>🌮</span>
+        {/* Dark mode background */}
+        <div className='absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black opacity-0 dark:opacity-100 transition-opacity duration-1000'>
+          <div className='absolute top-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-pulse'></div>
+          <div className='absolute bottom-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-orange-500/5 to-red-500/5 rounded-full blur-2xl animate-pulse delay-1000'></div>
         </div>
 
-        <div className='absolute top-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-pulse'></div>
-        <div className='absolute bottom-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-orange-500/5 to-red-500/5 rounded-full blur-2xl animate-pulse delay-1000'></div>
+        {/* Floating food icons - theme aware */}
+        <div className='absolute top-20 left-20 w-16 h-16 bg-blue-500/10 dark:bg-blue-500/20 rounded-full flex items-center justify-center animate-float'>
+          <span className='text-2xl'>🍕</span>
+        </div>
+        <div className='absolute top-40 right-32 w-12 h-12 bg-purple-500/10 dark:bg-purple-500/20 rounded-full flex items-center justify-center animate-float-delayed'>
+          <span className='text-xl'>🍔</span>
+        </div>
+        <div className='absolute bottom-32 left-16 w-14 h-14 bg-green-500/10 dark:bg-green-500/20 rounded-full flex items-center justify-center animate-bounce-slow'>
+          <span className='text-xl'>🌮</span>
+        </div>
       </div>
 
       <div className='relative p-6'>
@@ -274,18 +284,18 @@ function StudentDashboardContent() {
           <div className='mb-12'>
             <div className='flex items-center justify-between mb-8'>
               <div>
-                <h1 className='text-4xl font-bold text-white mb-2'>
+                <h1 className='text-4xl font-bold text-foreground mb-2'>
                   Hey there,{' '}
                   <span className='bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent'>
                     Student!
                   </span>
                 </h1>
-                <p className='text-gray-400 text-lg'>
+                <p className='text-muted-foreground text-lg'>
                   What are you craving today?
                 </p>
               </div>
               <Link href='/cart'>
-                <Button className='bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 hover:scale-105'>
+                <Button className='bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-300 hover:scale-105'>
                   <ShoppingCart className='w-5 h-5 mr-2' />
                   Cart ({cartItemsCount})
                 </Button>
@@ -294,15 +304,15 @@ function StudentDashboardContent() {
 
             {/* Search Bar */}
             <div className='relative max-w-2xl mx-auto mb-8'>
-              <Search className='absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6' />
+              <Search className='absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-6 h-6' />
               <Input
                 type='text'
                 placeholder='Search for restaurants, cuisines, or dishes...'
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className='w-full pl-12 pr-16 py-4 bg-gray-800/50 border-gray-700 rounded-2xl text-white placeholder-gray-400 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm'
+                className='w-full pl-12 pr-16 py-4 bg-background/50 border-border rounded-2xl text-foreground placeholder-muted-foreground text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm'
               />
-              <Button className='absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl px-4'>
+              <Button className='absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-xl px-4'>
                 <Filter className='w-5 h-5' />
               </Button>
             </div>
@@ -318,8 +328,8 @@ function StudentDashboardContent() {
                   }
                   className={`${
                     selectedCategory === category.id
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-                      : 'border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white bg-transparent'
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 text-white'
+                      : 'border-border text-muted-foreground hover:bg-accent hover:text-accent-foreground bg-transparent'
                   } rounded-full px-6 py-3 transition-all duration-300 hover:scale-105 font-semibold`}>
                   <span className='mr-2'>{category.icon}</span>
                   {category.name}
@@ -356,12 +366,12 @@ function StudentDashboardContent() {
             <Dialog
               open={isGroupOrderModalOpen}
               onOpenChange={setIsGroupOrderModalOpen}>
-              <DialogContent className='sm:max-w-[425px] bg-gray-800 text-white border-gray-700'>
+              <DialogContent className='sm:max-w-[425px] bg-background text-foreground border-border'>
                 <DialogHeader>
                   <DialogTitle className='text-2xl font-bold text-center bg-gradient-to-r from-red-500 to-red-500 bg-clip-text text-transparent pb-2'>
                     Start a New Group Order
                   </DialogTitle>
-                  <DialogDescription className='text-gray-300 text-center'>
+                  <DialogDescription className='text-muted-foreground text-center'>
                     {newGroupOrderDetails
                       ? 'Share this link or QR code with your friends to join the order.'
                       : 'Select a canteen to create a group order.'}
@@ -373,7 +383,7 @@ function StudentDashboardContent() {
                     <div>
                       <Label
                         htmlFor='canteen-select'
-                        className='mb-2 block text-gray-300'>
+                        className='mb-2 block text-foreground'>
                         Select Canteen
                       </Label>
                       <Select
@@ -381,13 +391,13 @@ function StudentDashboardContent() {
                         onValueChange={setSelectedCanteen}>
                         <SelectTrigger
                           id='canteen-select'
-                          className='w-full bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-red-500 focus:border-transparent'>
+                          className='w-full bg-input border-border text-foreground placeholder-muted-foreground focus:ring-2 focus:ring-red-500 focus:border-transparent'>
                           <SelectValue
                             placeholder='Choose a Canteen'
-                            className='text-gray-200'
+                            className='text-foreground'
                           />
                         </SelectTrigger>
-                        <SelectContent className='bg-gray-800 border-gray-700 text-gray-200'>
+                        <SelectContent className='bg-background border-border text-foreground'>
                           {restaurants.map((canteen) => (
                             <SelectItem
                               key={canteen._id}
@@ -410,7 +420,7 @@ function StudentDashboardContent() {
                       <Button
                         onClick={handleCreateGroupOrder}
                         disabled={isCreatingOrder || !selectedCanteen}
-                        className='bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex-1'>
+                        className='bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-3 text-base shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5 flex-1'>
                         {isCreatingOrder ? (
                           <>
                             <svg
@@ -503,7 +513,7 @@ function StudentDashboardContent() {
                           passHref>
                           <Button
                             size='sm'
-                            className='bg-gradient-to-r from-red-600 to-red-600 hover:from-red-700 hover:to-red-700 text-white font-semibold'>
+                            className='bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold'>
                             Go to Group Order
                           </Button>
                         </Link>
@@ -523,8 +533,8 @@ function StudentDashboardContent() {
             <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
               {filteredRestaurants?.map((restaurant) => (
                 <Card
-                  key={restaurant._id}
-                  className='bg-gray-800/30 border-gray-700/30 backdrop-blur-xl hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden'>
+                key={restaurant._id}
+                className='bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/30 backdrop-blur-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden'>              
                   <div className='relative'>
                     <Image
                       src={restaurant.image || '/placeholder.svg'}
@@ -562,10 +572,10 @@ function StudentDashboardContent() {
                   <CardHeader className='pb-3'>
                     <div className='flex items-start justify-between'>
                       <div>
-                        <CardTitle className='text-lg text-white mb-1'>
+                        <CardTitle className='text-lg text-black dark:text-white mb-1'>
                           {restaurant.name}
                         </CardTitle>
-                        <CardDescription className='text-gray-400'>
+                        <CardDescription className='text-gray-600 dark:text-gray-400'>
                           {restaurant.cuisine}
                         </CardDescription>
                       </div>
@@ -590,7 +600,7 @@ function StudentDashboardContent() {
                     </div>
                     <Link href={`/menu/${restaurant._id}`}>
                       <Button
-                        className='w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-2 rounded-xl transition-all duration-300'
+                        className='w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300'
                         disabled={!restaurant.isOpen}>
                         {restaurant.isOpen ? 'Order Now' : 'Closed'}
                       </Button>

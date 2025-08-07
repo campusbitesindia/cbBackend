@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { API_ENDPOINTS } from '@/lib/constants';
@@ -138,6 +139,11 @@ const getRoleInfo = (role: string) => {
 
 export default function ProfilePage() {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+
+  // Redirect campus partners to their dashboard profile tab
+  // Allow all authenticated users to access the profile page
+  // Campus partners and students can both edit their profiles here
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -451,48 +457,56 @@ export default function ProfilePage() {
       {/* Header */}
       <div className='bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
         <div className='container mx-auto px-6 py-6'>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
             {/* Top row: Back button (full width on mobile) */}
-            <div className="flex items-center justify-between w-full sm:w-auto">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <div className='flex items-center justify-between w-full sm:w-auto'>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}>
                 <Button
                   asChild
-                  variant="ghost"
-                  className="text-slate-900 dark:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-700/50 rounded-xl px-2 py-1 text-sm sm:text-base"
-                >
-                  <Link href="/menu">
-                    <ArrowLeft className="w-5 h-5 mr-1" />
-                    <span className="hidden xs:inline">Back to Menu</span>
+                  variant='ghost'
+                  className='text-slate-900 dark:text-slate-100 hover:bg-slate-100/50 dark:hover:bg-slate-700/50 rounded-xl px-2 py-1 text-sm sm:text-base'>
+                  <Link href='/menu'>
+                    <ArrowLeft className='w-5 h-5 mr-1' />
+                    <span className='hidden xs:inline'>Back to Menu</span>
                   </Link>
                 </Button>
               </motion.div>
               {/* Edit button on mobile, only show here on mobile */}
-              <div className="sm:hidden">
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <div className='sm:hidden'>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}>
                   <Button
                     onClick={() => setIsEditing(!isEditing)}
                     disabled={isUpdating}
-                    size="icon"
+                    size='icon'
                     className={`ml-2 rounded-full p-2 ${
                       isEditing
                         ? 'bg-slate-500 hover:bg-slate-600 text-white'
                         : 'bg-red-500 hover:bg-red-600 text-white'
-                    }`}
-                  >
-                    {isEditing ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                    }`}>
+                    {isEditing ? (
+                      <X className='w-4 h-4' />
+                    ) : (
+                      <Edit3 className='w-4 h-4' />
+                    )}
                   </Button>
                 </motion.div>
               </div>
             </div>
             {/* Title and description */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full">
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100">
+            <div className='flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full'>
+              <div className='flex items-center gap-2'>
+                <h1 className='text-2xl sm:text-4xl font-bold text-slate-900 dark:text-slate-100'>
                   My Profile
                 </h1>
                 {/* Edit button on desktop */}
-                <div className="hidden sm:block">
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <div className='hidden sm:block'>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}>
                     <Button
                       onClick={() => setIsEditing(!isEditing)}
                       disabled={isUpdating}
@@ -500,16 +514,15 @@ export default function ProfilePage() {
                         isEditing
                           ? 'bg-slate-500 hover:bg-slate-600 text-white'
                           : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white'
-                      }`}
-                    >
+                      }`}>
                       {isEditing ? (
                         <>
-                          <X className="w-4 h-4 mr-2" />
+                          <X className='w-4 h-4 mr-2' />
                           Cancel
                         </>
                       ) : (
                         <>
-                          <Edit3 className="w-4 h-4 mr-2" />
+                          <Edit3 className='w-4 h-4 mr-2' />
                           Edit Profile
                         </>
                       )}
@@ -517,7 +530,7 @@ export default function ProfilePage() {
                   </motion.div>
                 </div>
               </div>
-              <p className="text-slate-600 dark:text-slate-400 mt-1 sm:mt-0">
+              <p className='text-slate-600 dark:text-slate-400 mt-1 sm:mt-0'>
                 Manage your account information
               </p>
             </div>
@@ -726,17 +739,16 @@ export default function ProfilePage() {
                     <Label className='text-slate-700 dark:text-slate-300 font-medium'>
                       Email Address
                     </Label>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-5 h-5 text-slate-500 dark:text-slate-400" />
-                        <span className="text-slate-900 dark:text-slate-100 break-all text-sm sm:text-base">
+                    <div className='flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg'>
+                      <div className='flex items-center gap-2'>
+                        <Mail className='w-5 h-5 text-slate-500 dark:text-slate-400' />
+                        <span className='text-slate-900 dark:text-slate-100 break-all text-sm sm:text-base'>
                           {userData.email}
                         </span>
                       </div>
                       <Badge
-                        variant="outline"
-                        className="mt-1 sm:mt-0 sm:ml-auto text-xs px-2 py-0.5"
-                      >
+                        variant='outline'
+                        className='mt-1 sm:mt-0 sm:ml-auto text-xs px-2 py-0.5'>
                         Read-only
                       </Badge>
                     </div>
