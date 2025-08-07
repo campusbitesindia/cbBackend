@@ -398,15 +398,13 @@ function CartPageContent() {
                   <span className='text-gray-600 dark:text-gray-400'>
                     Delivery Fee
                   </span>
-                  <span className='text-gray-900 dark:text-white'>₹25</span>
+                  <span className='text-gray-900 dark:text-white'>₹0</span>
                 </div>
                 <div className='flex justify-between text-sm'>
                   <span className='text-gray-600 dark:text-gray-400'>
                     Taxes & Charges
                   </span>
-                  <span className='text-gray-900 dark:text-white'>
-                    ₹{(totalPrice * 0.05).toFixed(2)}
-                  </span>
+                  <span className='text-gray-900 dark:text-white'>₹0</span>
                 </div>
               </div>
 
@@ -414,7 +412,7 @@ function CartPageContent() {
                 <div className='flex justify-between font-bold text-lg'>
                   <span className='text-gray-900 dark:text-white'>To Pay</span>
                   <span className='text-gray-900 dark:text-white'>
-                    ₹{(totalPrice - discount + 25).toFixed(2)}
+                    ₹{(totalPrice - discount).toFixed(2)}
                   </span>
                 </div>
               </div>
