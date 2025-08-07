@@ -16,20 +16,22 @@ import { ShoppingCart, Plus, Minus } from 'lucide-react';
 
 interface ProductCardProps {
   item: StoreItem;
+  canteenId: string;
 }
 
-export default function ProductCard({ item }: ProductCardProps) {
+export default function ProductCard({ item, canteenId }: ProductCardProps) {
   const { addToCart } = useCart();
   const { toast } = useToast();
   const [quantity, setQuantity] = useState(1);
 
   const handleAddToCart = () => {
     addToCart({
-      id: item.id,
+      id: item.id.toString(), // Convert number to string
       name: item.name,
       price: item.price,
       quantity: quantity,
       image: item.image,
+      canteenId: canteenId, // Use the canteenId prop
     });
 
     toast({
