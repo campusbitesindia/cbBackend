@@ -25,7 +25,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const connectSocket = () => {
     if (!socketRef.current) {
       console.log("connected")
-      socketRef.current = io('http://localhost:8080');
+      socketRef.current = io('https://campusbites-mxpe.onrender.com');
 
       socketRef.current.on("connect", () => {
         console.log("Socket connected:", socketRef.current?.id);
