@@ -53,7 +53,7 @@ exports.getReviews = async (req, res) => {
     });
   }
 };
-s
+
 // POST review for a canteen or item
 exports.createReview = async (req, res) => {
   try {
