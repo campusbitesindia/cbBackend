@@ -101,6 +101,9 @@ importers:
       '@tsparticles/fireworks':
         specifier: ^3.8.1
         version: 3.9.1
+      animejs:
+        specifier: ^3.2.1
+        version: 3.2.2
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.21(postcss@8.5.6)
@@ -1125,6 +1128,9 @@ packages:
   '@types/socket.io-client@3.0.0':
     resolution: {integrity: sha512-s+IPvFoEIjKA3RdJz/Z2dGR4gLgysKi8owcnrVwNjgvc01Lk68LJDDsG2GRqegFITcxmvCMYM7bhMpwEMlHmDg==}
     deprecated: This is a stub types definition. socket.io-client provides its own type definitions, so you do not need this installed.
+
+  animejs@3.2.2:
+    resolution: {integrity: sha512-Ao95qWLpDPXXM+WrmwcKbl6uNlC5tjnowlaRYtuVDHHoygjtIPfDUoK9NthrlZsQSKjZXlmji2TrBUAVbiH0LQ==}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -3012,6 +3018,8 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  animejs@3.2.2: {}
 
   ansi-regex@5.0.1: {}
 
