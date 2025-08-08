@@ -24,10 +24,10 @@ router.route("/profile/image").post(isAuthenticated, upload.single('profileImage
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:3000/login', session: false }),
+  passport.authenticate('google', { failureRedirect: 'https://campus-bites-c7pe.vercel.app/login', session: false }),
   (req, res) => { 
     // On success, redirect with a token
-    res.redirect(`http://localhost:3000/login?token=${req.user}`);
+    res.redirect(`https://campus-bites-c7pe.vercel.app/login?token=${req.user}`);
   }
 );
 router.post("/google",getUserDetails)

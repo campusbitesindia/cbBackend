@@ -21,7 +21,7 @@ exports.createGroupOrder = async (req, res) => {
     if (!canteen) return res.status(400).json({ message: "Canteen ID is required" });
 
     const groupLink = `group-order-${crypto.randomBytes(8).toString('hex')}`;
-    const qrCodeUrl = await QRCode.toDataURL(`http://localhost:3000/join-group?link=${groupLink}`);
+    const qrCodeUrl = await QRCode.toDataURL(`https://campus-bites-c7pe.vercel.app/join-group?link=${groupLink}`);
 
     const groupOrder = await GroupOrder.create({
       creator: user._id,
