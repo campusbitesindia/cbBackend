@@ -40,7 +40,7 @@ export default function CreateGroupOrderPage() {
 
   const fetchCanteens = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/v1/canteens", {
+      const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/canteens", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -71,7 +71,7 @@ export default function CreateGroupOrderPage() {
     }
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/v1/groupOrder/create-order", {
+      const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/groupOrder/create-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -185,12 +185,12 @@ export default function CreateGroupOrderPage() {
                 <Label className="block text-gray-300 text-sm font-medium mb-2">Group Link:</Label>
                 <div className="bg-gray-800 p-3 rounded border border-gray-600 mb-3">
                   <p className="text-red-400 font-mono text-sm break-all">
-                    {`http://localhost:3000/group-order?link=${newGroupOrderDetails.groupLink}`}
+                    {`https://campusbites-mxpe.onrender.com/group-order?link=${newGroupOrderDetails.groupLink}`}
                   </p>
                 </div>
                 <Button
                   onClick={() => {
-                    navigator.clipboard.writeText(`http://localhost:3000/group-order?link=${newGroupOrderDetails.groupLink}`);
+                    navigator.clipboard.writeText(`https://campusbites-mxpe.onrender.com/group-order?link=${newGroupOrderDetails.groupLink}`);
                     toast({ 
                       description: "Link copied to clipboard!",
                       className: "bg-green-600 text-white border-0"

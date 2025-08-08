@@ -124,7 +124,7 @@ function StudentDashboardContent() {
     setIsCreatingOrder(true);
     try {
       const res = await fetch(
-        'http://localhost:8080/api/v1/groupOrder/create-order',
+        'https://campusbites-mxpe.onrender.com/api/v1/groupOrder/create-order',
         {
           method: 'POST',
           headers: {
@@ -476,14 +476,14 @@ function StudentDashboardContent() {
                       </Label>
                       <div className='bg-gray-800 p-3 rounded border border-gray-600 mb-3'>
                         <p className='text-red-400 font-mono text-sm break-all'>
-                          {`http://localhost:3000/group-order?link=${newGroupOrderDetails.groupLink}`}
+                          {`https://campus-bites-c7pe.vercel.app//group-order?link=${newGroupOrderDetails.groupLink}`}
                         </p>
                       </div>
                       <div className='flex gap-3 justify-center'>
                         <Button
                           onClick={() => {
                             navigator.clipboard.writeText(
-                              `http://localhost:3000/group-order?link=${newGroupOrderDetails.groupLink}`
+                              `https://campus-bites-c7pe.vercel.app//group-order?link=${newGroupOrderDetails.groupLink}`
                             );
                             toast({
                               description: 'Link copied to clipboard!',

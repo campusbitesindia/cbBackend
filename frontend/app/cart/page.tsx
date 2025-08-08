@@ -106,7 +106,7 @@ function CartPageContent() {
       };
       console.log(Newdata);
       const response = await axios.post(
-        'http://localhost:8080/api/v1/order/CreateOrder',
+        'https://campusbites-mxpe.onrender.com/api/v1/order/CreateOrder',
         Newdata,
         {
           headers: {

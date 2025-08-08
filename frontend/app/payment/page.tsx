@@ -61,7 +61,7 @@ export default function PaymentPage() {
       if (!orderId) return;
       try {
         const response = await axios.get(
-          `http://localhost:8080/api/v1/order/getOrderDetails/${orderId}`,
+          `https://campusbites-mxpe.onrender.com/api/v1/order/getOrderDetails/${orderId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -107,7 +107,7 @@ export default function PaymentPage() {
   const handleCashOnDelivery = async (paymentData: object) => {
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/v1/payments/COD",
+        "https://campusbites-mxpe.onrender.com/api/v1/payments/COD",
         paymentData,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -136,7 +136,7 @@ export default function PaymentPage() {
   const verifypayment = async (data: object) => {
     try {
       const response = await axios.post(
-        "http://localhost:8080/api/v1/payments/verify",
+        "https://campusbites-mxpe.onrender.com/api/v1/payments/verify",
         data,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -182,7 +182,7 @@ export default function PaymentPage() {
     try {
       // Pass custom transaction ID to your backend for order creation
       const response = await axios.post(
-        "http://localhost:8080/api/v1/payments/create-order",paymentData,
+        "https://campusbites-mxpe.onrender.com/api/v1/payments/create-order",paymentData,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

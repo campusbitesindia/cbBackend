@@ -131,7 +131,7 @@ export default function GroupOrderPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:8080/api/v1/groupOrder/${groupLink}`,
+        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/${groupLink}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -160,7 +160,7 @@ export default function GroupOrderPage() {
       if (!groupOrder?.canteen || !token) return;
       try {
         const res = await fetch(
-          `http://localhost:8080/api/v1/items/getItems/${groupOrder.canteen}`,
+          `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${groupOrder.canteen}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -192,7 +192,7 @@ export default function GroupOrderPage() {
         items: updatedItems,
       };
 
-      const res = await fetch(`http://localhost:8080/api/v1/groupOrder/items`, {
+      const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/groupOrder/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -394,7 +394,7 @@ export default function GroupOrderPage() {
       };
 
       const res = await fetch(
-        `http://localhost:8080/api/v1/groupOrder/add-items-payment`,
+        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/add-items-payment`,
         {
           method: 'POST',
           headers: {
@@ -469,7 +469,7 @@ export default function GroupOrderPage() {
         order_id: transaction.razorpayOrderId,
         handler: async function (response: any) {
           try {
-            await fetch(`http://localhost:8080/api/v1/payments/verify`, {
+            await fetch(`https://campusbites-mxpe.onrender.com/api/v1/payments/verify`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -524,7 +524,7 @@ export default function GroupOrderPage() {
         toast({ title: 'Already a member' });
         return;
       }
-      const res = await fetch('http://localhost:8080/api/v1/groupOrder/join', {
+      const res = await fetch('https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
