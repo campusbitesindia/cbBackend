@@ -220,7 +220,6 @@ const verifyPayment = async (req, res) => {
 
 // Handle payment failure
 const handlePaymentFailure = async (req, res) => {
-  console.log("handle Payment started");
     try {
         const { razorpay_order_id, error } = req.body
 

@@ -5,7 +5,6 @@ const cloudinary = require('cloudinary').v2;
 exports.getItems = async (req, res) => {
   try {
     const { id: canteenId } = req.params;
-    console.log(canteenId);
     if (!canteenId) {
       return res.status(400).json({
         success: false,
@@ -36,7 +35,6 @@ exports.createItem = async (req, res) => {
   try {
     const { name, price, canteenId } = req.body;
     const Image = req.file;
-    console.log(name, price, req.file);
 
     if (!name || !price || !canteenId || !Image) {
       return res.status(400).json({
@@ -46,7 +44,6 @@ exports.createItem = async (req, res) => {
     }
 
     const canteen = await Canteen.findById(canteenId);
-    console.log(canteen);
     if (!canteen) {
       return res.status(400).json({
         success: false,
@@ -57,7 +54,6 @@ exports.createItem = async (req, res) => {
       resource_type: 'auto',
       folder: process.env.ItemsFolder,
     });
-    console.log(uploaded);
     const item = Item.create({
       name,
       price,
@@ -83,8 +79,6 @@ exports.createItem = async (req, res) => {
 exports.updateItem = async (req, res) => {
   try {
     const data = req.body;
-    console.log("...........................update...........item");
-    console.log(data);
     const { id: itemId } = req.params;
     const file = req.file;
     const item = await Item.findById(itemId);

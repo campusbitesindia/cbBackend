@@ -1,5 +1,4 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+export const API_BASE_URL = 'https://campusbites-mxpe.onrender.com';
 
 export const API_ENDPOINTS = {
   CANTEENS: `${API_BASE_URL}/api/v1/canteens`,

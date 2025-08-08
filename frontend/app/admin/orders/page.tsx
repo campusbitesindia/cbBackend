@@ -20,7 +20,7 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch("http://localhost:8080/api/v1/admin/orders/by-campus-canteen")
+    fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/by-campus-canteen")
       .then(res => res.json())
       .then(data => {
         setOrders(data || []);

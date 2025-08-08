@@ -269,6 +269,7 @@ function OrdersPageContent() {
       },
       createdAt: apiOrder.createdAt,
       updatedAt: apiOrder.updatedAt,
+      paymentStatus: apiOrder.paymentStatus || 'pending',
     };
   };
 

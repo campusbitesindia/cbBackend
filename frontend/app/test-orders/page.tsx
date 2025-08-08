@@ -61,6 +61,7 @@ const mapApiResponseToOrder = (apiOrder: any): Order => {
     })),
     total: apiOrder.total || 0,
     status: apiOrder.status,
+    paymentStatus: apiOrder.status === 'payment_pending' ? 'pending' : 'completed', // Added missing property
     payment: {
       method: 'cod', // Default to COD since API doesn't specify
       status: apiOrder.status === 'payment_pending' ? 'pending' : 'completed',

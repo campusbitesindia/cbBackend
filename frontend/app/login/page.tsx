@@ -490,7 +490,7 @@ export default function LoginPage() {
                       '
                       onClick={() =>
                         (window.location.href =
-                          'http://localhost:8080/api/v1/users/auth/google')
+                          'https://campusbites-mxpe.onrender.com/api/v1/users/auth/google')
                       }>
                       <svg className='w-6 h-6 mr-3' viewBox='0 0 48 48'>
                         <path

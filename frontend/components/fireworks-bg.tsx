@@ -8,14 +8,14 @@ interface FireworksBackgroundProps {
 }
 
 export default function FireworksBackground({ className = "" }: FireworksBackgroundProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    if (!containerRef.current) return
+    if (!canvasRef.current) return
 
     // Create fireworks with professional settings
     const startFireworks = () => {
-      fireworks.create(containerRef.current!, {
+      fireworks.create(canvasRef.current!, {
         background: "transparent",
         colors: [
           "#ef4444", // red-500
@@ -55,13 +55,15 @@ export default function FireworksBackground({ className = "" }: FireworksBackgro
   }, [])
 
   return (
-    <div
-      ref={containerRef}
-      className={`absolute inset-0 pointer-events-none z-0 ${className}`}
-      style={{
-        background: "transparent",
-        overflow: "hidden",
-      }}
-    />
+    <div className={`absolute inset-0 pointer-events-none z-0 ${className}`}>
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
+        style={{
+          background: "transparent",
+          overflow: "hidden",
+        }}
+      />
+    </div>
   )
-} 
+}

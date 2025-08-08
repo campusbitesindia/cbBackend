@@ -411,7 +411,7 @@ function DashboardContent() {
         setMenuLoading(true);
         console.log(`Fetching menu items for canteen: ${canteenIdToUse}`);
         const menuData = await axios.get(
-          `http://localhost:8080/api/v1/items/getItems/${canteenIdToUse}`,
+          `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

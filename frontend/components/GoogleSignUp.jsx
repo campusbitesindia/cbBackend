@@ -18,7 +18,7 @@ const GoogleSignUp = ({form}) => {
             code
         }
         console.log(data);
-        const response=await axios.post("http://localhost:8080/api/v1/users/google",data);
+        const response=await axios.post("https://campusbites-mxpe.onrender.com/api/v1/users/google",data);
         if(!response.data.success){
             throw new Error(response.data.message)
         }

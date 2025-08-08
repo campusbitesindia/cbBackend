@@ -163,7 +163,7 @@ export default function AdminDashboard() {
 
     setRatingLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/v1/admin/rateVendors", {
+      const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/rateVendors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
   // Fetch users/vendors from backend
   const fetchUsersByRole = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/v1/admin/users/list-by-role");
+      const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/users/list-by-role");
       if (res.ok) {
         const data = await res.json();
         const combined = [
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/v1/admin/canteens")
+    fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/canteens")
       .then(res => res.json())
       .then(data => setCanteens(data.canteens || []))
       .catch(err => console.error("Error fetching all canteens:", err));
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
 
   // Fetch total orders from /api/v1/admin/orders/by-campus-canteen
   useEffect(() => {
-    fetch("http://localhost:8080/api/v1/admin/orders/by-campus-canteen")
+    fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/by-campus-canteen")
       .then(res => res.json())
       .then(data => {
         setOrdersByCampusCanteen(data || []);
@@ -239,7 +239,7 @@ export default function AdminDashboard() {
   async function handleBanUser(userId: string, ban: boolean) {
     setActionLoading(l => ({ ...l, [userId]: true }));
     try {
-    const res = await fetch("http://localhost:8080/api/v1/admin/banUser", {
+    const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/banUser", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, ban }),
@@ -262,7 +262,7 @@ export default function AdminDashboard() {
   async function handleApproveCanteen(canteenId: string, approved: boolean, rejectionReason: string = "") {
     setCanteenActionLoading(l => ({ ...l, [canteenId]: true }));
     try {
-      const res = await fetch(`http://localhost:8080/api/v1/admin/vendors/${canteenId}/approve`, {
+      const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/admin/vendors/${canteenId}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ approved, rejectionReason }),
@@ -286,7 +286,7 @@ export default function AdminDashboard() {
   async function handleBanCanteen(canteenId: string, suspend: boolean) {
     setCanteenActionLoading(l => ({ ...l, [canteenId]: true }));
     try {
-    const res = await fetch("http://localhost:8080/api/v1/admin/suspendCanteen", {
+    const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/suspendCanteen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ canteenId, suspend }),
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
 
   async function fetchPendingVendors() {
     try {
-      const res = await fetch("http://localhost:8080/api/v1/admin/vendors/pending");
+      const res = await fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/vendors/pending");
     if (res.ok) {
         const data = await res.json();
         setPendingVendors(data.data || []);
@@ -350,23 +350,23 @@ export default function AdminDashboard() {
           topCampusesByRevenueRes,
           revenueByCampusCanteenRes,
         ] = await Promise.all([
-          fetch("http://localhost:8080/api/v1/admin/totals"),
-          fetch("http://localhost:8080/api/v1/admin/users/monthly"),
-          fetch("http://localhost:8080/api/v1/admin/users/count-by-role"),
-          fetch("http://localhost:8080/api/v1/admin/users/top-spenders"),
-          fetch("http://localhost:8080/api/v1/admin/orders/monthly"),
-          fetch("http://localhost:8080/api/v1/admin/orders/status-wise"),
-          fetch("http://localhost:8080/api/v1/admin/orders/top-tcanteens"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/daily"), 
-          fetch("http://localhost:8080/api/v1/admin/revenue/weekly"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/monthly"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/total"),
-          fetch("http://localhost:8080/api/v1/admin/orders/average-order-value"),
-          fetch("http://localhost:8080/api/v1/admin/orders/peak-hours"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/payment-breakdown"),
-          fetch("http://localhost:8080/api/v1/admin/users/getSuspectedUser"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/top-campuses"),
-          fetch("http://localhost:8080/api/v1/admin/revenue/by-campus-canteen"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/totals"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/users/monthly"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/users/count-by-role"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/users/top-spenders"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/monthly"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/status-wise"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/top-tcanteens"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/daily"), 
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/weekly"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/monthly"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/total"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/average-order-value"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/orders/peak-hours"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/payment-breakdown"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/users/getSuspectedUser"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/top-campuses"),
+          fetch("https://campusbites-mxpe.onrender.com/api/v1/admin/revenue/by-campus-canteen"),
         ])
 
         const checkResponse = async (res: Response, name: string) => {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/', // adjust as needed
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://campusbites-mxpe.onrender.com/', // adjust as needed
   headers: {
     'Content-Type': 'application/json',
   },

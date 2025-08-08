@@ -88,7 +88,6 @@ exports.getTopUsersBySpending = async (req, res) => {
         },
       },
     ])
-    console.log(topUsers)
     res.json(topUsers)
   } catch (error) {
     console.error("Error getting top users by spending:", error)
@@ -610,7 +609,6 @@ exports.getCampusesSummary = async (req, res) => {
         }
       }),
     )
-    console.log(result)
     res.status(200).json({
       success: true,
       campuses: result,
@@ -1067,7 +1065,6 @@ exports.getSuspectedUser=async(req,res)=>{
           { suspiciousActivityCount: { $gt: 0 } }
         ]
       });
-      console.log(AllSuspectedUser)
       if(AllSuspectedUser.length===0){
         return res.status(400).json({
           success:false,
@@ -1075,7 +1072,6 @@ exports.getSuspectedUser=async(req,res)=>{
         })
       }
       const penalties=await Penalty.find({isPaid:false}).populate({path:"user",select:"email"}).populate({path:"Order",select:"OrderNumber"}).select("student Amount deviceId  isPaid")
-      console.log(penalties)
       const UsersWithPenalty = [];
 
       for (const user of AllSuspectedUser) {

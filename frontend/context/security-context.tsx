@@ -63,7 +63,7 @@ type SecurityContextType = {
   currentPrompt: SecurityPrompt | null
   
   // Actions
-  // fetchSecurityDashboard: () => Promise<void>
+  fetchSecurityDashboard: () => Promise<void>
   handleSecurityPrompt: (prompt: SecurityPrompt) => void
   dismissPrompt: () => void
   manageDevice: (deviceId: string, action: 'trust' | 'remove' | 'rename', newName?: string) => Promise<void>
@@ -74,6 +74,15 @@ type SecurityContextType = {
 }
 
 const SecurityContext = createContext<SecurityContextType | undefined>(undefined)
+
+// Custom hook to use Security Context
+export function useSecurity() {
+  const context = useContext(SecurityContext)
+  if (context === undefined) {
+    throw new Error('useSecurity must be used within a SecurityProvider')
+  }
+  return context
+}
 
 export function SecurityProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast()
@@ -166,7 +175,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         setSecurityScore(data.securityScore)
         
         // Update devices list
-        // await fetchSecurityDashboard()
+        await fetchSecurityDashboard()
         
         toast({
           title: "Device Updated",
@@ -183,8 +192,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         description: "Unable to update device settings"
       })
     }
-  }, [toast])
-  // }, [fetchSecurityDashboard, toast])
+  }, [fetchSecurityDashboard, toast])
 
   // 📧 Send Verification Code
   const sendVerification = useCallback(async (purpose = 'login_verification') => {
@@ -311,10 +319,9 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) {
-      // fetchSecurityDashboard()
+      fetchSecurityDashboard()
     }
-  // }, [fetchSecurityDashboard])
-     }, [])
+  }, [fetchSecurityDashboard])
 
   return (
     <SecurityContext.Provider
@@ -327,7 +334,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         settings,
         isLoading,
         currentPrompt,
-        // fetchSecurityDashboard,
+        fetchSecurityDashboard,
         handleSecurityPrompt,
         dismissPrompt,
         manageDevice,
@@ -341,4 +348,3 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     </SecurityContext.Provider>
   )
 }
-
