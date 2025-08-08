@@ -170,7 +170,7 @@ function StudentDashboardContent() {
         setLoading(true);
         setError(null);
 
-        let url = 'http://localhost:8080/api/v1/canteens';
+        let url = 'https://campusbites-mxpe.onrender.com/api/v1/canteens';
         if (userCampusId) {
           url += `?campus=${userCampusId}`;
         }
