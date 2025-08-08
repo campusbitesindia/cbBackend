@@ -97,33 +97,29 @@ export default function LoginPage() {
         return;
       }
 
-      // Check for redirect parameter
-      const redirectParam = searchParams.get('redirect');
+      // Redirect to appropriate dashboard based on user role
       let redirectPath = '';
-
-      if (redirectParam) {
-        // Use the redirect parameter if it exists
-        redirectPath = decodeURIComponent(redirectParam);
-      } else {
-        // Default role-based redirection
-        switch (loggedInRole) {
-          case 'student':
+      switch (loggedInRole) {
+        case 'student':
+          redirectPath = '/student/dashboard';
+          break;
+        case 'campus':
+        case 'canteen':
+          redirectPath = '/campus/dashboard';
+          break;
+        case 'admin':
+          redirectPath = '/admin/dashboard';
+          break;
+        default:
+          // Fallback based on selected role if token role is not clear
+          if (values.role === 'student' || !values.role) {
             redirectPath = '/student/dashboard';
-            break;
-          case 'campus':
+          } else if (values.role === 'campus') {
             redirectPath = '/campus/dashboard';
-            break;
-          default:
-            // Fallback based on selected role if token role is not clear
-            if (values.role === 'student' || !values.role) {
-              redirectPath = '/student/dashboard';
-            } else if (values.role === 'campus') {
-              redirectPath = '/campus/dashboard';
-            } else {
-              redirectPath = '/';
-            }
-            break;
-        }
+          } else {
+            redirectPath = '/student/dashboard';
+          }
+          break;
       }
 
       // Perform the redirect
@@ -151,7 +147,6 @@ export default function LoginPage() {
   // Handle OAuth token from URL and show session expiration message
   useEffect(() => {
     const token = searchParams.get('token');
-    const redirect = searchParams.get('redirect');
     const message = searchParams.get('message');
 
     if (message) {
@@ -164,12 +159,8 @@ export default function LoginPage() {
 
     if (token) {
       loginWithToken(token);
-      // Clean up URL and navigate
-      if (redirect) {
-        router.replace(redirect);
-      } else {
-        router.replace('/');
-      }
+      // Clean up URL (loginWithToken will handle navigation to appropriate dashboard)
+      router.replace('/login');
     }
   }, [searchParams, loginWithToken, router, toast]);
 

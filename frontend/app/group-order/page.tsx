@@ -118,7 +118,7 @@ export default function GroupOrderPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      router.replace(`/login?redirect=/group-order?link=${groupLink}`);
+      router.replace('/login');
     }
   }, [isAuthenticated, router, groupLink]);
 
