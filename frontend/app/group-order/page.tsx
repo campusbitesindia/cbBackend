@@ -65,6 +65,98 @@ interface GroupOrder {
   status: string;
 }
 
+// Transaction row component for desktop view
+const TransactionRowDesktop = ({ txn, member, isCurrentUser, amount }: { 
+  txn: any, 
+  member: any, 
+  isCurrentUser: boolean, 
+  amount: number 
+}) => {
+  const statusColors = {
+    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  };
+  
+  const statusText = txn.status === 'pending' 
+    ? 'Processing...' 
+    : txn.status.charAt(0).toUpperCase() + txn.status.slice(1);
+    
+  const loadingSpinner = txn.status === 'pending' ? (
+    <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-yellow-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  ) : null;
+  
+  return (
+    <tr>
+      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+        {isCurrentUser ? 'You' : member?.name}
+      </td>
+      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
+        ₹{amount.toFixed(2)}
+      </td>
+      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
+          {loadingSpinner}
+          {statusText}
+        </span>
+      </td>
+    </tr>
+  );
+};
+
+// Transaction row component for mobile view
+const TransactionRowMobile = ({ txn, member, isCurrentUser, amount }: { 
+  txn: any, 
+  member: any, 
+  isCurrentUser: boolean, 
+  amount: number 
+}) => {
+  const statusColors = {
+    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  };
+  
+  const statusText = txn.status === 'pending' 
+    ? 'Processing...' 
+    : txn.status.charAt(0).toUpperCase() + txn.status.slice(1);
+    
+  const loadingSpinner = txn.status === 'pending' ? (
+    <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-yellow-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  ) : null;
+  
+  return (
+    <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="space-y-1">
+        <div className="font-medium text-gray-900 dark:text-white">
+          {isCurrentUser ? 'You' : member?.name || 'Unknown'}
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400">
+          {new Date(txn.createdAt).toLocaleString()}
+        </div>
+      </div>
+      <div className="flex flex-col items-end space-y-1">
+        <div className="font-semibold">₹{amount.toFixed(2)}</div>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
+          {loadingSpinner}
+          {statusText}
+        </span>
+      </div>
+      {txn.transactionId && (
+        <div className="col-span-2 mt-2 text-xs text-gray-500 dark:text-gray-400 truncate">
+          Txn ID: {txn.transactionId}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function GroupOrderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -573,37 +665,47 @@ export default function GroupOrderPage() {
   const userIsMember = groupOrder.members.some((m) => m._id === user?.id);
 
   return (
-    <div className='container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl'>
-      <div className='flex justify-between items-center mb-8'>
-        <h1 className='text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'>
+    <div className='container mx-auto p-3 sm:p-4 md:p-6 lg:p-8 max-w-6xl'>
+      <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8'>
+        <h1 className='text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'>
           Group Order
         </h1>
-        <div className='flex items-center space-x-2'>
-          <span className='px-3 py-1 text-sm rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'>
+        <div className='flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end'>
+          <span className='px-3 py-1 text-xs sm:text-sm rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'>
             {groupOrder.status}
           </span>
         </div>
       </div>
 
       {/* Group info */}
-      <div className='flex items-center space-x-6 mb-6'>
-        <div>
-          <img
-            src={groupOrder.qrCodeUrl}
-            alt='Group QR Code'
-            className='w-32 h-32'
-          />
-          <p className='mt-2 break-all text-sm'>
-            Group Link: {groupOrder.groupLink}
-          </p>
-        </div>
-        <div>
-          <h2 className='font-semibold'>Canteen:</h2>
-          <p>{groupOrder.canteen}</p>
-        </div>
-        <div>
-          <h2 className='font-semibold'>Status:</h2>
-          <p>{groupOrder.status}</p>
+      <div className='bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6'>
+        <div className='flex flex-col sm:flex-row items-start sm:items-center gap-6'>
+          <div className='mx-auto sm:mx-0'>
+            <img
+              src={groupOrder.qrCodeUrl}
+              alt='Group QR Code'
+              className='w-24 h-24 sm:w-32 sm:h-32'
+            />
+            <p className='mt-2 break-all text-xs sm:text-sm text-center sm:text-left text-gray-600 dark:text-gray-400'>
+              Group Link: <span className='font-mono'>{groupOrder.groupLink}</span>
+            </p>
+          </div>
+          <div className='grid grid-cols-2 gap-4 mt-4 sm:mt-0 w-full sm:w-auto'>
+            <div className='bg-gray-50 dark:bg-gray-700 p-3 rounded-lg'>
+              <h2 className='text-sm font-medium text-gray-500 dark:text-gray-400'>
+                Canteen
+              </h2>
+              <p className='text-sm font-medium break-words'>
+                {groupOrder.canteen}
+              </p>
+            </div>
+            <div className='bg-gray-50 dark:bg-gray-700 p-3 rounded-lg'>
+              <h2 className='text-sm font-medium text-gray-500 dark:text-gray-400'>
+                Status
+              </h2>
+              <p className='text-sm font-medium'>{groupOrder.status}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -626,9 +728,9 @@ export default function GroupOrderPage() {
       ) : (
         <>
           {/* Add Item Section */}
-          <Card className='mb-8 border border-gray-200 dark:border-gray-700 shadow-sm'>
-            <CardHeader className='pb-4'>
-              <CardTitle className='text-lg font-semibold text-gray-900 dark:text-white'>
+          <Card className='mb-6 border border-gray-200 dark:border-gray-700 shadow-sm'>
+            <CardHeader className='pb-3 sm:pb-4'>
+              <CardTitle className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
                 Add Item to Your Share
               </CardTitle>
             </CardHeader>
@@ -636,7 +738,7 @@ export default function GroupOrderPage() {
               <div className='flex flex-col sm:flex-row gap-3'>
                 <div className='flex-1'>
                   <select
-                    className='w-full px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-800 dark:text-white'
+                    className='w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 dark:bg-gray-800 dark:text-white'
                     value={selectedMenuItemId || ''}
                     onChange={(e) => setSelectedMenuItemId(e.target.value)}
                     disabled={savingItems}>
@@ -648,11 +750,11 @@ export default function GroupOrderPage() {
                     ))}
                   </select>
                 </div>
-                <div className='w-24'>
+                <div className='w-full sm:w-20'>
                   <Input
                     type='number'
                     min={1}
-                    className='text-center'
+                    className='text-center w-full'
                     value={newItemQuantity}
                     onChange={(e) =>
                       setNewItemQuantity(Math.max(1, +e.target.value))
@@ -663,7 +765,7 @@ export default function GroupOrderPage() {
                 </div>
                 <Button
                   onClick={addItem}
-                  className='bg-red-600 hover:bg-red-700 text-white font-medium whitespace-nowrap px-6'
+                  className='bg-red-600 hover:bg-red-700 text-white whitespace-nowrap w-full sm:w-auto'
                   disabled={savingItems || !selectedMenuItemId}>
                   {savingItems ? (
                     <>
@@ -695,9 +797,9 @@ export default function GroupOrderPage() {
           </Card>
 
           {/* Items List */}
-          <Card className='mb-8 border border-gray-200 dark:border-gray-700 shadow-sm'>
-            <CardHeader className='pb-4'>
-              <CardTitle className='text-lg font-semibold text-gray-900 dark:text-white'>
+          <Card className='mb-6 border border-gray-200 dark:border-gray-700 shadow-sm'>
+            <CardHeader className='pb-3 sm:pb-4'>
+              <CardTitle className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
                 Your Order Items
                 <span className='ml-2 px-2.5 py-0.5 text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 rounded-full'>
                   {items.length} {items.length === 1 ? 'item' : 'items'}
@@ -1077,8 +1179,8 @@ export default function GroupOrderPage() {
           </Card>
 
           {/* Payment Button */}
-          <div className='sticky bottom-0 bg-white dark:bg-gray-900 pt-4 pb-6 border-t border-gray-200 dark:border-gray-800 -mx-8 px-8'>
-            <div className='bg-white dark:bg-gray-900'>
+          <div className='sticky bottom-0 left-0 right-0 bg-white dark:bg-gray-900 pt-3 sm:pt-4 pb-4 sm:pb-6 border-t border-gray-200 dark:border-gray-800 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8'>
+            <div className='max-w-3xl mx-auto'>
               {(() => {
                 const isCustomSplitValid =
                   splitType === 'equal' ||
@@ -1097,7 +1199,7 @@ export default function GroupOrderPage() {
                         !isCustomSplitValid
                       }
                       onClick={updateOrder}
-                      className={`w-full py-6 text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${
+                      className={`w-full py-4 sm:py-5 text-sm sm:text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${
                         isCustomSplitValid
                           ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white'
                           : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed'
@@ -1106,7 +1208,7 @@ export default function GroupOrderPage() {
                       {paymentProcessing ? (
                         <>
                           <svg
-                            className='animate-spin -ml-1 mr-2 h-5 w-5 text-white'
+                            className='animate-spin -ml-1 mr-2 h-4 w-4 sm:h-5 sm:w-5 text-white'
                             xmlns='http://www.w3.org/2000/svg'
                             fill='none'
                             viewBox='0 0 24 24'>
@@ -1143,79 +1245,80 @@ export default function GroupOrderPage() {
 
           {/* Transaction History */}
           {groupOrder.paymentDetails.transactions.length > 0 && (
-            <Card className='mt-8 border border-gray-200 dark:border-gray-700 shadow-sm'>
-              <CardHeader className='pb-4'>
-                <CardTitle className='text-lg font-semibold text-gray-900 dark:text-white'>
+            <Card className='mt-6 border border-gray-200 dark:border-gray-700 shadow-sm'>
+              <CardHeader className='pb-3 sm:pb-4'>
+                <CardTitle className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
                   Transaction History
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className='overflow-hidden'>
-                  <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
-                    <thead className='bg-gray-50 dark:bg-gray-800'>
-                      <tr>
-                        <th
-                          scope='col'
-                          className='px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Member
-                        </th>
-                        <th
-                          scope='col'
-                          className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Amount
-                        </th>
-                        <th
-                          scope='col'
-                          className='px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className='bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800'>
-                      {groupOrder.paymentDetails.transactions.map((txn) => {
-                        const member = groupOrder.members.find(
-                          (m) => m._id === txn.user
-                        );
-                        const isCurrentUser = member?._id === user?.id;
-                        const statusColors = {
-                          pending:
-                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-                          success:
-                            'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-                          failed:
-                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-                        };
-                        const statusText =
-                          txn.status.charAt(0).toUpperCase() +
-                          txn.status.slice(1);
+              <CardContent className='p-0 sm:p-6'>
+                <div className='overflow-x-auto -mx-4 sm:mx-0'>
+                  {/* Desktop Table */}
+                  <div className='hidden sm:block'>
+                    <table className='min-w-full divide-y divide-gray-200 dark:divide-gray-700'>
+                      <thead className='bg-gray-50 dark:bg-gray-800'>
+                        <tr>
+                          <th
+                            scope='col'
+                            className='px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                            Member
+                          </th>
+                          <th
+                            scope='col'
+                            className='px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                            Amount
+                          </th>
+                          <th
+                            scope='col'
+                            className='px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className='bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800'>
+                        {groupOrder.paymentDetails.transactions.map((txn) => (
+                          <TransactionRowDesktop
+                            key={txn.transactionId}
+                            txn={txn}
+                            member={groupOrder.members.find(
+                              (m) => m._id === txn.user
+                            )}
+                            isCurrentUser={
+                              groupOrder.members.find((m) => m._id === txn.user)
+                                ?._id === user?.id
+                            }
+                            amount={
+                              amounts.find((a) => a.user === txn.user)?.amount ||
+                              0
+                            }
+                          />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                        return (
-                          <tr key={txn.transactionId}>
-                            <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white'>
-                              {isCurrentUser ? 'You' : member?.name}
-                            </td>
-                            <td className='px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400'>
-                              ₹
-                              {amounts
-                                .find((a) => a.user === txn.user)
-                                ?.amount.toFixed(2) || '0.00'}
-                            </td>
-                            <td className='px-6 py-4 whitespace-nowrap text-right'>
-                              <span
-                                className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
-                                  statusColors[
-                                    txn.status as keyof typeof statusColors
-                                  ] ||
-                                  'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                                }`}>
-                                {statusText}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                  {/* Mobile List */}
+                  <div className='sm:hidden space-y-3 p-4'>
+                    {groupOrder.paymentDetails.transactions.map((txn) => (
+                      <div
+                        key={txn.transactionId}
+                        className='bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-100 dark:border-gray-700'>
+                        <TransactionRowMobile
+                          txn={txn}
+                          member={groupOrder.members.find(
+                            (m) => m._id === txn.user
+                          )}
+                          isCurrentUser={
+                            groupOrder.members.find((m) => m._id === txn.user)
+                              ?._id === user?.id
+                          }
+                          amount={
+                            amounts.find((a) => a.user === txn.user)?.amount || 0
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
