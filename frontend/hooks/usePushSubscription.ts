@@ -24,7 +24,7 @@ export const usePushSubscription = (userId?: string) => {
        
 
       if(!subscription){
-          const res = await axios.get("http://localhost:8080/api/v1/notifications/publicKey");
+          const res = await axios.get("https://campusbites-mxpe.onrender.com/api/v1/notifications/publicKey");
         const { publicKey } = res.data;
 
         subscription= await registration.pushManager.subscribe({
@@ -33,7 +33,7 @@ export const usePushSubscription = (userId?: string) => {
         });
       }
 
-        const response = await axios.post("http://localhost:8080/api/v1/notifications/subscribe", {
+        const response = await axios.post("https://campusbites-mxpe.onrender.com/api/v1/notifications/subscribe", {
           userId,
           subscription: JSON.stringify(subscription.toJSON()),
         });
