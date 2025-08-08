@@ -99,7 +99,6 @@ const handlePaymentCaptured = async (payment) => {
         "payment_success",
       )
 
-      console.log(`UPI Payment captured for transaction: ${transaction._id}`)
     }
   } catch (error) {
     console.error("Handle payment captured error:", error)
@@ -108,7 +107,6 @@ const handlePaymentCaptured = async (payment) => {
 
 // Handle payment failed event
 const handlePaymentFailed = async (payment) => {
-  console.log("started");
   try {
     const transaction = await Transaction.findOne({
       razorpayOrderId: payment.order_id,
@@ -139,7 +137,6 @@ const handlePaymentFailed = async (payment) => {
       "payment_failed",
     )
 
-    console.log(`UPI Payment failed for transaction: ${transaction._id}`)
   } catch (error) {
     console.error("Handle payment failed error:", error)
   }
@@ -176,7 +173,6 @@ const handleRefundProcessed = async (refund) => {
         "refund_processed",
       )
 
-      console.log(`Full refund processed for transaction: ${transaction._id}`)
     }
   } catch (error) {
     console.error("Handle refund processed error:", error)
@@ -209,7 +205,6 @@ const handleRefundFailed = async (refund) => {
         "refund_failed",
       )
 
-      console.log(`Refund failed for transaction: ${transaction._id}`)
     }
   } catch (error) {
     console.error("Handle refund failed error:", error)

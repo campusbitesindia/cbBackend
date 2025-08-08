@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       try {
         const response = await fetch(
-          'http://localhost:8080/api/v1/users/login',
+          'https://campusbites-mxpe.onrender.com/api/v1/users/login',
           {
             method: 'POST',
             headers: {
@@ -194,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ) => {
       try {
         const response = await fetch(
-          'http://localhost:8080/api/v1/users/register',
+          'https://campusbites-mxpe.onrender.com/api/v1/users/register',
           {
             method: 'POST',
             headers: {

@@ -370,7 +370,6 @@ exports.loginUser = async (req, res, next) => {
       sameSite: "none",
       expires: new Date(Date.now() + 200 * 60 * 60 * 1000),
     }
-    console.log(user1)
     res.cookie("token", token, option)
     res.cookie("is_auth", true, {
       httpOnly: false,
@@ -671,7 +670,6 @@ exports.getUserDetails=async(req,res)=>{
     const userRes= await axios.get(
             `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
         );
-        console.log(userRes)
     const {id:googleId,name,email,picture}=userRes.data;
     const isUser=await User.findOne({email});
     if(isUser){

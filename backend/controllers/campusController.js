@@ -76,7 +76,6 @@ exports.requestCampusCreation = async (req, res) => {
 
     // For now, we'll just log this and return success
     // In production, save to CampusRequest model and notify admins
-    console.log("Campus creation request:", campusRequest)
 
     res.status(200).json({
       message: "Campus creation request submitted successfully. Admin will review and create the campus.",

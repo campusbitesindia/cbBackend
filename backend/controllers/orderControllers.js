@@ -296,7 +296,6 @@ exports.getAllOrdersByCanteen=async(req,res)=>{
         }
 
         const Orders=await Order.find({canteen:canteen._id}).populate({path:"student",select:"name"}).populate({path:"canteen",select:"name"}).sort({createdAt:-1});
-        console.log(Orders)
         const filteredOrder= Orders.filter((ele)=>ele.isDeleted===false && ele.status!=="pending");
         return res.status(200).json({
             success:true,

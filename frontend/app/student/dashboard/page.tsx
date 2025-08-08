@@ -75,7 +75,7 @@ function StudentDashboardContent() {
       try {
         setError(null);
         const response = await fetch(
-          'http://localhost:8080/api/v1/users/profile',
+          'https://campusbites-mxpe.onrender.com/api/v1/users/profile',
           {
             headers: {
               Authorization: `Bearer ${token}`,

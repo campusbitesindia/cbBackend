@@ -13,7 +13,6 @@ exports.getMenuByCanteenId = async (req, res) => {
         const menuItems = await Menu.find({ canteen: canteenId })
             .populate("canteen", "name")
             .select("-__v");
-            console.log(menuItems)
         res.status(200).json({ 
             success: true,
             data: menuItems,

@@ -50,7 +50,6 @@ exports.getBasicDashboard = async (req, res) => {
 
     const totalEarnings = earningsResult.length > 0 ? earningsResult[0].totalEarnings : 0;
     const earningsOrderCount = earningsResult.length > 0 ? earningsResult[0].orderCount : 0;
-    console.log(`Basic Dashboard - Earnings aggregation: ${earningsOrderCount} orders found, totalEarnings: ${totalEarnings}`);
 
     // Calculate total payouts
     const payoutsResult = await Payout.aggregate([
@@ -70,7 +69,6 @@ exports.getBasicDashboard = async (req, res) => {
 
     const totalPayouts = payoutsResult.length > 0 ? payoutsResult[0].totalPayouts : 0;
     const payoutCount = payoutsResult.length > 0 ? payoutsResult[0].payoutCount : 0;
-    console.log(`Basic Dashboard - Payouts aggregation: ${payoutCount} payouts found, totalPayouts: ${totalPayouts}`);
 
     // Calculate available balance
     const availableBalance = totalEarnings - totalPayouts;
@@ -83,7 +81,6 @@ exports.getBasicDashboard = async (req, res) => {
     });
 
     const activeItems = activeItemsResult.length;
-    console.log(`Basic Dashboard - Active items: ${activeItems}`);
 
     // Compute average rating
     let avgRating = 0;
@@ -97,7 +94,6 @@ exports.getBasicDashboard = async (req, res) => {
       canteen: new mongoose.Types.ObjectId(canteenId),
       isDeleted: false,
     });
-    console.log(`Basic Dashboard - Total orders: ${totalOrders}`);
 
     return res.json({
       success: true,
@@ -159,7 +155,6 @@ exports.getFinancialOverview = async (req, res) => {
         $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 }
       }
     ]);
-    console.log(`Financial Overview - Sales data: ${JSON.stringify(salesData)}`);
 
     // Calculate total earnings from completed or placed orders
     const earningsResult = await Order.aggregate([
@@ -182,7 +177,6 @@ exports.getFinancialOverview = async (req, res) => {
 
     const totalEarnings = earningsResult.length > 0 ? earningsResult[0].totalEarnings : 0;
     const earningsOrderCount = earningsResult.length > 0 ? earningsResult[0].orderCount : 0;
-    console.log(`Financial Overview - Earnings aggregation: ${earningsOrderCount} orders found, totalEarnings: ${totalEarnings}`);
 
     // Calculate total payouts
     const payoutsResult = await Payout.aggregate([
@@ -202,7 +196,6 @@ exports.getFinancialOverview = async (req, res) => {
 
     const totalPayouts = payoutsResult.length > 0 ? payoutsResult[0].totalPayouts : 0;
     const payoutCount = payoutsResult.length > 0 ? payoutsResult[0].payoutCount : 0;
-    console.log(`Financial Overview - Payouts aggregation: ${payoutCount} payouts found, totalPayouts: ${totalPayouts}`);
 
     // Calculate available balance
     const availableBalance = totalEarnings - totalPayouts;

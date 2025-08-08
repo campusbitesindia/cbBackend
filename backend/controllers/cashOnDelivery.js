@@ -67,7 +67,6 @@ exports.CreateCODTransaction = async (req, res) => {
       data: { transaction, order: updatedOrder },
     });
   } catch (err) {
-    console.log(err.message)
     return res.status(500).json({
       success: false,
       message: "Internal server error",
