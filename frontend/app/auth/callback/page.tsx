@@ -35,7 +35,10 @@ export default function AuthCallback() {
         description: "Successfully signed in with Google.",
       })
       setStatus("success")
-      setTimeout(() => router.push("/student/dashboard"), 2000) // Redirect to student dashboard
+      setTimeout(() => {
+        // loginWithToken will handle the redirect to appropriate dashboard
+        // No need to redirect here as it's already handled in the auth context
+      }, 2000)
     } else {
       toast({
         variant: "destructive",
