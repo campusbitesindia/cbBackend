@@ -14,7 +14,7 @@ const { oauth2Client } = require("../utils/googleOAuthClient")
 exports.registerUser = async (req, res) => {
   try {
     const { name, email, password, role, campus, phone } = req.body
-
+    console.log(phone);
     if (!name || !email || !password || !role || !campus) {
       return res.status(400).json({
         success: false,
@@ -31,20 +31,28 @@ exports.registerUser = async (req, res) => {
       })
     }
 
-    if (role !== "canteen" && (!phone || !/^\d{10}$/.test(phone) || Number(phone) <= 0)) {
-      return res.status(400).json({
-        success: false,
-        message: "Mobile number must be exactly 10 digits and positive.",
-      })
+    // Fixed phone validation - only validate for non-canteen roles
+    if (role !== "canteen") {
+      if (!phone) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number is required for students and admin users.",
+        })
+      }
+      
+      if (!/^\d{10}$/.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          message: "Phone number must be exactly 10 digits.",
+        })
+      }
     }
 
     // Handle both campus ID and campus name
     let campusDoc
     if (mongoose.Types.ObjectId.isValid(campus)) {
-      // If campus is a valid ObjectId, search by ID
       campusDoc = await Campus.findById(campus)
     } else {
-      // Otherwise, search by name
       campusDoc = await Campus.findOne({ name: campus })
     }
 
@@ -68,64 +76,79 @@ exports.registerUser = async (req, res) => {
       const suggestions = []
 
       if (!existingUser.password && existingUser.googleId) {
-        const hashedPass=await bcrypt.hash(password,10);
+        const hashedPass = await bcrypt.hash(password, 10)
 
-        const user=await User.findOneAndUpdate({email},{password:hashedPass,campus:campusDoc._id,...(role !== "canteen" ? { phone } : {})},{new:true});
+        // Create update object conditionally
+        const updateData = {
+          password: hashedPass,
+          campus: campusDoc._id,
+        }
+
+        // Only add phone if role is not canteen
+        if (role !== "canteen") {
+          updateData.phone = phone
+        }
+
+        const user = await User.findOneAndUpdate(
+          { email },
+          updateData,
+          { new: true }
+        )
 
         sendEmailVerificationOTP(req, user)
-            const token = JWT.sign(
-            {
-              id: user._id.toString(), // Ensure consistent string format
-              email: user.email,
-              role: user.role,
-              campusId: campusDoc._id.toString(),
+        
+        const token = JWT.sign(
+          {
+            id: user._id.toString(),
+            email: user.email,
+            role: user.role,
+            campusId: campusDoc._id.toString(),
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "200h" },
+        )
+
+        const options = {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          expires: new Date(Date.now() + 200 * 60 * 60 * 1000),
+        }
+
+        res.cookie("is_auth", true, options)
+        res.cookie("token", token, options)
+
+        return res.status(200).json({
+          success: true,
+          message:
+            role === "canteen"
+              ? "Vendor registered successfully. Please verify your email. Your canteen is pending admin approval."
+              : "User registered successfully. Please verify your email.",
+          user: {
+            id: user._id.toString(),
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            campus: {
+              id: campusDoc._id.toString(),
+              name: campusDoc.name,
+              code: campusDoc.code,
             },
-            process.env.JWT_SECRET,
-            { expiresIn: "200h" },
-          )
-
-          const options = {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none",
-            expires: new Date(Date.now() + 200 * 60 * 60 * 1000),
-          }
-
-          res.cookie("is_auth", true, options)
-          res.cookie("token", token, options)
-
-          // Consistent response format
-          return res.status(200).json({
-            success: true,
-            message:
-              role === "canteen"
-                ? "Vendor registered successfully. Please verify your email. Your canteen is pending admin approval."
-                : "User registered successfully. Please verify your email.",
-            user: {
-              id: user._id.toString(), // Consistent with token
-              _id: user._id, // Keep for backward compatibility
-              name: user.name,
-              email: user.email,
-              role: user.role,
-              campus: {
-                id: campusDoc._id.toString(),
-                name: campusDoc.name,
-                code: campusDoc.code,
-              },
-              canteenId: user.canteenId || null,
-              isVerified: user.is_verified,
-              approvalStatus: role === "canteen" ? "pending" : "approved",
-            },
-            token,
-            nextSteps:
-              role === "canteen"
-                ? [
-                    "Verify your email address",
-                    "Wait for admin approval of your canteen",
-                    "Once approved, you can start adding menu items",
-                  ]
-                : ["Verify your email address", "Complete your profile", "Start ordering from canteens"],
-          })
+            canteenId: user.canteenId || null,
+            isVerified: user.is_verified,
+            approvalStatus: role === "canteen" ? "pending" : "approved",
+          },
+          token,
+          nextSteps:
+            role === "canteen"
+              ? [
+                  "Verify your email address",
+                  "Wait for admin approval of your canteen",
+                  "Once approved, you can start adding menu items",
+                ]
+              : ["Verify your email address", "Complete your profile", "Start ordering from canteens"],
+        })
       } else if (!userInfo.isVerified) {
         message = "An unverified account exists with this email."
         suggestions.push("Check your email for verification link")
@@ -145,21 +168,31 @@ exports.registerUser = async (req, res) => {
       })
     }
 
+    console.log("started")
     const hashedPass = await bcrypt.hash(password, 10)
 
-    const user = await User.create({
+    // Create user data object conditionally
+    const userData = {
       name,
       email,
       password: hashedPass,
       role,
       campus: campusDoc._id,
-      ...(role !== "canteen" ? { phone } : {}),
       is_verified: false,
-    })
+    }
+
+    // Only add phone if role is not canteen
+    if (role !== "canteen") {
+      userData.phone = phone
+    }
+
+    const user = await User.create(userData)
+    
+    console.log(user)
+    console.log("User phone number:", user.phone) 
 
     // For vendors (canteen role), create a pending canteen that needs admin approval
     if (role === "canteen") {
-      // Extract additional fields for canteen creation
       const {
         canteenName,
         mobile: canteenMobile,
@@ -170,36 +203,31 @@ exports.registerUser = async (req, res) => {
         operatingDays,
       } = req.body
 
-      // For registration, we'll create a basic canteen record
-      // The vendor will need to complete the full onboarding process later
       const newCanteen = await Canteen.create({
         name: canteenName || `${name}'s Canteen`,
         campus: campusDoc._id,
-        isOpen: false, // Closed until approved
+        isOpen: false,
         owner: user._id,
         isApproved: false,
         approvalStatus: "pending",
 
-        // Basic required fields with placeholders
-        adhaarNumber: "000000000000", // Will be updated during onboarding
-        panNumber: "AAAAA0000A", // Will be updated during onboarding
-        gstNumber: "00AAAAA0000A1Z5", // Will be updated during onboarding
+        adhaarNumber: "000000000000",
+        panNumber: "AAAAA0000A",
+        gstNumber: "00AAAAA0000A1Z5",
         fssaiLicense: null,
         contactPersonName: name,
 
-        // New required fields
-        mobile: canteenMobile || phone || "0000000000", // Use provided mobile or phone
-        email: canteenEmail || email, // Use canteen email or user email
-        address: canteenAddress || "Address to be updated", // Placeholder address
+        mobile: canteenMobile || "0000000000", // Don't use user.phone for canteen
+        email: canteenEmail || email,
+        address: canteenAddress || "Address to be updated",
 
-        // Default operating hours
         operatingHours: {
           opening: openingHours || "09:00",
           closing: closingHours || "21:00",
         },
         operatingDays: operatingDays || ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
 
-        images: [], // Will be added during onboarding
+        images: [],
       })
 
       user.canteenId = newCanteen._id
@@ -210,7 +238,7 @@ exports.registerUser = async (req, res) => {
 
     const token = JWT.sign(
       {
-        id: user._id.toString(), // Ensure consistent string format
+        id: user._id.toString(),
         email: user.email,
         role: user.role,
         campusId: campusDoc._id.toString(),
@@ -229,7 +257,6 @@ exports.registerUser = async (req, res) => {
     res.cookie("is_auth", true, options)
     res.cookie("token", token, options)
 
-    // Consistent response format
     return res.status(200).json({
       success: true,
       message:
@@ -237,8 +264,8 @@ exports.registerUser = async (req, res) => {
           ? "Vendor registered successfully. Please verify your email. Your canteen is pending admin approval."
           : "User registered successfully. Please verify your email.",
       user: {
-        id: user._id.toString(), // Consistent with token
-        _id: user._id, // Keep for backward compatibility
+        id: user._id.toString(),
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -584,7 +611,7 @@ exports.updateProfile = async (req, res) => {
       .populate("campus", "name code city")
       .populate("canteenId", "name")
       .select("-password -resetPasswordToken -resetPasswordExpire")
-
+    
     // Add security event for profile update
     if (req.deviceInfo) {
       updatedUser.addSecurityEvent(
