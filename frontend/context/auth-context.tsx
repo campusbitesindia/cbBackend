@@ -83,7 +83,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('current_device_id');
     localStorage.removeItem('canteenId');
-    router.push('/');
+
+    // Clear any route persistence data
+    localStorage.removeItem('lastPath');
+    localStorage.removeItem('redirectPath');
+    sessionStorage.removeItem('lastPath');
+    sessionStorage.removeItem('redirectPath');
+
+    router.push('/login');
   }, [router]);
 
   const loginWithToken = useCallback(
@@ -94,6 +101,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(decoded);
           setToken(token);
           localStorage.setItem('token', token);
+
+          // Clear any stored route persistence data
+          localStorage.removeItem('lastPath');
+          localStorage.removeItem('redirectPath');
+          sessionStorage.removeItem('lastPath');
+          sessionStorage.removeItem('redirectPath');
+
+          // Navigate to appropriate dashboard based on user role
+          switch (decoded.role) {
+            case 'student':
+              router.push('/student/dashboard');
+              break;
+            case 'campus':
+            case 'canteen':
+              router.push('/campus/dashboard');
+              break;
+            case 'admin':
+              router.push('/admin/dashboard');
+              break;
+            default:
+              router.push('/student/dashboard');
+              break;
+          }
         } else {
           throw new Error('Expired token');
         }
@@ -102,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout();
       }
     },
-    [logout]
+    [logout, router]
   );
 
   const login = useCallback(
@@ -130,6 +160,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(decoded);
           setToken(data.token);
           localStorage.setItem('token', data.token);
+
+          // Clear any stored route persistence data
+          localStorage.removeItem('lastPath');
+          localStorage.removeItem('redirectPath');
+          sessionStorage.removeItem('lastPath');
+          sessionStorage.removeItem('redirectPath');
 
           // Save device ID if provided
           if (data.security?.deviceRegistered) {
@@ -225,6 +261,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(decoded);
           setToken(data.token);
           localStorage.setItem('token', data.token);
+
+          // Clear any stored route persistence data
+          localStorage.removeItem('lastPath');
+          localStorage.removeItem('redirectPath');
+          sessionStorage.removeItem('lastPath');
+          sessionStorage.removeItem('redirectPath');
 
           if (data.security && handleSecurityPrompt) {
             setTimeout(() => {

@@ -103,7 +103,7 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
     <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full'>
       {/* Enhanced Image Section */}
       <div className='relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-800'>
-        <div className='aspect-[5/4] relative overflow-hidden'>
+        <div className='aspect-square relative overflow-hidden'>
           <img
             src={item.image || '/placeholder.svg'}
             alt={item.name}
