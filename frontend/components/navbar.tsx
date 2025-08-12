@@ -585,7 +585,9 @@ function Navbar() {
                       <Button
                         asChild
                         variant='outline'
-                        className='w-full h-12 rounded-xl border-white/20 text-lg text-white hover:bg-white/10 hover:text-white'>
+                        className='w-full bg-gray-200 text-white dark:text-black font-semibold rounded-xl py-4 shadow-md 
+             transition-colors transition-transform duration-300 hover:scale-105 
+             hover:bg-gray-300'>
                         <Link
                           href='/login'
                           onClick={() => setIsMenuOpen(false)}>
