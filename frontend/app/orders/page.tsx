@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useReducer,useMemo, memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -30,27 +30,27 @@ import Image from 'next/image';
 import { Order, Review } from '@/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  Loader2,
-  Inbox,
-  AlertCircle,
-  Eye,
-  Clock,
-  MapPin,
-  CreditCard,
-  Package,
+  Receipt,
   ChefHat,
+  Package,
   CheckCircle2,
   XCircle,
-  Truck,
-  Receipt,
-  Calendar,
+  CreditCard,
   ShoppingBag,
-  Star,
   ArrowRight,
-  RefreshCw,
-  MessageSquare,
+  Loader2,
+  Clock,
+  Star,
   Heart,
+  MessageSquare,
   Plus,
+  Calendar,
+  Eye,
+  RefreshCw,
+  AlertCircle,
+  Truck,
+  MapPin,
+  Inbox,
 } from 'lucide-react';
 import { getMyOrders, getOrderById, AuthError } from '@/services/orderService';
 import { createReview, getItemReviews } from '@/services/reviewService';
@@ -61,106 +61,204 @@ import {
   useInView,
   useSpring,
   useTransform,
+  useMotionValue,
+ Transition,
 } from 'framer-motion';
 import ItemReviewSelector from '@/components/ItemReviewSelector';
 
 // Shared Helper Functions
-const getStatusConfig = (status: string) => {
-  const configs = {
-    placed: {
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/50',
-      textColor: 'text-blue-700 dark:text-blue-300',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      icon: Receipt,
-      label: 'Order Placed',
-      description: 'Your order has been received',
-    },
-    payment_pending: {
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-950/50',
-      textColor: 'text-orange-700 dark:text-orange-300',
-      borderColor: 'border-orange-200 dark:border-orange-800',
-      icon: Receipt,
-      label: 'Payment Pending',
-      description: 'Payment is pending for this order',
-    },
-    preparing: {
-      color: 'bg-yellow-500',
-      bgColor: 'bg-yellow-50 dark:bg-yellow-950/50',
-      textColor: 'text-yellow-700 dark:text-yellow-300',
-      borderColor: 'border-yellow-200 dark:border-yellow-800',
-      icon: ChefHat,
-      label: 'Preparing',
-      description: 'Your food is being prepared',
-    },
-    ready: {
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-950/50',
-      textColor: 'text-purple-700 dark:text-purple-300',
-      borderColor: 'border-purple-200 dark:border-purple-800',
-      icon: Package,
-      label: 'Ready for Pickup',
-      description: 'Your order is ready',
-    },
-    completed: {
-      color: 'bg-green-500',
-      bgColor: 'bg-green-50 dark:bg-green-950/50',
-      textColor: 'text-green-700 dark:text-green-300',
-      borderColor: 'border-green-200 dark:border-green-800',
-      icon: CheckCircle2,
-      label: 'Completed',
-      description: 'Order delivered successfully',
-    },
-    cancelled: {
-      color: 'bg-red-500',
-      bgColor: 'bg-red-50 dark:bg-red-950/50',
-      textColor: 'text-red-700 dark:text-red-300',
-      borderColor: 'border-red-200 dark:border-red-800',
-      icon: XCircle,
-      label: 'Cancelled',
-      description: 'Order was cancelled',
-    },
-  };
-  return configs[status as keyof typeof configs] || configs.placed;
+type OrderStatus =
+  | 'placed'
+  | 'payment_pending'
+  | 'preparing'
+  | 'ready'
+  | 'completed'
+  | 'cancelled';
+
+interface StatusConfig {
+  color: string;
+  bgColor: string;
+  textColor: string;
+  borderColor: string;
+  icon: React.ComponentType<any>;
+  label: string;
+  description: string;
+}
+
+const statusConfigs: Record<OrderStatus, StatusConfig> = {
+  placed: {
+    color: 'bg-blue-500',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
+    textColor: 'text-blue-700 dark:text-blue-300',
+    borderColor: 'border-blue-200 dark:border-blue-800',
+    icon: Receipt,
+    label: 'Order Placed',
+    description: 'Your order has been received',
+  },
+  payment_pending: {
+    color: 'bg-orange-500',
+    bgColor: 'bg-orange-50 dark:bg-orange-950/50',
+    textColor: 'text-orange-700 dark:text-orange-300',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    icon: Receipt,
+    label: 'Payment Pending',
+    description: 'Payment is pending for this order',
+  },
+  preparing: {
+    color: 'bg-yellow-500',
+    bgColor: 'bg-yellow-50 dark:bg-yellow-950/50',
+    textColor: 'text-yellow-700 dark:text-yellow-300',
+    borderColor: 'border-yellow-200 dark:border-yellow-800',
+    icon: ChefHat,
+    label: 'Preparing',
+    description: 'Your food is being prepared',
+  },
+  ready: {
+    color: 'bg-purple-500',
+    bgColor: 'bg-purple-50 dark:bg-purple-950/50',
+    textColor: 'text-purple-700 dark:text-purple-300',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+    icon: Package,
+    label: 'Ready for Pickup',
+    description: 'Your order is ready',
+  },
+  completed: {
+    color: 'bg-green-500',
+    bgColor: 'bg-green-50 dark:bg-green-950/50',
+    textColor: 'text-green-700 dark:text-green-300',
+    borderColor: 'border-green-200 dark:border-green-800',
+    icon: CheckCircle2,
+    label: 'Completed',
+    description: 'Order delivered successfully',
+  },
+  cancelled: {
+    color: 'bg-red-500',
+    bgColor: 'bg-red-50 dark:bg-red-950/50',
+    textColor: 'text-red-700 dark:text-red-300',
+    borderColor: 'border-red-200 dark:border-red-800',
+    icon: XCircle,
+    label: 'Cancelled',
+    description: 'Order was cancelled',
+  },
 };
 
-const getPaymentConfig = (method: string) => {
-  const configs = {
-    cod: {
-      icon: Package,
-      label: 'Cash on Delivery',
-      color:
-        'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/50',
-    },
-    upi: {
-      icon: CreditCard,
-      label: 'UPI Payment',
-      color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/50',
-    },
-    card: {
-      icon: CreditCard,
-      label: 'Card Payment',
-      color:
-        'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/50',
-    },
-  };
-  return configs[method as keyof typeof configs] || configs.cod;
+const getStatusConfig = (status: string): StatusConfig =>
+  statusConfigs[status as OrderStatus] ?? statusConfigs.placed;
+
+type PaymentMethod = 'cod' | 'upi' | 'card';
+
+interface PaymentConfig {
+  icon: React.ComponentType<any>;
+  label: string;
+  color: string;
+}
+
+const paymentConfigs: Record<PaymentMethod, PaymentConfig> = {
+  cod: {
+    icon: Package,
+    label: 'Cash on Delivery',
+    color: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/50',
+  },
+  upi: {
+    icon: CreditCard,
+    label: 'UPI Payment',
+    color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/50',
+  },
+  card: {
+    icon: CreditCard,
+    label: 'Card Payment',
+    color: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/50',
+  },
+};
+// Define Review State and Actions
+type ReviewState = {
+  showDialog: boolean;
+  selectedItem: any | null;
+  selectedOrder: Order | null;
+  rating: number;
+  comment: string;
+  submitting: boolean;
+  showThankYou: boolean;
 };
 
-const formatDate = (dateString: string) => {
+type ReviewAction =
+  | { type: 'openDialog'; item: any; order: Order }
+  | { type: 'closeDialog' }
+  | { type: 'setRating'; rating: number }
+  | { type: 'setComment'; comment: string }
+  | { type: 'setSubmitting'; submitting: boolean }
+  | { type: 'showThankYou' }
+  | { type: 'reset' };
+
+// Initial state for review
+const initialReviewState: ReviewState = {
+  showDialog: false,
+  selectedItem: null,
+  selectedOrder: null,
+  rating: 0,
+  comment: '',
+  submitting: false,
+  showThankYou: false,
+};
+
+// Reducer function to manage review state
+function reviewReducer(state: ReviewState, action: ReviewAction): ReviewState {
+  switch (action.type) {
+    case 'openDialog':
+      return {
+        ...state,
+        showDialog: true,
+        selectedItem: action.item,
+        selectedOrder: action.order,
+      };
+    case 'closeDialog':
+      return {
+        ...state,
+        showDialog: false,
+        selectedItem: null,
+        selectedOrder: null,
+        rating: 0,
+        comment: '',
+        submitting: false,
+        showThankYou: false,
+      };
+    case 'setRating':
+      return { ...state, rating: action.rating };
+    case 'setComment':
+      return { ...state, comment: action.comment };
+    case 'setSubmitting':
+      return { ...state, submitting: action.submitting };
+    case 'showThankYou':
+      return { ...state, showThankYou: true };
+    case 'reset':
+      return initialReviewState;
+    default:
+      return state;
+  }
+}
+
+const getPaymentConfig = (method: string): PaymentConfig =>
+  paymentConfigs[method as PaymentMethod] ?? paymentConfigs.cod;
+
+
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+const formatDate = (dateString?: string): string => {
   if (!dateString) return 'Date not available';
+
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'Invalid date';
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(date);
+  if (isNaN(date.valueOf())) return 'Invalid date';
+
+  return dateFormatter.format(date);
 };
+
 
 // Animated Counter Component
 function AnimatedCounter({
@@ -170,51 +268,66 @@ function AnimatedCounter({
   value: number;
   duration?: number;
 }) {
-  const spring = useSpring(0, { mass: 0.8, stiffness: 75, damping: 15 });
-  const display = useTransform(spring, (current) => Math.round(current));
+  const spring = useSpring(value, { mass: 0.8, stiffness: 75, damping: 15 });
+
+  // useMotionValue hook to get the current value of spring
+  const [displayValue, setDisplayValue] =useState(Math.round(value));
 
   useEffect(() => {
     spring.set(value);
-  }, [spring, value]);
+    // subscribe to spring updates and update displayValue state
+    return spring.on('change', (latest) => {
+      setDisplayValue(Math.round(latest));
+    });
+  }, [value, spring]);
 
-  return <motion.span>{display}</motion.span>;
+  return <motion.span>{displayValue}</motion.span>;
 }
 
 function OrdersPageContent() {
   const { isAuthenticated, token } = useAuth();
   const { addToCart, clearCart } = useCart();
   const router = useRouter();
+
+
+  // Orders data
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Selected order & detail modal
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderDetailLoading, setOrderDetailLoading] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
-  // Review related state - simplified
-  const [showReviewDialog, setShowReviewDialog] = useState(false);
-  const [selectedItemForReview, setSelectedItemForReview] = useState<any>(null);
-  const [selectedOrderForReview, setSelectedOrderForReview] =
-    useState<Order | null>(null);
-  const [reviewRating, setReviewRating] = useState(0);
-  const [reviewComment, setReviewComment] = useState('');
-  const [reviewSubmitting, setReviewSubmitting] = useState(false);
-  const [showThankYouDialog, setShowThankYouDialog] = useState(false);
+  // Review state managed by reducer
+  const [reviewState, dispatchReview] = useReducer(reviewReducer, initialReviewState);
 
-  // View reviews related state - simplified
-  const [showViewReviewDialog, setShowViewReviewDialog] = useState(false);
-  const [selectedItemForViewReview, setSelectedItemForViewReview] =
-    useState<any>(null);
-  const [existingReviews, setExistingReviews] = useState<Review[]>([]);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-
-  // Item review selector dialog state
-  const [showItemSelectorDialog, setShowItemSelectorDialog] = useState(false);
-  const [selectedOrderForSelector, setSelectedOrderForSelector] =
-    useState<Order | null>(null);
-
-  // Frontend-only state for tracking viewed reviews (no backend update)
+  // Viewed reviews tracking
   const [viewedReviews, setViewedReviews] = useState<Set<string>>(new Set());
+
+  // To add viewed review id immutably:
+  const markReviewAsViewed = (reviewId: string) => {
+    setViewedReviews((prev) => new Set(prev).add(reviewId));
+  };
+  const [selectedOrderForReview, setSelectedOrderForReview] = useState<Order | null>(null);
+const [selectedItemForReview, setSelectedItemForReview] = useState<any | null>(null);
+const [reviewRating, setReviewRating] = useState(0);
+const [reviewComment, setReviewComment] = useState('');
+const [showReviewDialog, setShowReviewDialog] = useState(false);
+
+const [showViewReviewDialog, setShowViewReviewDialog] = useState(false);
+const [selectedItemForViewReview, setSelectedItemForViewReview] = useState<any | null>(null);
+
+const [reviewsLoading, setReviewsLoading] = useState(false);
+const [existingReviews, setExistingReviews] = useState<Review[]>([]);
+
+const [selectedOrderForSelector, setSelectedOrderForSelector] = useState<Order | null>(null);
+const [showItemSelectorDialog, setShowItemSelectorDialog] = useState(false);
+
+const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+const [showThankYouDialog, setShowThankYouDialog] = useState(false);
 
   // Load viewed reviews from localStorage on component mount
   useEffect(() => {
@@ -231,145 +344,126 @@ function OrdersPageContent() {
 
   // Save viewed reviews to localStorage whenever it changes
   useEffect(() => {
-    if (viewedReviews.size > 0) {
-      localStorage.setItem('viewedReviews', JSON.stringify([...viewedReviews]));
+    const savedViewedReviews = localStorage.getItem('viewedReviews');
+    if (savedViewedReviews) {
+      try {
+        const parsed = JSON.parse(savedViewedReviews);
+        setViewedReviews(new Set(parsed));
+      } catch (error) {
+        console.error('Error loading viewed reviews:', error);
+      }
     }
-  }, [viewedReviews]);
-
+  }, []);
+  
   useEffect(() => {
     if (isAuthenticated && token) {
       fetchOrders();
     }
   }, [isAuthenticated, token]);
-
-  // Function to map API response to expected Order structure
-  const mapApiResponseToOrder = (apiOrder: any): Order => {
-    return {
-      _id: apiOrder._id,
-      student: apiOrder.student?.name || 'Unknown Student',
-      canteen: {
-        _id: apiOrder.canteen?._id || '',
-        name: apiOrder.canteen?.name || 'Unknown Canteen',
-      },
-      items: apiOrder.items.map((item: any) => ({
-        _id: item._id,
-        item: {
-          _id: typeof item.item === 'string' ? item.item : item.item?._id || '',
-          name: item.nameAtPurchase || 'Unknown Item',
-          price: item.priceAtPurchase || 0,
-          image: undefined, // API doesn't provide image in this response
-        },
-        quantity: item.quantity || 0,
-      })),
-      total: apiOrder.total || 0,
-      status: apiOrder.status,
-      payment: {
-        method: 'cod', // Default to COD since API doesn't specify
-        status: apiOrder.status === 'payment_pending' ? 'pending' : 'completed',
-      },
-      createdAt: apiOrder.createdAt,
-      updatedAt: apiOrder.updatedAt,
-      paymentStatus: apiOrder.paymentStatus || 'pending',
-    };
-  };
+  
 
   const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
       const response = await getMyOrders(token!);
-      // Map the API response to match the expected Order structure
-      const mappedOrders = response.data.map(mapApiResponseToOrder);
-      setOrders(mappedOrders);
+      setOrders(response.data);
     } catch (err: any) {
-      if (err instanceof AuthError) {
-        setError('Session expired. Please login again to view your orders.');
-      } else {
-        setError(err.message || 'Failed to fetch orders');
-      }
+      const errorMsg =
+        err instanceof AuthError
+          ? 'Session expired. Please login again to view your orders.'
+          : err?.message ?? 'Failed to fetch orders';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleViewDetails = async (orderId: string) => {
+    setOrderDetailLoading(true);
+    setSelectedOrder(null);
+    setIsDetailModalOpen(true);
+  
     try {
-      setOrderDetailLoading(true);
-      setSelectedOrder(null); // Clear previous order
-      setIsDetailModalOpen(true); // Open modal immediately to show loading
-      const response = await getOrderById(orderId, token!);
-      setSelectedOrder(response.data);
-    } catch (err: any) {
+      const { data } = await getOrderById(orderId, token!);
+      setSelectedOrder(data);
+    } catch (err) {
       console.error('Failed to fetch order details:', err);
-      setIsDetailModalOpen(false); // Close modal on error
-      // Show error toast or message
+      setIsDetailModalOpen(false);
       alert('Failed to load order details. Please try again.');
     } finally {
       setOrderDetailLoading(false);
     }
   };
+  
 
   if (!isAuthenticated) {
     return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 flex items-center justify-center relative overflow-hidden'>
-        {/* Enhanced Background Elements */}
-        <div className='absolute inset-0'>
-          <motion.div
-            className='absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-purple-400/20 dark:from-blue-600/20 dark:to-purple-600/20 rounded-full blur-3xl'
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
-          <motion.div
-            className='absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-orange-400/20 to-pink-400/20 dark:from-orange-600/20 dark:to-pink-600/20 rounded-full blur-3xl'
-            animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.2, 0.4, 0.2],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: 'easeInOut',
-              delay: 2,
-            }}
-          />
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 flex items-center justify-center relative overflow-hidden">
+        {/* Background Animated Blurs */}
+        <div className="absolute inset-0">
+          {[
+            {
+              className:
+                'absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-purple-400/20 dark:from-blue-600/20 dark:to-purple-600/20 rounded-full blur-3xl',
+              animate: { scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] },
+              transition: { duration: 8, repeat: Infinity, ease: 'easeInOut' },
+            },
+            {
+              className:
+                'absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-orange-400/20 to-pink-400/20 dark:from-orange-600/20 dark:to-pink-600/20 rounded-full blur-3xl',
+              animate: { scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] },
+              transition: { duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 },
+            },
+          ].map(({ className, animate, transition }, i) => (
+            <motion.div
+  key={i}
+  className={className}
+  animate={animate}
+  transition={{
+    duration: 10,
+    repeat: Infinity,
+    ease: 'easeInOut',
+    delay: 2,
+  }}
+/>
 
+          ))}
+        </div>
+  
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
-          className='relative z-10'>
-          <Card className='w-full max-w-md mx-4 shadow-2xl border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl relative overflow-hidden'>
-            <div className='absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-slate-800/50' />
-            <CardContent className='pt-12 pb-8 px-8 text-center relative z-10'>
+          className="relative z-10"
+        >
+          <Card className="w-full max-w-md mx-4 shadow-2xl border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-slate-800/50" />
+            <CardContent className="pt-12 pb-8 px-8 text-center relative z-10">
               <motion.div
-                className='w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl'
+                className="w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
                 whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}>
-                <ShoppingBag className='w-10 h-10 text-white' />
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
+                <ShoppingBag className="w-10 h-10 text-white" />
               </motion.div>
-              <CardTitle className='text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100'>
+  
+              <CardTitle className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">
                 Welcome Back!
               </CardTitle>
-              <CardDescription className='text-gray-600 dark:text-gray-300 mb-8 text-base leading-relaxed'>
-                Sign in to view your order history and track your delicious
-                campus meals.
+  
+              <CardDescription className="text-gray-600 dark:text-gray-300 mb-8 text-base leading-relaxed">
+                Sign in to view your order history and track your delicious campus meals.
               </CardDescription>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}>
+  
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   asChild
-                  className='w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300'>
-                  <Link href='/login'>
-                    <ArrowRight className='w-5 h-5 mr-2' />
+                  className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <Link href="/login" className="flex items-center justify-center">
+                    <ArrowRight className="w-5 h-5 mr-2" />
                     Sign In to Continue
                   </Link>
                 </Button>
@@ -380,6 +474,7 @@ function OrdersPageContent() {
       </div>
     );
   }
+  
 
   // Review helper functions
   const handleWriteReview = (order: Order, item: any) => {
@@ -389,66 +484,49 @@ function OrdersPageContent() {
     setReviewComment('');
     setShowReviewDialog(true);
   };
-
+  
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (reviewRating === 0) {
-      toast.error('Please select a rating');
-      return;
-    }
-
-    if (!reviewComment.trim()) {
-      toast.error('Please add a comment');
-      return;
-    }
-
-    if (!selectedItemForReview || !selectedOrderForReview) {
-      toast.error('Invalid review data');
-      return;
-    }
-
+  
+    if (reviewRating === 0) return toast.error('Please select a rating');
+    if (!reviewComment.trim()) return toast.error('Please add a comment');
+    if (!selectedItemForReview || !selectedOrderForReview)
+      return toast.error('Invalid review data');
+  
     setReviewSubmitting(true);
     try {
       const itemId =
         typeof selectedItemForReview.item === 'string'
           ? selectedItemForReview.item
           : selectedItemForReview.item._id;
-
-      console.log('Writing review for item ID:', itemId);
-      console.log('Selected item structure:', selectedItemForReview);
-
+  
       const reviewData = {
         canteenId: selectedOrderForReview.canteen._id,
         itemId,
         rating: reviewRating,
         comment: reviewComment.trim(),
       };
-
+  
       await createReview(reviewData);
-
-      // Close review dialog and reset form
+  
+      // Reset and close review dialog
       setShowReviewDialog(false);
       setReviewRating(0);
       setReviewComment('');
       setSelectedItemForReview(null);
       setSelectedOrderForReview(null);
-
-      // Show thank you dialog
+  
       setShowThankYouDialog(true);
-
-      // If user has view review dialog open for the same item, refresh the reviews
+  
+      // Refresh reviews if viewing same item review dialog
       if (showViewReviewDialog && selectedItemForViewReview) {
         const viewItemId =
           typeof selectedItemForViewReview.item === 'string'
             ? selectedItemForViewReview.item
             : selectedItemForViewReview.item._id;
         if (viewItemId === itemId) {
-          console.log('Refreshing reviews after creating new review');
-          // Add a small delay to ensure the backend has processed the review
-          setTimeout(() => {
-            fetchItemReviews(itemId);
-          }, 1000);
+          // Small delay to allow backend processing
+          setTimeout(() => fetchItemReviews(itemId), 1000);
         }
       }
     } catch (error) {
@@ -458,361 +536,405 @@ function OrdersPageContent() {
       setReviewSubmitting(false);
     }
   };
+  
 
   // View review helper functions
-  const handleViewReviews = (order: Order, item: any) => {
-    setSelectedOrderForReview(order);
-    setSelectedItemForViewReview(item);
+  // View review helper functions
+const handleViewReviews = (order: Order, item: any) => {
+  setSelectedOrderForReview(order);
+  setSelectedItemForViewReview(item);
 
-    const itemId = typeof item.item === 'string' ? item.item : item.item._id;
-    console.log('🔍 Viewing reviews for item ID:', itemId);
-    console.log('📦 Item structure:', item);
-    console.log('🏪 Order structure:', order);
-    console.log('🆔 Order ID:', order._id);
-    console.log('🍽️ Item name:', item.item?.name || 'Unknown');
+  const itemId = typeof item.item === 'string' ? item.item : item.item._id;
 
-    // Mark this item's reviews as viewed (frontend-only, no backend update)
-    setViewedReviews((prev) => {
-      const newSet = new Set(prev);
-      newSet.add(itemId);
-      return newSet;
-    });
+  // Mark this item's reviews as viewed (frontend only)
+  setViewedReviews(prev => {
+    if (prev.has(itemId)) return prev;
+    return new Set(prev).add(itemId);
+  });
 
-    setShowViewReviewDialog(true);
-    // Add a small delay to ensure any recently submitted reviews are fetched
-    setTimeout(() => {
-      fetchItemReviews(itemId);
-    }, 500);
-  };
+  setShowViewReviewDialog(true);
 
-  // Item selector helper functions
-  const handleOpenItemSelector = (order: Order) => {
-    setSelectedOrderForSelector(order);
-    setShowItemSelectorDialog(true);
-  };
+  // Delay to ensure recent reviews are fetched
+  setTimeout(() => fetchItemReviews(itemId), 500);
+};
 
-  const handleItemSelectorWriteReview = (item: any) => {
-    if (selectedOrderForSelector) {
-      setShowItemSelectorDialog(false);
-      handleWriteReview(selectedOrderForSelector, item);
+// Item selector helper functions
+const handleOpenItemSelector = (order: Order) => {
+  setSelectedOrderForSelector(order);
+  setShowItemSelectorDialog(true);
+};
+
+const handleItemSelectorWriteReview = (item: any) => {
+  if (!selectedOrderForSelector) return;
+  setShowItemSelectorDialog(false);
+  handleWriteReview(selectedOrderForSelector, item);
+};
+
+const handleItemSelectorViewReviews = (item: any) => {
+  if (!selectedOrderForSelector) return;
+  handleViewReviews(selectedOrderForSelector, item);
+};
+
+// Fetch item reviews from backend
+const fetchItemReviews = async (itemId: string) => {
+  setReviewsLoading(true);
+  try {
+    const reviews = await getItemReviews(itemId);
+    setExistingReviews(reviews);
+
+    if (reviews.length === 0) {
+      toast.info('No reviews found for this item yet.');
+    } else {
+      toast.success(`Found ${reviews.length} review(s) for this item.`);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    toast.error('Failed to load reviews');
+    setExistingReviews([]);
+  } finally {
+    setReviewsLoading(false);
+  }
+};
 
-  const handleItemSelectorViewReviews = (item: any) => {
-    if (selectedOrderForSelector) {
-      handleViewReviews(selectedOrderForSelector, item);
-    }
-  };
 
-  const fetchItemReviews = async (itemId: string) => {
-    setReviewsLoading(true);
-    try {
-      console.log('Fetching reviews for item ID:', itemId);
-      const reviews = await getItemReviews(itemId);
-      console.log('Fetched reviews:', reviews);
-      console.log('Review count:', reviews.length);
-      console.log('First review (if exists):', reviews[0]);
-      setExistingReviews(reviews);
+ // Helper to check if item's reviews viewed (frontend only)
+const hasViewedReviews = (itemId: string) => viewedReviews.has(itemId);
 
-      if (reviews.length === 0) {
-        toast.info('No reviews found for this item yet.');
-      } else {
-        toast.success(`Found ${reviews.length} review(s) for this item.`);
-      }
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      toast.error('Failed to load reviews');
-      setExistingReviews([]);
-    } finally {
-      setReviewsLoading(false);
-    }
-  };
+// Helper to clear viewed reviews and localStorage
+const clearViewedReviews = () => {
+  setViewedReviews(new Set());
+  localStorage.removeItem('viewedReviews');
+  toast.success('Viewed reviews cleared! 🧹');
+};
 
-  // Helper function to check if an item's reviews have been viewed (frontend-only)
-  const hasViewedReviews = (itemId: string) => {
-    return viewedReviews.has(itemId);
-  };
+// Reorder functionality
+const handleReorder = (order: Order) => {
+  try {
+    clearCart();
 
-  // Helper function to clear viewed reviews (frontend-only utility)
-  const clearViewedReviews = () => {
-    setViewedReviews(new Set());
-    localStorage.removeItem('viewedReviews');
-    toast.success('Viewed reviews cleared! 🧹');
-  };
-
-  // Reorder functionality
-  const handleReorder = (order: Order) => {
-    try {
-      // Clear current cart first
-      clearCart();
-
-      // Add all items from the order to cart
-      let itemsAdded = 0;
-      order.items.forEach((orderItem) => {
-        if (orderItem.item && orderItem.item._id) {
-          addToCart({
-            id: orderItem.item._id,
-            name: orderItem.item.name,
-            price: orderItem.item.price,
-            quantity: orderItem.quantity,
-            image: orderItem.item.image || '/placeholder.svg',
-            canteenId: order.canteen._id,
-          });
-          itemsAdded++;
-        }
-      });
-
-      if (itemsAdded > 0) {
-        toast.success(`${itemsAdded} items added to cart! 🛒`, {
-          description: 'Redirecting to cart...',
-          duration: 2000,
+    // Add all valid items to cart
+    const itemsAdded = order.items.reduce((count, orderItem) => {
+      const item = orderItem.item;
+      if (item?._id) {
+        addToCart({
+          id: item._id,
+          name: item.name,
+          price: item.price,
+          quantity: orderItem.quantity,
+          image: item.image ?? '/placeholder.svg',
+          canteenId: order.canteen._id,
         });
-
-        // Navigate to cart page after a short delay
-        setTimeout(() => {
-          router.push('/cart');
-        }, 1000);
-      } else {
-        toast.error('No items could be added to cart');
+        return count + 1;
       }
-    } catch (error) {
-      console.error('Error reordering:', error);
-      toast.error('Failed to reorder. Please try again.');
+      return count;
+    }, 0);
+
+    if (itemsAdded > 0) {
+      toast.success(`${itemsAdded} item${itemsAdded > 1 ? 's' : ''} added to cart! 🛒`, {
+        description: 'Redirecting to cart...',
+        duration: 2000,
+      });
+      setTimeout(() => router.push('/cart'), 1000);
+    } else {
+      toast.error('No items could be added to cart');
     }
-  };
-
-  if (loading) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900'>
-        {/* Modern Header */}
-        <div className='bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
-          <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
-            <div className='flex items-center justify-between'>
-              <div>
-                <h1 className='text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
-                  My Orders
-                </h1>
-                <p className='text-gray-600 dark:text-slate-300 mt-1 text-sm sm:text-base'>
-                  Track your delicious journey
-                </p>
-              </div>
-            </div>
-          </div>
+  } catch (error) {
+    console.error('Error reordering:', error);
+    toast.error('Failed to reorder. Please try again.');
+  }
+};
+const activeOrders = useMemo(() =>
+  orders.filter((o) =>
+    ['placed', 'preparing', 'ready', 'payment_pending'].includes(o.status)
+  ),
+[orders]
+);
+if (loading) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
+      {/* Loading Header */}
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
+            My Orders
+          </h1>
+          <p className="text-gray-600 dark:text-slate-300 mt-1 text-sm sm:text-base">
+            Track your delicious journey
+          </p>
         </div>
+      </div>
 
-        <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-12'>
-          <motion.div
-            className='flex flex-col items-center justify-center py-20'
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}>
-            <div className='relative'>
-              <motion.div
-                className='w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-2xl'
-                animate={{
-                  scale: [1, 1.1, 1],
-                  rotate: [0, 5, -5, 0],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}>
-                <Loader2 className='h-8 w-8 sm:h-10 sm:w-10 text-white animate-spin' />
-              </motion.div>
-              <motion.div
-                className='absolute -inset-4 sm:-inset-6 bg-gradient-to-r from-orange-200/40 via-red-200/40 to-pink-200/40 dark:from-orange-500/20 dark:via-red-500/20 dark:to-pink-500/20 rounded-3xl blur-2xl'
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.6, 0.3],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-              />
-            </div>
+      {/* Loading animation */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <motion.div
+          className="flex flex-col items-center justify-center py-20"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+        >
+          <div className="relative">
             <motion.div
-              className='text-center'
-              animate={{ opacity: [0.7, 1, 0.7] }}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-2xl bg-gradient-to-br from-orange-500 via-red-500 to-pink-500"
+              animate={{
+                scale: [1, 1.1, 1],
+                rotate: [0, 5, -5, 0],
+              }}
               transition={{
                 duration: 2,
                 repeat: Infinity,
-                ease: 'easeInOut',
-              }}>
-              <p className='text-gray-700 dark:text-slate-300 text-base sm:text-lg font-medium mb-1 sm:mb-2'>
-                Loading your orders...
-              </p>
-              <p className='text-gray-500 dark:text-slate-400 text-xs sm:text-sm'>
-                This won't take long
-              </p>
+                ease: "easeInOut",
+              }}
+            >
+              <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 text-white animate-spin" />
             </motion.div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900'>
-        {/* Modern Header */}
-        <div className='bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
-          <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
-            <h1 className='text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
-              My Orders
-            </h1>
+            <motion.div
+              className="absolute -inset-4 sm:-inset-6 rounded-3xl blur-2xl bg-gradient-to-r from-orange-200/40 via-red-200/40 to-pink-200/40 dark:from-orange-500/20 dark:via-red-500/20 dark:to-pink-500/20"
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.3, 0.6, 0.3],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
           </div>
-        </div>
 
-        <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-12'>
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className='max-w-2xl mx-auto'>
-            <Alert className='border-red-200/50 bg-red-50/80 dark:border-red-800/50 dark:bg-red-950/20 backdrop-blur-sm shadow-xl'>
-              <AlertCircle className='h-5 w-5 text-red-600 dark:text-red-400' />
-              <AlertTitle className='text-red-800 dark:text-red-300 font-semibold text-lg'>
-                Oops! Something went wrong
-              </AlertTitle>
-              <AlertDescription className='text-red-700 dark:text-red-400 mb-6 text-base leading-relaxed'>
-                {error}
-              </AlertDescription>
-              <div className='flex flex-col sm:flex-row gap-3'>
-                {error.includes('Session expired') && (
-                  <Button
-                    asChild
-                    className='bg-red-600 hover:bg-red-700 text-white shadow-lg'>
-                    <Link href='/login'>Login Again</Link>
-                  </Button>
-                )}
-                <Button
-                  onClick={fetchOrders}
-                  variant='outline'
-                  className='border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 shadow-lg'>
-                  <RefreshCw className='w-4 h-4 mr-2' />
-                  Try Again
-                </Button>
-              </div>
-            </Alert>
+            className="text-center"
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            <p className="text-gray-700 dark:text-slate-300 text-base sm:text-lg font-medium mb-1 sm:mb-2">
+              Loading your orders...
+            </p>
+            <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">
+              This won't take long
+            </p>
           </motion.div>
-        </div>
+        </motion.div>
       </div>
-    );
-  }
-
-  // Split orders into active and history
-  const activeOrders = orders.filter((o) =>
-    ['placed', 'preparing', 'ready', 'payment_pending'].includes(o.status)
+    </div>
   );
+}
 
+if (error) {
   return (
-    <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 relative overflow-hidden'>
-      {/* Animated Background Elements */}
-      <div className='absolute inset-0 overflow-hidden'>
-        <motion.div
-          className='absolute top-20 left-20 w-96 h-96 bg-gradient-to-r from-blue-400/10 via-purple-400/10 to-pink-400/10 dark:from-blue-600/10 dark:via-purple-600/10 dark:to-pink-600/10 rounded-full blur-3xl'
-          animate={{
-            x: [0, 100, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        <motion.div
-          className='absolute bottom-20 right-20 w-80 h-80 bg-gradient-to-r from-orange-400/10 via-red-400/10 to-pink-400/10 dark:from-orange-600/10 dark:via-red-600/10 dark:to-pink-600/10 rounded-full blur-3xl'
-          animate={{
-            x: [0, -80, 0],
-            y: [0, 60, 0],
-            scale: [1, 0.8, 1],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 2,
-          }}
-        />
-      </div>
-
-      {/* Modern Header with Stats */}
-      <div className='bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
-        <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
-            <div>
-              <h1 className='text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
-                My Orders
-              </h1>
-              <p className='text-gray-600 dark:text-slate-300 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base'>
-                Track your delicious journey across campus
-              </p>
-            </div>
-            {/* Utility actions */}
-            <div className='flex items-center gap-2 sm:gap-3'>
-              {viewedReviews.size > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className='flex items-center gap-1.5 sm:gap-2'>
-                  <Badge className='bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs sm:text-sm px-2 sm:px-3 py-1'>
-                    {viewedReviews.size} viewed
-                  </Badge>
-                  <Button
-                    onClick={clearViewedReviews}
-                    variant='ghost'
-                    size='sm'
-                    className='text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 h-6 px-1.5 sm:px-2'>
-                    Clear
-                  </Button>
-                </motion.div>
-              )}
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
+      {/* Error Header */}
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
+            My Orders
+          </h1>
         </div>
       </div>
 
-      <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative z-10'>
-        {orders.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className='text-center py-12 sm:py-16 lg:py-24'>
-            <div className='max-w-sm sm:max-w-md mx-auto px-4 sm:px-0'>
-              <motion.div
-                className='w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/30 dark:to-red-900/30 rounded-2xl flex items-center justify-center'
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}>
-                <Inbox className='w-10 h-10 sm:w-12 sm:h-12 text-orange-500' />
-              </motion.div>
-              <h3 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4'>
-                No orders yet
-              </h3>
-              <p className='text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base'>
-                Start your food journey by exploring our amazing campus
-                restaurants and placing your first order.
-              </p>
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}>
+      {/* Error message */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-2xl mx-auto"
+          role="alert"
+        >
+          <Alert className="border-red-200/50 bg-red-50/80 dark:border-red-800/50 dark:bg-red-950/20 backdrop-blur-sm shadow-xl">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <AlertTitle className="text-red-800 dark:text-red-300 font-semibold text-lg">
+              Oops! Something went wrong
+            </AlertTitle>
+            <AlertDescription className="text-red-700 dark:text-red-400 mb-6 text-base leading-relaxed">
+              {error}
+            </AlertDescription>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {error.includes("Session expired") && (
                 <Button
                   asChild
-                  className='w-full sm:w-auto bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base'>
-                  <Link href='/menu'>
-                    <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
-                    Browse Menu
-                  </Link>
+                  className="bg-red-600 hover:bg-red-700 text-white shadow-lg"
+                >
+                  <Link href="/login">Login Again</Link>
+                </Button>
+              )}
+              <Button
+                onClick={fetchOrders}
+                variant="outline"
+                className="border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 shadow-lg"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </Alert>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+  
+  return (
+    <div
+    className="
+      min-h-screen
+      bg-gradient-to-br
+      from-slate-50
+      via-blue-50
+      to-indigo-100
+      dark:from-slate-900
+      dark:via-slate-800
+      dark:to-indigo-900
+      relative
+      overflow-hidden
+    "
+  >
+    {/* Animated Background Elements */}
+    <div className="absolute inset-0 overflow-hidden">
+      <motion.div
+        className="
+          absolute top-20 left-20 w-96 h-96
+          rounded-full blur-3xl
+          bg-gradient-to-r from-blue-400/10 via-purple-400/10 to-pink-400/10
+          dark:from-blue-600/10 dark:via-purple-600/10 dark:to-pink-600/10
+        "
+        animate={{
+          x: [0, 100, 0],
+          y: [0, -50, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.div
+        className="
+          absolute bottom-20 right-20 w-80 h-80
+          rounded-full blur-3xl
+          bg-gradient-to-r from-orange-400/10 via-red-400/10 to-pink-400/10
+          dark:from-orange-600/10 dark:via-red-600/10 dark:to-pink-600/10
+        "
+        animate={{
+          x: [0, -80, 0],
+          y: [0, 60, 0],
+          scale: [1, 0.8, 1],
+        }}
+        transition={{
+          duration: 15,
+          repeat: Infinity,
+          ease: "easeInOut",
+          delay: 2,
+        }}
+      />
+    </div>
+
+    {/* Modern Header with Stats */}
+    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div>
+            <h1
+              className="
+                text-2xl sm:text-3xl md:text-4xl lg:text-5xl
+                font-bold
+                bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900
+                dark:from-white dark:via-blue-200 dark:to-indigo-200
+                bg-clip-text text-transparent
+              "
+            >
+              My Orders
+            </h1>
+            <p className="text-gray-600 dark:text-slate-300 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
+              Track your delicious journey across campus
+            </p>
+          </div>
+
+          {/* Utility actions */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {viewedReviews.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center gap-1.5 sm:gap-2"
+              >
+                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs sm:text-sm px-2 sm:px-3 py-1">
+                  {viewedReviews.size} viewed
+                </Badge>
+                <Button
+                  onClick={clearViewedReviews}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 h-6 px-1.5 sm:px-2"
+                >
+                  Clear
                 </Button>
               </motion.div>
-            </div>
-          </motion.div>
-        ) : (
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative z-10">
+      {orders.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center py-12 sm:py-16 lg:py-24"
+        >
+          <div className="max-w-sm sm:max-w-md mx-auto px-4 sm:px-0">
+            <motion.div
+              className="
+                w-20 h-20 sm:w-24 sm:h-24
+                mx-auto mb-6 sm:mb-8
+                bg-gradient-to-br from-orange-100 to-red-100
+                dark:from-orange-900/30 dark:to-red-900/30
+                rounded-2xl flex items-center justify-center
+              "
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Inbox className="w-10 h-10 sm:w-12 sm:h-12 text-orange-500" />
+            </motion.div>
+
+            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
+              No orders yet
+            </h3>
+
+            <p className="text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
+              Start your food journey by exploring our amazing campus restaurants and placing your first order.
+            </p>
+
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                asChild
+                className="
+                  w-full sm:w-auto
+                  bg-gradient-to-r from-orange-500 via-red-500 to-pink-500
+                  hover:from-orange-600 hover:via-red-600 hover:to-pink-600
+                  text-white font-semibold px-6 sm:px-8 py-2.5 sm:py-3
+                  rounded-xl shadow-lg hover:shadow-xl
+                  transition-all duration-300
+                  text-sm sm:text-base
+                "
+              >
+                <Link href="/menu">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  Browse Menu
+                </Link>
+              </Button>
+            </motion.div>
+          </div>
+        </motion.div>
+      ) : (
           <div className='space-y-8 lg:space-y-12'>
             {/* Active Orders Section */}
             {activeOrders.length > 0 && (
@@ -1370,19 +1492,10 @@ function OrdersPageContent() {
     </div>
   );
 }
+const btnBase = "w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300";
 
 // Enhanced Order Card Component
-function OrderCard({
-  order,
-  index,
-  onViewDetails,
-  onReorder,
-  onOpenItemSelector,
-  orderDetailLoading,
-  isDetailModalOpen,
-  setIsDetailModalOpen,
-  selectedOrder,
-}: {
+interface OrderCardProps {
   order: Order;
   index: number;
   onViewDetails: (orderId: string) => void;
@@ -1392,9 +1505,33 @@ function OrderCard({
   isDetailModalOpen: boolean;
   setIsDetailModalOpen: (open: boolean) => void;
   selectedOrder: Order | null;
-}) {
-  const statusConfig = getStatusConfig(order.status);
+}
+
+const MotionWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <motion.div
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    className="w-full sm:w-auto"
+  >
+    {children}
+  </motion.div>
+);
+
+const OrderCard: React.FC<OrderCardProps> = ({
+  order,
+  index,
+  onViewDetails,
+  onReorder,
+  onOpenItemSelector,
+  orderDetailLoading,
+  isDetailModalOpen,
+  setIsDetailModalOpen,
+  selectedOrder,
+}) => {
+  console.log({order})
+  const statusConfig = useMemo(() => getStatusConfig(order.status), [order.status]);
   const StatusIcon = statusConfig.icon;
+  const maxVisible = 3;
 
   return (
     <motion.div
@@ -1408,42 +1545,48 @@ function OrderCard({
       whileHover={{
         y: -8,
         transition: { duration: 0.2 },
-      }}>
-      <Card className='overflow-hidden border-0 shadow-xl hover:shadow-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm transition-all duration-300 group relative'>
-        <div className='absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
+      }}
+    >
+      <Card className="relative overflow-hidden border-0 shadow-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl group">
+        {/* Hover gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {/* Header */}
-        <CardHeader
-          className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-b-2 relative z-10`}>
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
-            <div className='flex items-center gap-4'>
+        <CardHeader className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-b-2 relative z-10`}>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Left: Status Icon & Order Info */}
+            <div className="flex items-center gap-4">
               <motion.div
                 className={`w-14 h-14 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}
                 whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}>
-                <StatusIcon className='w-7 h-7 text-white' />
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <StatusIcon className="w-7 h-7 text-white" />
               </motion.div>
-              <div className='flex-1'>
-                <CardTitle className='text-xl lg:text-2xl font-bold text-gray-900 dark:text-white'>
-                  Order #{order._id.slice(-6).toUpperCase()}
+
+              <div className="flex-1">
+                <CardTitle className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
+                {order?.OrderNumber }
+
                 </CardTitle>
-                <CardDescription className='flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1'>
-                  <Calendar className='w-4 h-4' />
+                <CardDescription className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1">
+                  <Calendar className="w-4 h-4" />
                   {formatDate(order.createdAt)}
                 </CardDescription>
               </div>
             </div>
-            <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
-              <Badge
-                className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-4 py-2 font-semibold text-sm`}>
+
+            {/* Right: Status Badge & Payment Info */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <Badge className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-4 py-2 font-semibold text-sm`}>
                 {statusConfig.label}
               </Badge>
-              <div className='text-left sm:text-right'>
-                <div className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>
+              <div className="text-left sm:text-right">
+                <div className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
                   ₹{order.total.toFixed(2)}
                 </div>
                 {order.payment && (
-                  <div className='text-sm text-gray-500 dark:text-gray-400 capitalize mt-1'>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 capitalize mt-1">
                     {getPaymentConfig(order.payment.method).label}
                   </div>
                 )}
@@ -1452,141 +1595,124 @@ function OrderCard({
           </div>
         </CardHeader>
 
-        <CardContent className='p-6 relative z-10'>
+        <CardContent className="p-6 relative z-10">
           {/* Restaurant Info */}
-          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4'>
-            <div className='flex items-center gap-3'>
-              <div className='w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center'>
-                <ChefHat className='w-5 h-5 text-white' />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                <ChefHat className="w-5 h-5 text-white" />
               </div>
               <div>
-                <span className='font-semibold text-gray-900 dark:text-white text-lg'>
-                  {order.canteen?.name || 'Unknown Restaurant'}
+                <span className="block font-semibold text-lg text-gray-900 dark:text-white">
+                  {order.canteen?.name ?? "Unknown Restaurant"}
                 </span>
-                <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  Campus Restaurant
-                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Campus Restaurant</p>
               </div>
             </div>
-            <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
-              <ShoppingBag className='w-4 h-4' />
-              <span className='text-sm font-medium'>
-                {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <ShoppingBag className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {order.items.length} item{order.items.length !== 1 ? "s" : ""}
               </span>
             </div>
           </div>
 
           {/* Order Items Preview */}
-          <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
-            {order.items.slice(0, 3).map((item, itemIndex) => (
-              <motion.div
-                key={item._id}
-                className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 + itemIndex * 0.05 }}>
-                <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
-                  <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
-                    <Image
-                      src={item.item?.image || '/placeholder.svg'}
-                      alt={item.item?.name || 'Item'}
-                      fill
-                      className='object-cover'
-                    />
+          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+            {order.items.slice(0, maxVisible).map(({ _id, item, quantity }, idx) => {
+              const { name = "Item No Longer Available", image, price = 0 } = item || {};
+              return (
+                <motion.div
+                  key={_id}
+                  className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                >
+                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
+                    <div className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0">
+                      <Image src={image || "/placeholder.svg"} alt={name} fill className="object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate">
+                        {name}
+                      </h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Qty: {quantity}</p>
+                    </div>
                   </div>
-                  <div className='flex-1 min-w-0'>
-                    <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
-                      {item.item?.name || 'Item No Longer Available'}
-                    </h4>
-                    <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
-                      Qty: {item.quantity}
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base">
+                      ₹{(quantity * price).toFixed(2)}
                     </p>
                   </div>
-                </div>
-                <div className='text-right flex-shrink-0'>
-                  <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
-                    ₹{(item.quantity * (item.item?.price || 0)).toFixed(2)}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-            {order.items.length > 3 && (
-              <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
-                +{order.items.length - 3} more item
-                {order.items.length - 3 !== 1 ? 's' : ''}
+                </motion.div>
+              );
+            })}
+
+            {order.items.length > maxVisible && (
+              <div className="text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl">
+                +{order.items.length - maxVisible} more item
+                {order.items.length - maxVisible !== 1 ? "s" : ""}
               </div>
             )}
           </div>
 
-          <Separator className='my-6' />
+          <Separator className="my-6" />
 
           {/* Footer */}
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
-            <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
-              <Clock className='w-4 h-4' />
-              <span className='text-sm'>{statusConfig.description}</span>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              <Clock className="w-4 h-4" />
+              <span className="text-sm">{statusConfig.description}</span>
             </div>
 
-            {/* Responsive Button Container */}
-            <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto'>
-              <Dialog
-                open={isDetailModalOpen}
-                onOpenChange={setIsDetailModalOpen}>
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              {/* View Details Dialog */}
+              <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
                 <DialogTrigger asChild>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className='w-full sm:w-auto'>
+                  <MotionWrapper>
                     <Button
-                      variant='outline'
-                      size='sm'
-                      className='w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50 transition-all duration-300'
+                      variant="outline"
+                      size="sm"
+                      className={`${btnBase} border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50`}
                       onClick={() => onViewDetails(order._id)}
-                      disabled={orderDetailLoading}>
+                      disabled={orderDetailLoading}
+                    >
                       {orderDetailLoading ? (
-                        <Loader2 className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin' />
+                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
                       ) : (
-                        <Eye className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
+                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       )}
-                      <span className='sm:hidden'>Details</span>
-                      <span className='hidden sm:inline'>View Details</span>
+                      <span className="sm:hidden">Details</span>
+                      <span className="hidden sm:inline">View Details</span>
                     </Button>
-                  </motion.div>
+                  </MotionWrapper>
                 </DialogTrigger>
-                <DialogContent className='max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4'>
+
+                <DialogContent className="max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4">
                   {orderDetailLoading ? (
                     <>
                       <DialogHeader>
-                        <DialogTitle className='text-xl'>
-                          Loading Order Details...
-                        </DialogTitle>
+                        <DialogTitle className="text-xl">Loading Order Details...</DialogTitle>
                       </DialogHeader>
-                      <div className='flex items-center justify-center py-20'>
-                        <Loader2 className='h-8 w-8 animate-spin text-orange-500' />
+                      <div className="flex items-center justify-center py-20">
+                        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
                       </div>
                     </>
                   ) : selectedOrder ? (
                     <>
-                      <DialogHeader className='border-b pb-6 dark:border-slate-700'>
-                        <div className='flex items-center gap-4'>
-                          <div
-                            className={`w-16 h-16 ${
-                              getStatusConfig(selectedOrder.status).color
-                            } rounded-2xl flex items-center justify-center shadow-lg`}>
-                            {(() => {
-                              const StatusIcon = getStatusConfig(
-                                selectedOrder.status
-                              ).icon;
-                              return (
-                                <StatusIcon className='w-8 h-8 text-white' />
-                              );
-                            })()}
+                      <DialogHeader className="border-b pb-6 dark:border-slate-700">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-16 h-16 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}>
+                            <statusConfig.icon className="w-8 h-8 text-white" />
                           </div>
                           <div>
-                            <DialogTitle className='text-2xl font-bold text-gray-900 dark:text-white'>
-                              Order #{selectedOrder._id.slice(-8).toUpperCase()}
+                            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+                            Order #{order?.OrderNumber?.replace("order#", "") }
                             </DialogTitle>
-                            <p className='text-gray-600 dark:text-gray-400 mt-1'>
+                            <p className="text-gray-600 dark:text-gray-400 mt-1">
                               {formatDate(selectedOrder.createdAt)}
                             </p>
                           </div>
@@ -1599,44 +1725,40 @@ function OrderCard({
                       <DialogHeader>
                         <DialogTitle>Order Details</DialogTitle>
                       </DialogHeader>
-                      <div className='flex items-center justify-center py-20'>
-                        <p className='text-gray-500 dark:text-gray-400'>
-                          No order selected
-                        </p>
+                      <div className="flex items-center justify-center py-20">
+                        <p className="text-gray-500 dark:text-gray-400">No order selected</p>
                       </div>
                     </>
                   )}
                 </DialogContent>
               </Dialog>
 
-              {order.status === 'completed' && (
+              {/* Completed Order Actions */}
+              {order.status === "completed" && (
                 <>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className='w-full sm:w-auto'>
+                  <MotionWrapper>
                     <Button
                       onClick={onOpenItemSelector}
-                      variant='outline'
-                      size='sm'
-                      className='w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm border-2 border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-950/30 dark:hover:to-red-950/30 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold'>
-                      <Star className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current' />
-                      <span className='sm:hidden'>Review</span>
-                      <span className='hidden sm:inline'>Write Reviews</span>
+                      variant="outline"
+                      size="sm"
+                      className={`${btnBase} border-2 border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-950/30 dark:hover:to-red-950/30 shadow-lg hover:shadow-xl font-semibold`}
+                    >
+                      <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current" />
+                      <span className="sm:hidden">Review</span>
+                      <span className="hidden sm:inline">Write Reviews</span>
                     </Button>
-                  </motion.div>
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className='w-full sm:w-auto'>
+                  </MotionWrapper>
+
+                  <MotionWrapper>
                     <Button
                       onClick={() => onReorder(order)}
-                      size='sm'
-                      className='w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 font-semibold'>
-                      <RefreshCw className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
+                      size="sm"
+                      className={`${btnBase} bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl font-semibold`}
+                    >
+                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       Reorder
                     </Button>
-                  </motion.div>
+                  </MotionWrapper>
                 </>
               )}
             </div>
@@ -1644,111 +1766,114 @@ function OrderCard({
         </CardContent>
       </Card>
     </motion.div>
-  );
-}
+      );
+    };
 
-// Order Details Content Component (Enhanced)
+// Order Details Content Component (Optimized)
 function OrderDetailsContent({ order }: { order: Order | null }) {
   if (!order) return null;
 
-  const getOrderTimeline = (order: Order) => {
-    // Handle payment_pending status
+  const isCompleted = (statuses: OrderStatus[]) =>
+    statuses.includes(order.status as OrderStatus);
+
+  const isCurrentStatus = (status: string) => order.status === status;
+
+  const getOrderTimeline = () => {
+    const baseSteps = [
+      {
+        status: 'placed',
+        label: 'Order Placed',
+        icon: Receipt,
+        isComplete: isCompleted(['placed', 'preparing', 'ready', 'completed']),
+      },
+      {
+        status: 'preparing',
+        label: 'Preparing',
+        icon: ChefHat,
+        isComplete: isCompleted(['preparing', 'ready', 'completed']),
+      },
+      {
+        status: 'ready',
+        label: 'Ready',
+        icon: Package,
+        isComplete: isCompleted(['ready', 'completed']),
+      },
+      {
+        status: 'completed',
+        label: 'Completed',
+        icon: CheckCircle2,
+        isComplete: order.status === 'completed',
+      },
+    ];
+
     if (order.status === 'payment_pending') {
       return [
         {
           status: 'payment_pending',
           label: 'Payment Pending',
           icon: Receipt,
-          completed: true,
+          isComplete: true,
         },
       ];
     }
 
-    // Handle cancelled status
     if (order.status === 'cancelled') {
       return [
         {
           status: 'placed',
           label: 'Order Placed',
           icon: Receipt,
-          completed: true,
+          isComplete: true,
         },
         {
           status: 'cancelled',
           label: 'Cancelled',
           icon: XCircle,
-          completed: true,
+          isComplete: true,
         },
       ];
     }
 
-    const timeline = [
-      {
-        status: 'placed',
-        label: 'Order Placed',
-        icon: Receipt,
-        completed: ['placed', 'preparing', 'ready', 'completed'].includes(
-          order.status
-        ),
-      },
-      {
-        status: 'preparing',
-        label: 'Preparing',
-        icon: ChefHat,
-        completed: ['preparing', 'ready', 'completed'].includes(order.status),
-      },
-      {
-        status: 'ready',
-        label: 'Ready',
-        icon: Package,
-        completed: ['ready', 'completed'].includes(order.status),
-      },
-      {
-        status: 'completed',
-        label: 'Completed',
-        icon: CheckCircle2,
-        completed: order.status === 'completed',
-      },
-    ];
-
-    return timeline;
+    return baseSteps;
   };
 
+  const timeline = getOrderTimeline();
+  const progress = timeline.filter((step) => step.isComplete).length / timeline.length;
+
   return (
-    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 py-6'>
-      {/* Order Timeline */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 py-6">
       <div>
-        <h3 className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2'>
-          <Truck className='w-4 h-4 sm:w-5 sm:h-5' />
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2">
+          <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
           Order Timeline
         </h3>
-        <div className='space-y-3 sm:space-y-4 md:space-y-6 relative'>
-          {/* Progress Line */}
-          <div className='absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700'>
+
+        <div className="space-y-3 sm:space-y-4 md:space-y-6 relative">
+          <div className="absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700">
             <motion.div
-              className='bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top'
+              className="bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top"
               initial={{ scaleY: 0 }}
-              animate={{
-                scaleY:
-                  getOrderTimeline(order).filter((s) => s.completed).length /
-                  getOrderTimeline(order).length,
-              }}
+              animate={{ scaleY: progress }}
               transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
             />
           </div>
 
-          {getOrderTimeline(order).map((step, index) => {
+          {timeline.map((step, index) => {
             const StepIcon = step.icon;
+            const isCompleted = step.isComplete;
+            const isCurrent = isCurrentStatus(step.status);
+
             return (
               <motion.div
                 key={step.status}
-                className='flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10'
+                className="flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}>
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+              >
                 <motion.div
                   className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 sm:border-3 md:border-4 border-white dark:border-slate-900 shadow-lg ${
-                    step.completed
+                    isCompleted
                       ? step.status === 'cancelled'
                         ? 'bg-red-500'
                         : 'bg-green-500'
@@ -1757,33 +1882,38 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
-                  whileHover={{ scale: 1.1 }}>
+                  whileHover={{ scale: 1.1 }}
+                >
                   <StepIcon
                     className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ${
-                      step.completed
+                      isCompleted
                         ? 'text-white'
                         : 'text-gray-400 dark:text-slate-500'
                     }`}
                   />
                 </motion.div>
-                <div className='flex-1 min-w-0'>
+
+                <div className="flex-1 min-w-0">
                   <motion.div
                     className={`font-medium text-xs sm:text-sm md:text-base ${
-                      step.completed
+                      isCompleted
                         ? 'text-gray-800 dark:text-gray-200'
                         : 'text-gray-400 dark:text-slate-500'
                     }`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.2 + 0.5 }}>
+                    transition={{ delay: index * 0.2 + 0.5 }}
+                  >
                     {step.label}
                   </motion.div>
-                  {step.completed && order.status === step.status && (
+
+                  {isCompleted && isCurrent && (
                     <motion.div
-                      className='text-xs text-green-600 dark:text-green-400 font-medium'
+                      className="text-xs text-green-600 dark:text-green-400 font-medium"
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.2 + 0.7 }}>
+                      transition={{ delay: index * 0.2 + 0.7 }}
+                    >
                       Current Status
                     </motion.div>
                   )}
@@ -1793,197 +1923,10 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
           })}
         </div>
       </div>
-
-      {/* Restaurant & Payment Info */}
-      <div className='space-y-6'>
-        <div>
-          <h3 className='text-sm sm:text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4 flex items-center gap-2'>
-            <MapPin className='w-4 h-4 sm:w-5 sm:h-5' />
-            Restaurant Details
-          </h3>
-          <Card className='p-3 sm:p-4 md:p-6 bg-gray-50/80 border-gray-200 dark:bg-slate-800/80 dark:border-slate-700 backdrop-blur-sm'>
-            <div className='flex items-center gap-2 sm:gap-3 md:gap-4'>
-              <div className='w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center shadow-lg'>
-                <ChefHat className='w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-white' />
-              </div>
-              <div className='min-w-0'>
-                <h4 className='font-semibold text-gray-800 dark:text-gray-200 text-sm sm:text-base md:text-lg truncate'>
-                  {order.canteen?.name || 'Unknown Restaurant'}
-                </h4>
-                <p className='text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
-                  Campus Restaurant
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {order.payment && (
-          <div>
-            <h3 className='text-sm sm:text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 sm:mb-4 flex items-center gap-2'>
-              <CreditCard className='w-4 h-4 sm:w-5 sm:h-5' />
-              Payment Information
-            </h3>
-            <Card className='p-3 sm:p-4 md:p-6 bg-gray-50/80 border-gray-200 dark:bg-slate-800/80 dark:border-slate-700 backdrop-blur-sm'>
-              <div className='space-y-2 sm:space-y-3 md:space-y-4'>
-                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                  <span className='text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400'>
-                    Method:
-                  </span>
-                  <span className='font-medium capitalize dark:text-gray-200 text-xs sm:text-sm md:text-base'>
-                    {order.payment.method}
-                  </span>
-                </div>
-                <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                  <span className='text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400'>
-                    Status:
-                  </span>
-                  <Badge
-                    className={`${
-                      order.payment.status === 'completed'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                        : order.payment.status === 'pending'
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                    } border-0 text-xs w-fit`}>
-                    {order.payment.status}
-                  </Badge>
-                </div>
-                {order.payment.transactionId && (
-                  <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-0'>
-                    <span className='text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-400'>
-                      Transaction ID:
-                    </span>
-                    <span className='font-mono text-xs sm:text-sm dark:text-gray-300 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded break-all sm:break-normal'>
-                      {order.payment.transactionId}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
-      </div>
-
-      {/* Order Items */}
-      <div className='lg:col-span-2 border-t pt-8 dark:border-slate-700'>
-        <h3 className='text-lg font-semibold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-2'>
-          <ShoppingBag className='w-5 h-5' />
-          Order Items ({order.items.length})
-        </h3>
-        <div className='space-y-4'>
-          {order.items.map((item, index) => (
-            <motion.div
-              key={item._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}>
-              <Card className='p-4 sm:p-6 border-gray-200 dark:border-slate-700 dark:bg-slate-800/50 hover:shadow-lg transition-all duration-300 backdrop-blur-sm'>
-                <div className='flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6'>
-                  {/* Image and basic info */}
-                  <div className='flex items-center gap-4 flex-1'>
-                    <div className='relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-700 flex-shrink-0'>
-                      <Image
-                        src={item.item?.image || '/placeholder.svg'}
-                        alt={item.item?.name || 'Item'}
-                        fill
-                        className='object-cover'
-                      />
-                    </div>
-                    <div className='flex-1 min-w-0'>
-                      <h4 className='font-semibold text-gray-800 dark:text-gray-200 text-base sm:text-lg'>
-                        {item.item?.name || 'Item No Longer Available'}
-                      </h4>
-                      {/* Mobile: Show quantity and price inline */}
-                      <div className='flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 sm:hidden'>
-                        <div className='flex items-center gap-1'>
-                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                            Qty:
-                          </span>
-                          <span className='font-medium text-gray-800 dark:text-gray-200 text-sm'>
-                            {item.quantity || 'N/A'}
-                          </span>
-                        </div>
-                        <div className='flex items-center gap-1'>
-                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                            Unit:
-                          </span>
-                          <span className='font-medium text-gray-800 dark:text-gray-200 text-sm'>
-                            ₹{item.item?.price || 0}
-                          </span>
-                        </div>
-                      </div>
-                      {/* Desktop: Show quantity and price in separate layout */}
-                      <div className='hidden sm:flex sm:items-center sm:gap-6 mt-3'>
-                        <div className='flex items-center gap-2'>
-                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                            Quantity:
-                          </span>
-                          <span className='font-medium text-gray-800 dark:text-gray-200'>
-                            {item.quantity || 'N/A'}
-                          </span>
-                        </div>
-                        <div className='flex items-center gap-2'>
-                          <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                            Unit Price:
-                          </span>
-                          <span className='font-medium text-gray-800 dark:text-gray-200'>
-                            ₹{item.item?.price || 0}
-                          </span>
-                        </div>
-                      </div>
-                      {(!item.item ||
-                        item.item.name === 'Item No Longer Available') && (
-                        <p className='text-sm text-red-500 italic mt-2'>
-                          This item may have been removed from the menu
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Price section */}
-                  <div className='flex justify-between sm:block sm:text-right flex-shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200 dark:border-slate-700'>
-                    <span className='text-sm text-gray-600 dark:text-gray-400 sm:hidden'>
-                      Total:
-                    </span>
-                    <div className='sm:text-right'>
-                      <div className='text-lg sm:text-2xl font-bold text-gray-800 dark:text-gray-200'>
-                        ₹
-                        {(
-                          (item.quantity || 0) * (item.item?.price || 0)
-                        ).toFixed(2)}
-                      </div>
-                      <p className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 hidden sm:block'>
-                        Subtotal
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Order Total */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}>
-          <Card className='mt-6 sm:mt-8 p-6 sm:p-8 bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 dark:bg-gradient-to-r dark:from-slate-800 dark:to-slate-700 dark:border-slate-700 shadow-lg'>
-            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0'>
-              <div className='text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-200'>
-                Total Amount
-              </div>
-              <div className='text-2xl sm:text-4xl font-bold text-gray-900 dark:text-gray-100'>
-                ₹{order.total.toFixed(2)}
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
     </div>
   );
 }
+
 
 // Main page component with route protection
 export default function OrdersPage() {

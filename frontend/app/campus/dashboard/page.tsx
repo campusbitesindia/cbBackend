@@ -162,530 +162,412 @@ function DashboardContent() {
   const { getSocket, connectSocket, disconnectSocket } = useSocket();
 
   useEffect(() => {
-    const canteenId = localStorage.getItem('canteenId');
-    if (canteenId) {
-      setCanteenId(canteenId);
-    }
+    const storedId = localStorage.getItem('canteenId');
+    if (storedId) setCanteenId(storedId);
   }, []);
-
   // Fixed Socket Connection Effect
   useEffect(() => {
-    if (!canteenId) {
-      return;
-    }
-
+    if (!canteenId) return;
+  
     connectSocket();
     const socket = getSocket();
-
+  
     if (!socket) {
-      console.error('Socket not available');
+      console.error("Socket not available");
       return;
     }
-
-    // Join the canteen room
-    socket.emit('Join_Room', canteenId);
-
-    // Handle new orders
-    const handleNewOrder = (data: any) => {
-      // Validate order data
-      if (!data || !data._id) {
-        return;
-      }
-
-      // Transform the data if needed to match your Order type
-      const transformedOrder = {
+  
+    socket.emit("Join_Room", canteenId);
+  
+    const handleNewOrder = (data: Order) => {
+      if (!data?._id) return;
+  
+      const transformedOrder: Order = {
         ...data,
-        status: data.status || 'pending',
-        createdAt: data.createdAt || new Date().toISOString(),
+        status: data.status ?? "pending",
+        createdAt: data.createdAt ?? new Date().toISOString(),
       };
-
-      setOrders((prevOrders) => {
-        // Check for duplicates
-        const orderExists = prevOrders.some((order) => order._id === data._id);
-        if (orderExists) {
-          return prevOrders;
-        }
-
-        const newOrders = [transformedOrder, ...prevOrders]; // Add to beginning for latest first
-
-        return newOrders;
+  
+      setOrders((prev) => {
+        if (prev.some((o) => o._id === transformedOrder._id)) return prev;
+        return [transformedOrder, ...prev]; // latest first
       });
-
-      // Show toast notification
+  
       toast({
-        title: 'New Order Received!',
-        description: `Order #${data._id?.slice(-6)} has been placed.`,
+        title: "New Order Received!",
+        description: `Order #${data._id.slice(-6)} has been placed.`,
       });
     };
-
-    socket.on('New_Order', handleNewOrder);
-
-    // Cleanup function
+  
+    socket.on("New_Order", handleNewOrder);
+  
     return () => {
-      socket.off('New_Order', handleNewOrder);
+      socket.off("New_Order", handleNewOrder);
       disconnectSocket();
     };
   }, [canteenId, toast, connectSocket, disconnectSocket, getSocket]);
+  
 
-  // Type for breadcrumb items
   type BreadcrumbItem = {
     label: string;
-    href: string;
-    onClick: (() => void) | null;
-    icon: React.ComponentType<any> | undefined;
+    href?: string;
+    onClick?: () => void;
+    icon?: React.ComponentType<any>;
   };
-
-  // Breadcrumb configuration
+  
   const getBreadcrumbItems = (): BreadcrumbItem[] => {
-    const baseItems: BreadcrumbItem[] = [
+    const base: BreadcrumbItem[] = [
       {
-        label: 'Dashboard',
-        href: '#',
-        onClick: () => setActiveTab('overview'),
+        label: "Dashboard",
+        href: "#",
+        onClick: () => setActiveTab("overview"),
         icon: Home,
       },
     ];
-
-    if (activeTab === 'overview') {
-      return baseItems;
-    }
-
-    const tabLabels: { [key: string]: string } = {
-      menu: 'Menu Items',
-      orders: 'Orders',
-      analytics: 'Analytics',
-      profile: 'Profile',
-      payouts: 'Payouts',
+  
+    const tabLabels: Record<string, string> = {
+      menu: "Menu Items",
+      orders: "Orders",
+      analytics: "Analytics",
+      profile: "Profile",
+      payouts: "Payouts",
     };
-
-    // Add sub-navigation for specific tabs
-    const breadcrumbItems: BreadcrumbItem[] = [
-      ...baseItems,
+  
+    // If overview tab, just return base
+    if (activeTab === "overview") return base;
+  
+    const breadcrumbs: BreadcrumbItem[] = [
+      ...base,
       {
         label: tabLabels[activeTab] || activeTab,
-        href: '#',
-        onClick: null, // Current page, no click action
-        icon: undefined,
+        href: "#",
       },
     ];
-
-    // Add sub-navigation for menu items
-    if (activeTab === 'menu') {
+  
+    if (activeTab === "menu") {
       if (isAddItemOpen) {
-        breadcrumbItems.push({
-          label: 'Add New Item',
-          href: '#',
+        breadcrumbs.push({
+          label: "Add New Item",
+          href: "#",
           onClick: () => {
             setIsAddItemOpen(false);
             resetForm();
           },
-          icon: undefined,
         });
       } else if (isEditItemOpen && editingItem) {
-        breadcrumbItems.push({
+        breadcrumbs.push({
           label: `Edit ${editingItem.name}`,
-          href: '#',
+          href: "#",
           onClick: () => {
             setIsEditItemOpen(false);
             setEditingItem(null);
             resetForm();
           },
-          icon: undefined,
         });
       }
     }
-
-    // Add sub-navigation for orders
-    if (activeTab === 'orders' && orderDetails) {
-      breadcrumbItems.push({
-        label: `Order #${orderDetails._id?.slice(-6) || 'Details'}`,
-        href: '#',
+  
+    if (activeTab === "orders" && orderDetails) {
+      breadcrumbs.push({
+        label: `Order #${orderDetails._id?.slice(-6) || "Details"}`,
+        href: "#",
         onClick: () => setOrderDetails(null),
-        icon: undefined,
       });
     }
-
-    return breadcrumbItems;
+  
+    return breadcrumbs;
   };
 
-  // Handle profile picture upload
   const handleProfilePicUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setProfilePicFile(file);
-
-      // Create immediate preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePicPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      try {
-        // Upload to server
-        const token = localStorage.getItem('token') || '';
-        const { uploadProfileImage } = await import('@/services/userService');
-        const uploadResult = await uploadProfileImage(file, token);
-
-        // Update with uploaded URL
-        setPersonalData((prev) => ({
-          ...prev,
-          profilePic: uploadResult.imageUrl,
-        }));
-
-        toast({
-          title: 'Success',
-          description: 'Profile picture uploaded successfully!',
-        });
-      } catch (error) {
-        console.error('Profile picture upload error:', error);
-        toast({
-          title: 'Upload Failed',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'Failed to upload profile picture',
-          variant: 'destructive',
-        });
-
-        // Keep local preview but mark as not uploaded
-        setPersonalData((prev) => ({
-          ...prev,
-          profilePic: reader.result as string,
-        }));
-      }
+    if (!file) return;
+  
+    setProfilePicFile(file);
+  
+    // Immediate preview (faster than FileReader for images)
+    const previewUrl = URL.createObjectURL(file);
+    setProfilePicPreview(previewUrl);
+  
+    try {
+      const token = localStorage.getItem("token") || "";
+      const { uploadProfileImage } = await import("@/services/userService");
+      const { imageUrl } = await uploadProfileImage(file, token);
+  
+      setPersonalData((prev) =>
+        prev.profilePic === imageUrl ? prev : { ...prev, profilePic: imageUrl }
+      );
+  
+      toast({
+        title: "Success",
+        description: "Profile picture uploaded successfully!",
+      });
+    } catch (err) {
+      console.error("Profile picture upload error:", err);
+  
+      toast({
+        title: "Upload Failed",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Failed to upload profile picture",
+        variant: "destructive",
+      });
+  
+      // Fallback: keep local preview
+      setPersonalData((prev) => ({
+        ...prev,
+        profilePic: previewUrl,
+      }));
     }
   };
+  
 
   // Additional useEffect to refetch data when canteenId changes
   useEffect(() => {
-    console.log('canteenId changed:', canteenId);
-    if (canteenId && isAuthenticated && user) {
-      console.log('Fetching data due to canteenId change...');
-      fetchData(canteenId);
-    }
-  }, [canteenId, isAuthenticated, user]);
+    if (!canteenId || !isAuthenticated) return;
+  
+    console.log("canteenId changed:", canteenId);
+    console.log("Fetching data due to canteenId change...");
+    fetchData(canteenId);
+    
+    // Only re-run when the canteen ID or authentication status changes
+  }, [canteenId, isAuthenticated]);
 
   // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
-  const fetchData = async (currentCanteenId?: string) => {
-    try {
-      setLoading(true);
-      if (!isAuthenticated || !user) {
-        setLoading(false);
-        toast({
-          title: 'Error',
-          description: 'You must be logged in to access this feature',
-          variant: 'destructive',
-        });
-        return;
-      }
+ const fetchData = async (currentCanteenId?: string) => {
+  const token = localStorage.getItem("token") || "";
 
-      // Use the passed canteenId parameter or fallback to state canteenId
-      const canteenIdToUse = currentCanteenId || canteenId;
+  // Early auth check
+  if (!isAuthenticated || !user) {
+    toast({
+      title: "Error",
+      description: "You must be logged in to access this feature",
+      variant: "destructive",
+    });
+    return;
+  }
 
-      console.log('fetchData called with:', {
-        currentCanteenId,
-        stateCanteenId: canteenId,
-        canteenIdToUse,
-        userRole: user?.role,
-        userId: user?.id,
-      });
+  const canteenIdToUse = currentCanteenId || canteenId;
+  if (!canteenIdToUse) {
+    toast({
+      title: "Error",
+      description: "Canteen ID not found. Please refresh the page.",
+      variant: "destructive",
+    });
+    return;
+  }
 
-      if (!canteenIdToUse) {
-        console.error('No canteen ID available for fetching data');
-        setLoading(false);
-        toast({
-          title: 'Error',
-          description: 'Canteen ID not found. Please refresh the page.',
-          variant: 'destructive',
-        });
-        return;
-      }
+  setLoading(true);
+  console.log("fetchData called with:", {
+    currentCanteenId,
+    stateCanteenId: canteenId,
+    canteenIdToUse,
+    userRole: user?.role,
+    userId: user?.id,
+  });
 
-      const token = localStorage.getItem('token') || '';
-
-      // Fetch menu items using dynamic canteenId
-      try {
-        setMenuLoading(true);
-        console.log(`Fetching menu items for canteen: ${canteenIdToUse}`);
-        const menuData = await axios.get(
-          `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        console.log('Menu API response:', menuData.data);
-
-        // Handle different response structures
-        let menuItemsArray = [];
-        if (Array.isArray(menuData.data)) {
-          menuItemsArray = menuData.data;
-        } else if (menuData.data && Array.isArray(menuData.data.data)) {
-          menuItemsArray = menuData.data.data;
-        } else if (menuData.data && Array.isArray(menuData.data.items)) {
-          menuItemsArray = menuData.data.items;
-        } else {
-          console.warn('Unexpected menu data structure:', menuData.data);
-          menuItemsArray = [];
-        }
-
-        console.log(
-          `Setting ${menuItemsArray.length} menu items:`,
-          menuItemsArray
-        );
-        setMenuItems(menuItemsArray);
-      } catch (error: any) {
-        console.error('Error fetching menu data:', error);
-
-        // Check for canteen not approved error
-        if (
-          error?.response?.status === 403 &&
-          error?.response?.data?.message?.toLowerCase().includes('not approved')
-        ) {
-          setNotApprovedDialog(true);
-          setLoading(false); // Stop loading when showing dialog
-          return; // Exit early to prevent other error handling
-        }
-
-        setMenuItems([]); // Clear menu items on error
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch menu items',
-          variant: 'destructive',
-        });
-      } finally {
-        setMenuLoading(false);
-      }
-
-      // Fetch orders using dynamic canteenId
-      try {
-        const ordersData = await getCanteenOrders(canteenIdToUse, token);
-        const ordersToSet = Array.isArray(ordersData?.data)
-          ? ordersData.data
-          : [];
-        setOrders(ordersToSet);
-      } catch (error: any) {
-        console.error('Error fetching orders data:', error);
-
-        // Check for canteen not approved error
-        if (
-          error?.response?.status === 403 &&
-          error?.response?.data?.message?.toLowerCase().includes('not approved')
-        ) {
-          setNotApprovedDialog(true);
-          setLoading(false); // Stop loading when showing dialog
-          return; // Exit early to prevent other error handling
-        }
-
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch orders',
-          variant: 'destructive',
-        });
-      }
-
-      // Fetch statistics using dynamic canteenId
-      try {
-        const statsData = await getCanteenStats(canteenIdToUse, token);
-        const statsToSet = statsData?.data || null;
-        setCanteenStats(statsToSet);
-      } catch (error: any) {
-        console.error('Error fetching stats data:', error);
-
-        // Check for canteen not approved error
-        if (
-          error?.response?.status === 403 &&
-          error?.response?.data?.message?.toLowerCase().includes('not approved')
-        ) {
-          setNotApprovedDialog(true);
-          setLoading(false); // Stop loading when showing dialog
-          return; // Exit early to prevent other error handling
-        }
-
-        toast({
-          title: 'Error',
-          description: 'Failed to fetch statistics',
-          variant: 'destructive',
-        });
-      }
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
-
-      // Check for canteen not approved error
-      if (
-        error?.response?.status === 403 &&
-        error?.response?.data?.message?.toLowerCase().includes('not approved')
-      ) {
-        setNotApprovedDialog(true);
-        setLoading(false); // Stop loading when showing dialog
-        return;
-      }
-
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch data',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+  const handleNotApproved = (error: any) => {
+    if (
+      error?.response?.status === 403 &&
+      error?.response?.data?.message?.toLowerCase().includes("not approved")
+    ) {
+      setNotApprovedDialog(true);
+      return true;
     }
+    return false;
   };
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      try {
-        setImageUploading(true);
-
-        // Validate the image first
-        validateImage(file);
-        setSelectedImage(file);
-
-        // Create a preview URL for immediate display
-        const previewUrl = URL.createObjectURL(file);
-        setImagePreview(previewUrl);
-
-        // Store the file for later use in form submission
-        // The image will be uploaded when the form is submitted
-
-        toast({
-          title: 'Success',
-          description: 'Image selected successfully!',
-        });
-      } catch (validationError) {
-        console.error('Image validation error:', validationError);
-        setSelectedImage(null);
-        setImagePreview('');
-        setFormData({ ...formData, image: '' });
-
-        toast({
-          title: 'Invalid Image',
-          description:
-            validationError instanceof Error
-              ? validationError.message
-              : 'Please select a valid image file',
-          variant: 'destructive',
-        });
-      } finally {
-        setImageUploading(false);
-      }
-    }
+  const normalizeMenuData = (data: any) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.items)) return data.items;
+    console.warn("Unexpected menu data structure:", data);
+    return [];
   };
+
+  try {
+    // Start menu fetch first (needs separate loader for UI)
+    setMenuLoading(true);
+    const menuPromise = axios
+      .get(
+        `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      .then((res) => normalizeMenuData(res.data))
+      .catch((err) => {
+        if (handleNotApproved(err)) throw err;
+        toast({ title: "Error", description: "Failed to fetch menu items", variant: "destructive" });
+        return [];
+      })
+      .finally(() => setMenuLoading(false));
+
+    // Fetch orders & stats in parallel
+    const ordersPromise = getCanteenOrders(canteenIdToUse, token)
+      .then((res) => (Array.isArray(res?.data) ? res.data : []))
+      .catch((err) => {
+        if (handleNotApproved(err)) throw err;
+        toast({ title: "Error", description: "Failed to fetch orders", variant: "destructive" });
+        return [];
+      });
+
+    const statsPromise = getCanteenStats(canteenIdToUse, token)
+      .then((res) => res?.data || null)
+      .catch((err) => {
+        if (handleNotApproved(err)) throw err;
+        toast({ title: "Error", description: "Failed to fetch statistics", variant: "destructive" });
+        return null;
+      });
+
+    // Run all fetches in parallel
+    const [menuItemsArray, ordersArray, statsData] = await Promise.all([
+      menuPromise,
+      ordersPromise,
+      statsPromise,
+    ]);
+
+    // Set state in minimal updates
+    setMenuItems(menuItemsArray);
+    setOrders(ordersArray);
+    setCanteenStats(statsData);
+
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    if (!handleNotApproved(error)) {
+      toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleImageUpload = async (
+  event: React.ChangeEvent<HTMLInputElement>
+) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  setImageUploading(true);
+
+  try {
+    // Validate image
+    validateImage(file);
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+
+    // Update states in one go to avoid multiple renders
+    setSelectedImage(file);
+    setImagePreview(previewUrl);
+    setFormData(prev => ({ ...prev, image: '' })); // Image will be uploaded later
+
+    toast({
+      title: 'Success',
+      description: 'Image selected successfully!',
+    });
+  } catch (err) {
+    console.error('Image validation error:', err);
+
+    // Reset states
+    setSelectedImage(null);
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, image: '' }));
+
+    toast({
+      title: 'Invalid Image',
+      description:
+        err instanceof Error ? err.message : 'Please select a valid image file',
+      variant: 'destructive',
+    });
+  } finally {
+    setImageUploading(false);
+  }
+};
+
 
   // Handle form submission for creating/updating menu items using dynamic canteenId
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Prevent submission while image is uploading
+  
     if (imageUploading) {
-      toast({
+      return toast({
         title: 'Please wait',
         description: 'Image is still uploading. Please wait a moment.',
         variant: 'destructive',
       });
-      return;
     }
-
+  
+    if (!isAuthenticated || !user) {
+      return toast({
+        title: 'Error',
+        description: 'You must be logged in to access this feature',
+        variant: 'destructive',
+      });
+    }
+  
+    if (!canteenId) {
+      console.error('No canteenId available for form submission');
+      return toast({
+        title: 'Error',
+        description: 'Canteen ID not found. Please refresh the page.',
+        variant: 'destructive',
+      });
+    }
+  
     try {
-      if (!isAuthenticated || !user) {
-        toast({
-          title: 'Error',
-          description: 'You must be logged in to access this feature',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Ensure canteenId is available before proceeding
-      if (!canteenId) {
-        console.error('No canteenId available for form submission');
-        toast({
-          title: 'Error',
-          description: 'Canteen ID not found. Please refresh the page.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
       console.log('Submitting menu item with canteenId:', canteenId);
-
-      // Handle image data - pass base64 data directly
-      let imageData = null;
-
-      if (formData.image) {
-        if (formData.image.startsWith('data:')) {
-          // Pass base64 data URL directly
-          imageData = formData.image;
-        } else if (formData.image.startsWith('blob:')) {
-          // Convert blob URL to base64
-          const response = await fetch(formData.image);
-          const blob = await response.blob();
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-          imageData = base64;
-        } else if (selectedImage) {
-          // Convert File to base64
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(selectedImage);
-          });
-          imageData = base64;
-        }
+  
+      const getBase64FromFile = (file: File | Blob) =>
+        new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+  
+      // Determine image data
+      let imageData: string | undefined;
+      if (formData.image?.startsWith('data:')) {
+        imageData = formData.image;
+      } else if (formData.image?.startsWith('blob:')) {
+        const blob = await (await fetch(formData.image)).blob();
+        imageData = await getBase64FromFile(blob);
+      } else if (selectedImage) {
+        imageData = await getBase64FromFile(selectedImage);
       }
-
-      // Create menu item data with dynamic canteenId
+  
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
-        canteenId: canteenId,
+        canteenId,
         description: formData.description,
         category: formData.category,
-        canteen: canteenId, // Using dynamic canteenId
+        canteen: canteenId,
         isVeg: formData.isVeg,
         available: formData.available,
         portion: formData.portion,
         quantity: formData.quantity,
-        image: imageData || undefined,
+        image: imageData,
       };
-
+  
       console.log('Submitting item data:', itemData);
-
+  
       if (editingItem) {
         await updateMenuItem(editingItem._id, itemData);
-        console.log('Menu item updated successfully');
-        toast({
-          title: 'Success',
-          description: 'Menu item updated successfully',
-        });
+        toast({ title: 'Success', description: 'Menu item updated successfully' });
       } else {
-        const newItem = await createMenuItem(itemData);
-        console.log('New menu item created:', newItem);
-        toast({
-          title: 'Success',
-          description: 'Menu item added successfully',
-        });
+        await createMenuItem(itemData);
+        toast({ title: 'Success', description: 'Menu item added successfully' });
       }
-
+  
+      // Cleanup
       setIsAddItemOpen(false);
       setIsEditItemOpen(false);
       setEditingItem(null);
       resetForm();
-
-      // Force refresh with the current canteenId
-      console.log('Refreshing menu data after form submission...');
-      if (canteenId) {
-        await fetchData(canteenId);
-      }
+  
+      // Refresh menu data
+      await fetchData(canteenId);
     } catch (error) {
       console.error('Error saving menu item:', error);
       toast({
@@ -697,58 +579,79 @@ function DashboardContent() {
       });
     }
   };
+  
 
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
+  
+    const {
+      name,
+      price,
+      description = '',
+      category = '',
+      isVeg = false,
+      available = true,
+      image = '',
+      portion = '',
+      quantity = '',
+    } = item;
+  
     setFormData({
-      name: item.name,
-      price: item.price.toString(),
-      description: item.description || '',
-      category: item.category || '',
-      isVeg: item.isVeg || false,
-      available: item.available !== false,
-      image: item.image || '',
-      portion: item.portion || '',
-      quantity: item.quantity || '',
+      name,
+      price: price.toString(),
+      description,
+      category,
+      isVeg,
+      available,
+      image,
+      portion,
+      quantity,
     });
-    setImagePreview(item.image || '');
+  
+    setImagePreview(image);
     setIsEditItemOpen(true);
   };
+  
 
   const handleDelete = async (itemId: string) => {
-    if (confirm('Are you sure you want to delete this item?')) {
-      try {
-        await deleteMenuItem(itemId);
-        toast({
-          title: 'Success',
-          description: 'Menu item deleted successfully',
-        });
-        fetchData();
-      } catch (error) {
-        toast({
-          title: 'Error',
-          description: 'Failed to delete menu item',
-          variant: 'destructive',
-        });
-      }
+    if (!confirm('Are you sure you want to delete this item?')) return;
+  
+    try {
+      await deleteMenuItem(itemId);
+      toast({
+        title: 'Success',
+        description: 'Menu item deleted successfully',
+      });
+  
+      // Ensure latest data after deletion
+      await fetchData();
+    } catch (error) {
+      console.error('Delete menu item error:', error);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error ? error.message : 'Failed to delete menu item',
+        variant: 'destructive',
+      });
     }
   };
+  
 
   const handleToggleReady = (itemId: string, isReady: boolean) => {
-    // Update the menu item in the local state
-    setMenuItems((prevItems) =>
-      prevItems.map((item) =>
+    setMenuItems(prev =>
+      prev.map(item =>
         item._id === itemId ? { ...item, isReady } : item
       )
     );
   };
+  
 
   const resetForm = () => {
-    // Clear any object URLs to prevent memory leaks
-    if (imagePreview && imagePreview.startsWith('blob:')) {
+    // Revoke object URL if it exists to prevent memory leaks
+    if (imagePreview?.startsWith('blob:')) {
       URL.revokeObjectURL(imagePreview);
     }
-
+  
     setFormData({
       name: '',
       price: '',
@@ -760,26 +663,29 @@ function DashboardContent() {
       portion: '',
       quantity: '',
     });
+  
     setSelectedImage(null);
     setImagePreview('');
     setImageUploading(false);
   };
+  
 
   const fetchOrderDetails = async (orderId: string) => {
     try {
-      const token = localStorage.getItem('token') || '';
-      const response = await getOrderById(orderId, token);
-      setOrderDetails(response.data);
-    } catch (error: any) {
+      const token = localStorage.getItem('token') ?? '';
+      const { data } = await getOrderById(orderId, token);
+      setOrderDetails(data);
+    } catch (error) {
       console.error('Error fetching order details:', error);
       toast({
         title: 'Error',
         description:
-          error.response?.data?.message || 'Failed to fetch order details',
+          (error as any)?.response?.data?.message || 'Failed to fetch order details',
         variant: 'destructive',
       });
     }
   };
+  
 
   const handleOrderStatusUpdate = (orderId: string, newStatus: string) => {
     // Update the order in the local state

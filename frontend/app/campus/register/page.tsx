@@ -115,10 +115,12 @@ const vendorSchema = z
         /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/,
         'GST number must be 15 characters in valid GST format'
       ),
-    fssaiLicense: z
+      fssaiLicense: z
       .string()
       .regex(/^[0-9]{14}$/, 'FSSAI license must be 14 digits')
-      .optional(),
+      .optional()
+      .or(z.literal('')),
+    
     termsAccepted: z
       .boolean()
       .refine(

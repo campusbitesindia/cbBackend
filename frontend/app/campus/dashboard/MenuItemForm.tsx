@@ -191,7 +191,7 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
               <SelectTrigger className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white text-black'>
                 <SelectValue placeholder='Select a category' />
               </SelectTrigger>
-              <SelectContent className='bg-white border border-gray-200 rounded-xl shadow-lg'>
+              <SelectContent className='bg-white text-black border border-gray-200 rounded-xl shadow-lg'>
                 <SelectItem
                   value='appetizers'
                   className='px-4 py-3 hover:bg-gray-50'>
@@ -259,7 +259,7 @@ export const MenuItemForm: React.FC<MenuItemFormProps> = ({
                 <SelectTrigger className='w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white text-black'>
                   <SelectValue placeholder='Select portion' />
                 </SelectTrigger>
-                <SelectContent className='bg-white border border-gray-200 rounded-xl shadow-lg'>
+                <SelectContent className='bg-white text-black border border-gray-200 rounded-xl shadow-lg'>
                   <SelectItem
                     value='full'
                     className='px-4 py-2 hover:bg-gray-50'>
