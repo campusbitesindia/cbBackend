@@ -45,13 +45,14 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [restaurants, setRestaurants] = useState<Canteen[]>([]);
   const [userCampusId, setUserCampusId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGroupOrderModalOpen, setIsGroupOrderModalOpen] = useState(false);
   const [selectedCanteen, setSelectedCanteen] = useState<string | null>(null);
@@ -163,46 +164,35 @@ function StudentDashboardContent() {
     setIsGroupOrderModalOpen(false);
   };
 
-  // Fetch canteens based on campus
-  useEffect(() => {
-    const fetchCanteens = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        let url = 'https://campusbites-mxpe.onrender.com/api/v1/canteens';
-        if (userCampusId) {
-          url += `?campus=${userCampusId}`;
-        }
-
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('Failed to fetch canteens');
-        }
-
-        const data = await response.json();
-
-        const processedCanteens =
-          data.canteens?.map((canteen: any) => ({
-            ...canteen,
-            image:
-              canteen.owner?.profileImage ||
-              canteen.image ||
-              '/placeholder.svg',
-          })) || [];
-
-        console.log('Processed Canteens:', processedCanteens);
+  const fetchCanteens = async () => {
+    setLoading(true)
+    try{
+      const response = await axios.get(`https://campusbites-mxpe.onrender.com/api/v1/canteens?campus=${userCampusId}`)
+      if(response?.status === 200) {
+           const processedCanteens =
+        response?.data?.canteens?.map((canteen: any) => ({
+          ...canteen,
+          image:
+            canteen.owner?.profileImage ||
+            canteen.image ||
+            '/placeholder.svg',
+        })) || [];
         setRestaurants(processedCanteens);
-      } catch (error) {
-        console.error('Error fetching canteens:', error);
-        setError('Failed to load restaurants');
-        setRestaurants([]);
-      } finally {
         setLoading(false);
       }
-    };
+    } catch {
+      setLoading(false);
+      ('Failed to load restaurants');
+      setRestaurants([]);
+    }
+  };
 
-    fetchCanteens();
+  // Fetch canteens based on campus
+  useEffect(() => {
+    if(userCampusId) {
+
+      fetchCanteens();
+    }
   }, [userCampusId]);
 
   const categories = [

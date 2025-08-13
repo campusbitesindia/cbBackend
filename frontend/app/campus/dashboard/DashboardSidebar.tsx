@@ -201,22 +201,6 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           </button>
         )}
 
-        {/* Enhanced Collapse/Expand Button */}
-        <button
-          className={`absolute top-8 -right-4 p-3 rounded-full bg-white border-2 border-slate-200 transition-all duration-300 z-20 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 group ${
-            isMobile ? 'hidden' : ''
-          }`}
-          onClick={() => setCollapsed((c) => !c)}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-          <div className='relative'>
-            {collapsed ? (
-              <ChevronRight className='w-4 h-4 text-slate-600 group-hover:text-blue-600 transition-all duration-300 group-hover:scale-110' />
-            ) : (
-              <ChevronLeft className='w-4 h-4 text-slate-600 group-hover:text-blue-600 transition-all duration-300 group-hover:scale-110' />
-            )}
-          </div>
-        </button>
-
         {/* Enhanced Brand Section */}
         <div
           className={`flex items-center px-6 py-6 border-b border-slate-200/60 ${
@@ -225,7 +209,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
           {!collapsed && (
             <div className='flex items-center gap-3'>
               <div className='w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25'>
-                <span className='text-white font-bold text-lg'>C</span>
+                <span className='text-white font-bold text-lg'>CB</span>
               </div>
               <div>
                 <span className='font-bold text-xl bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent'>
@@ -238,9 +222,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             </div>
           )}
           {collapsed && (
-            <div className='w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105'>
-              <span className='text-white font-bold text-lg'>C</span>
-            </div>
+             <div className='w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25 hover:shadow-blue-500/25 transition-all duration-300 hover:scale-105'>
+             <span className='text-white font-bold text-xl tracking-wide'>CB</span>
+           </div>
           )}
         </div>
 
@@ -284,6 +268,43 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             </React.Fragment>
           ))}
         </div>
+
+        {/* Enhanced Collapse/Expand Button - Moved to bottom before logout */}
+        {!isMobile && (
+          <div className={`px-3 pb-3 ${collapsed ? 'flex justify-center' : ''}`}>
+            {collapsed ? (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className='p-2 rounded-full bg-white border-2 border-slate-200 transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 group'
+                      onClick={() => setCollapsed((c) => !c)}
+                      aria-label='Expand sidebar'>
+                      <ChevronRight className='w-4 h-4 text-slate-600 group-hover:text-blue-600 transition-all duration-300 group-hover:scale-110' />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side='right'
+                    className='bg-slate-900 text-white border-slate-700 shadow-xl backdrop-blur-sm'>
+                    <p className='font-medium'>Expand Sidebar</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ) : (
+              <button
+                className='flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 transition-all duration-300 w-full group hover:shadow-md hover:scale-102 border border-transparent hover:border-blue-200'
+                onClick={() => setCollapsed((c) => !c)}
+                aria-label='Collapse sidebar'>
+                <div className='p-1 rounded-lg group-hover:bg-blue-100 transition-all duration-300'>
+                  <ChevronLeft className='w-4 h-4 transition-all duration-300 group-hover:scale-110' />
+                </div>
+                <span className='font-semibold transition-all duration-300'>
+                  Collapse
+                </span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Enhanced Logout Button */}
         <div

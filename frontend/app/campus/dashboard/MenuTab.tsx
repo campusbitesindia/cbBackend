@@ -9,11 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { MenuItemCard } from './MenuItemCard';
-import { MenuItemForm } from './MenuItemForm';
 import { MenuItemFilters } from './MenuItemFilters';
 import { MenuItem } from '@/services/menuService';
+import { MenuItemForm } from './MenuItemForm';
+import { X } from 'lucide-react';
+
 
 interface MenuItemFormData {
   name: string;
@@ -122,7 +125,15 @@ export const MenuTab: React.FC<MenuTabProps> = ({
                 </DialogTrigger>
                 <DialogContent className='max-w-lg bg-white border border-gray-200 shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide rounded-2xl'>
                   <DialogHeader className='space-y-3 pb-6'>
-                    <DialogTitle className='text-2xl font-bold text-gray-900 flex items-center gap-2'>
+                        <DialogClose asChild>
+          <button
+            className='absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100 transition'
+            aria-label='Close'
+          >
+            <X className='w-5 h-5 text-gray-500' />
+          </button>
+        </DialogClose>
+                          <DialogTitle className='text-2xl font-bold text-gray-900 flex items-center gap-2'>
                       <Sparkles className='w-6 h-6 text-blue-600' />
                       Add New Menu Item
                     </DialogTitle>
@@ -278,6 +289,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({
       <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
         <DialogContent className='max-w-lg bg-white border border-gray-200 shadow-2xl max-h-[90vh] overflow-y-auto scrollbar-hide rounded-2xl'>
           <DialogHeader className='space-y-3 pb-6'>
+          <DialogClose asChild>
+    <button
+      className='absolute top-3 right-3 p-2 rounded-full hover:bg-gray-100 transition'
+      aria-label='Close'
+    >
+      <X className='w-5 h-5 text-gray-500' />
+    </button>
+  </DialogClose>
             <DialogTitle className='text-2xl font-bold text-gray-900 flex items-center gap-2'>
               <Sparkles className='w-6 h-6 text-purple-600' />
               Edit Menu Item
