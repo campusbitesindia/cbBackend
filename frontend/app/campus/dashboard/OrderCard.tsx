@@ -151,7 +151,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const canUpdateStatus = nextStatusOptions.length > 0 && !updatingStatus;
 
   return (
-    <div className='bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200 group'>
+    <div className='w-full max-w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200 group overflow-hidden overflow-x-hidden box-border'>
       {/* Header Section */}
       <div className='flex justify-between items-start mb-6'>
         <div className='flex items-center space-x-3'>
@@ -246,7 +246,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               key={item._id || idx}
               className='flex justify-between items-center bg-gray-50 rounded-lg p-3'>
               <div className='flex-1'>
-                <p className='font-medium text-gray-900'>
+                <p className='font-medium text-gray-900 break-words'>
                   {item.nameAtPurchase || item.item?.name || 'Unknown Item'}
                 </p>
                 <p className='text-sm text-gray-500'>
@@ -279,7 +279,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
               value={selectedStatus}
               onValueChange={setSelectedStatus}
               disabled={updatingStatus}>
-              <SelectTrigger className='w-48 bg-white border-blue-200 text-black'>
+              <SelectTrigger className='w-full sm:w-48 bg-white border-blue-200 text-black'>
                 <SelectValue placeholder='Select new status' />
               </SelectTrigger>
               <SelectContent>
