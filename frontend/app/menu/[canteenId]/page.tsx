@@ -255,48 +255,49 @@ const CanteenMenuPage = () => {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 transition-colors duration-500'>
-      <header className='relative h-64 md:h-80'>
-        <Image
-          src={canteen.image || '/placeholder.svg'}
-          alt={canteen.name}
-          layout='fill'
-          objectFit='cover'
-          className='opacity-70'
-        />
-        <div className='absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent' />
-        <div className='absolute bottom-0 left-0 p-8'>
-          <Link
-            href='/menu'
-            className='flex items-center gap-2 text-white mb-4 hover:underline transition-colors'>
-            <ArrowLeft size={16} /> Back to Restaurants
-          </Link>
-          <h1 className='text-5xl font-bold text-white drop-shadow-md'>
-            {canteen.name}
-          </h1>
-          <p className='text-lg text-gray-200 drop-shadow-sm'>
-            {canteen.cuisine}
-          </p>
-          <div className='flex items-center gap-4 mt-2 text-gray-200'>
-            <div className='flex items-center gap-1'>
-              <Star className='w-5 h-5 text-yellow-400 fill-yellow-400' />
-              <span>{canteen.rating}</span>
-            </div>
-            <div className='flex items-center gap-1'>
-              <Clock className='w-5 h-5' />
-              <span>{canteen.deliveryTime}</span>
-            </div>
-            <div className='flex items-center gap-1'>
-              <MapPin className='w-5 h-5' />
-              <span>{canteen.distance}</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <header className="relative h-48 sm:h-64 md:h-80">
+  <Image
+    src={canteen.image || '/placeholder.svg'}
+    alt={canteen.name}
+    fill
+    className="object-cover opacity-70"
+    priority
+  />
+  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent" />
+  <div className="absolute bottom-0 left-0 p-4 sm:p-8">
+    <Link
+      href="/menu"
+      className="flex items-center gap-2 text-white mb-2 sm:mb-4 hover:underline"
+    >
+      <ArrowLeft size={14} className="sm:size-4" /> 
+      <span className="text-sm sm:text-base">Back to Restaurants</span>
+    </Link>
+    <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-md">
+      {canteen.name}
+    </h1>
+    <p className="text-sm sm:text-lg text-gray-200 drop-shadow-sm">{canteen.cuisine}</p>
+    <div className="flex flex-wrap items-center gap-3 mt-2 text-gray-200 text-xs sm:text-sm">
+      <div className="flex items-center gap-1">
+        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-yellow-400" />
+        <span>{canteen.rating}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span>{canteen.deliveryTime}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span>{canteen.distance}</span>
+      </div>
+    </div>
+  </div>
+</header>
+
 
       <div className='container mx-auto px-4 py-8'>
         {/* Filter Bar */}
         <div className='flex flex-col gap-6 mb-8 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700'>
-          <div className='flex flex-col md:flex-row gap-4 items-center'>
+          <div className='flex flex-col md:flex-row flex-wrap gap-4 items-center'>
             <div className='relative w-full md:w-1/3'>
               <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5' />
               <Input
@@ -308,7 +309,7 @@ const CanteenMenuPage = () => {
               />
             </div>
             <select
-              className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
+              className='w-full sm:w-1/4 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
               value={selectedItemType}
               onChange={(e) => setSelectedItemType(e.target.value)}>
               {itemTypes.map((type) => (
@@ -318,7 +319,7 @@ const CanteenMenuPage = () => {
               ))}
             </select>
             <select
-              className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
+              className=' w-full sm:w-1/4 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}>
               {categories.map((category) => (
@@ -353,7 +354,7 @@ const CanteenMenuPage = () => {
               <span className='text-gray-900 dark:text-white text-sm font-medium mb-2'>
                 Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
               </span>
-              <div className='flex gap-4'>
+              <div className='flex flex-col sm:flex-row gap-4 w-full'>
                 <input
                   type='range'
                   id='min-price'
@@ -380,14 +381,14 @@ const CanteenMenuPage = () => {
         <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
           <main className='md:col-span-4'>
             {filteredMenuItems.length > 0 ? (
-              <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'>
                 {filteredMenuItems.map((item) => {
                   const quantity = getCartItemQuantity(item._id);
                   return (
                     <Card
                       key={item._id}
                       className='flex flex-col rounded-2xl shadow-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 relative'>
-                      <div className='relative w-full h-48'>
+                      <div className='relative w-full h-40 sm:h-48'>
                         {item.image ? (
                           <Image
                             src={item.image}
