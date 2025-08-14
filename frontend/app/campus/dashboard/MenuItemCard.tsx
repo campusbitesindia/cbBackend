@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Edit, Leaf, Trash2, Clock, CheckCircle, Star } from 'lucide-react';
+import React, { useState, useCallback, memo } from 'react';
+import { Edit, Leaf, Trash2, Clock, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +13,7 @@ interface MenuItemCardProps {
   onToggleReady?: (itemId: string, isReady: boolean) => void;
 }
 
-export const MenuItemCard: React.FC<MenuItemCardProps> = ({
+export const MenuItemCard: React.FC<MenuItemCardProps> = memo(({
   item,
   onEdit,
   onDelete,
@@ -23,7 +23,7 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
   const [currentItem, setCurrentItem] = useState(item);
   const [togglingReady, setTogglingReady] = useState(false);
 
-  const handleToggleReady = async () => {
+  const handleToggleReady = useCallback(async () => {
     if (togglingReady) return;
 
     setTogglingReady(true);
@@ -38,95 +38,94 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
         }`,
       });
 
-      // Call parent callback if provided
-      if (onToggleReady) {
-        onToggleReady(currentItem._id, updatedItem.isReady || false);
-      }
+      onToggleReady?.(currentItem._id, updatedItem.isReady || false);
     } catch (error: any) {
       console.error('Error toggling ready status:', error);
       toast({
         title: 'Update Failed',
-        description:
-          error.response?.data?.message || 'Failed to update ready status',
+        description: error.response?.data?.message || 'Failed to update ready status',
         variant: 'destructive',
       });
     } finally {
       setTogglingReady(false);
     }
-  };
+  }, [currentItem._id, toast, onToggleReady, togglingReady]);
+
+  const handleEdit = useCallback(() => {
+    onEdit(currentItem);
+  }, [onEdit, currentItem]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(currentItem._id);
+  }, [onDelete, currentItem._id]);
+
+  // Pre-calculate class names to avoid repeated string concatenation
+  const cardClassName = `group relative overflow-hidden bg-white border-0 shadow-lg rounded-2xl transition-transform duration-300 hover:shadow-xl hover:-translate-y-1 ${
+    currentItem.available === false
+      ? 'opacity-75 ring-2 ring-red-100'
+      : 'hover:ring-2 hover:ring-indigo-100'
+  }`;
+
+  const imageClassName = `w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+    currentItem.available === false ? 'grayscale saturate-50' : ''
+  }`;
+
+  const availabilityBadgeClass = `inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-xl backdrop-blur-sm border ${
+    currentItem.available !== false
+      ? 'bg-emerald-500/90 text-white border-emerald-400/50'
+      : 'bg-red-500/90 text-white border-red-400/50'
+  }`;
+
+  const vegBadgeClass = `inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-xl backdrop-blur-sm border ${
+    currentItem.isVeg
+      ? 'bg-green-500/90 text-white border-green-400/50'
+      : 'bg-orange-500/90 text-white border-orange-400/50'
+  }`;
+
+  const readyBadgeClass = `inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl backdrop-blur-sm border ${
+    currentItem.isReady
+      ? 'bg-emerald-500/90 text-white border-emerald-400/50'
+      : 'bg-amber-500/90 text-white border-amber-400/50'
+  }`;
 
   return (
-    <Card
-      className={`group relative overflow-hidden bg-white border-0 shadow-lg rounded-2xl transition-all duration-500 hover:shadow-xl hover:shadow-slate-200/50 hover:-translate-y-1 ${
-        currentItem.available === false
-          ? 'opacity-75 ring-2 ring-red-100'
-          : 'hover:ring-2 hover:ring-indigo-100'
-      }`}>
-      {/* Gradient overlay for depth */}
-      <div className='absolute inset-0 bg-gradient-to-br from-slate-50/30 via-transparent to-slate-100/20 pointer-events-none' />
+    <Card className={cardClassName}>
+      {/* Simplified gradient overlay */}
+      <div className='absolute inset-0 bg-gradient-to-br from-slate-50/20 to-slate-100/10 pointer-events-none' />
 
-      {/* Image Section */}
-      <div className='relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 to-slate-200'>
-        <div className='aspect-[3/2] relative overflow-hidden'>
+      {/* Image Section - Reduced aspect ratio calculations */}
+      <div className='relative overflow-hidden rounded-t-2xl bg-slate-100'>
+        <div className='aspect-[3/2] relative'>
           <img
             src={currentItem.image || '/placeholder.svg'}
             alt={currentItem.name}
-            className={`w-full h-full object-cover transition-all duration-700 group-hover:scale-110 ${
-              currentItem.available === false ? 'grayscale saturate-50' : ''
-            }`}
+            className={imageClassName}
+            loading="lazy" // Add lazy loading for better performance
+            decoding="async"
           />
 
-          {/* Image overlay gradient */}
-          <div className='absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-60' />
-
-          {/* Animated overlay on hover */}
-          <div className='absolute inset-0 bg-gradient-to-t from-indigo-900/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500' />
+          {/* Simplified overlay */}
+          <div className='absolute inset-0 bg-gradient-to-t from-black/30 to-transparent' />
         </div>
 
         {/* Status Badges Container */}
         <div className='absolute inset-0 p-3'>
-          {/* Availability Badge */}
           <div className='flex justify-between items-start'>
-            <span
-              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-xl backdrop-blur-md border transition-all duration-300 ${
-                currentItem.available !== false
-                  ? 'bg-emerald-500/90 text-white border-emerald-400/50 shadow-lg shadow-emerald-500/25'
-                  : 'bg-red-500/90 text-white border-red-400/50 shadow-lg shadow-red-500/25 animate-pulse'
-              }`}>
-              <div
-                className={`w-1.5 h-1.5 rounded-full ${
-                  currentItem.available !== false
-                    ? 'bg-emerald-200'
-                    : 'bg-red-200'
-                }`}
-              />
+            <span className={availabilityBadgeClass}>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                currentItem.available !== false ? 'bg-emerald-200' : 'bg-red-200'
+              }`} />
               {currentItem.available !== false ? 'Available' : 'Unavailable'}
             </span>
 
-            {/* Veg/Non-Veg Badge */}
-            <span
-              className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-xl backdrop-blur-md border transition-all duration-300 ${
-                currentItem.isVeg
-                  ? 'bg-green-500/90 text-white border-green-400/50 shadow-lg shadow-green-500/25'
-                  : 'bg-orange-500/90 text-white border-orange-400/50 shadow-lg shadow-orange-500/25'
-              }`}>
-              <Leaf
-                className={`w-2.5 h-2.5 ${
-                  !currentItem.isVeg ? 'rotate-180' : ''
-                }`}
-              />
+            <span className={vegBadgeClass}>
+              <Leaf className={`w-2.5 h-2.5 ${!currentItem.isVeg ? 'rotate-180' : ''}`} />
               {currentItem.isVeg ? 'Veg' : 'Non-Veg'}
             </span>
           </div>
 
-          {/* Ready Status Badge - Bottom */}
           <div className='absolute bottom-3 left-3'>
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl backdrop-blur-md border transition-all duration-300 ${
-                currentItem.isReady
-                  ? 'bg-emerald-500/90 text-white border-emerald-400/50 shadow-lg shadow-emerald-500/25'
-                  : 'bg-amber-500/90 text-white border-amber-400/50 shadow-lg shadow-amber-500/25'
-              }`}>
+            <span className={readyBadgeClass}>
               {currentItem.isReady ? (
                 <>
                   <CheckCircle className='w-3 h-3' />
@@ -151,19 +150,15 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
             {currentItem.name}
           </h3>
           <p className='text-xs text-slate-600 line-clamp-2 leading-relaxed'>
-            {currentItem.description ||
-              'Delicious item crafted with care and quality ingredients'}
+            {currentItem.description || 'Delicious item crafted with care and quality ingredients'}
           </p>
         </div>
 
         {/* Price and Category Row */}
         <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-1.5'>
-            <span className='text-xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-700 bg-clip-text text-transparent'>
-              ₹{currentItem.price}
-            </span>
-          </div>
-
+          <span className='text-xl font-bold text-emerald-600'>
+            ₹{currentItem.price}
+          </span>
           <span className='inline-flex items-center text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg capitalize'>
             {currentItem.category}
           </span>
@@ -172,11 +167,9 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
         {/* Ready Status Toggle */}
         <div className='flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100'>
           <div className='flex items-center gap-2'>
-            <div
-              className={`w-1.5 h-1.5 rounded-full ${
-                currentItem.isReady ? 'bg-emerald-500' : 'bg-amber-500'
-              }`}
-            />
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              currentItem.isReady ? 'bg-emerald-500' : 'bg-amber-500'
+            }`} />
             <span className='text-xs font-medium text-slate-700'>
               {currentItem.isReady ? 'Ready to serve' : 'Mark when ready'}
             </span>
@@ -186,12 +179,9 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
             checked={currentItem.isReady || false}
             onCheckedChange={handleToggleReady}
             disabled={togglingReady}
-            className={`
-              transition-all duration-300
-              ${togglingReady ? 'opacity-50 cursor-not-allowed' : ''}
-              data-[state=checked]:bg-emerald-600 
-              data-[state=unchecked]:bg-slate-300
-            `}
+            className={`transition-all duration-300 ${
+              togglingReady ? 'opacity-50 cursor-not-allowed' : ''
+            } data-[state=checked]:bg-emerald-600 data-[state=unchecked]:bg-slate-300`}
           />
         </div>
 
@@ -200,8 +190,9 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
           <Button
             size='sm'
             variant='outline'
-            className='flex-1 h-8 bg-gradient-to-r from-blue-50 to-indigo-50 text-indigo-700 border-indigo-200 hover:from-indigo-100 hover:to-blue-100 hover:border-indigo-300 hover:text-indigo-800 font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-indigo-200/50 rounded-lg text-xs'
-            onClick={() => onEdit(currentItem)}>
+            className='flex-1 h-8 bg-blue-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 font-medium transition-colors duration-200 rounded-lg text-xs'
+            onClick={handleEdit}
+          >
             <Edit className='w-3 h-3 mr-1.5' />
             Edit
           </Button>
@@ -209,16 +200,14 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({
           <Button
             size='sm'
             variant='outline'
-            className='flex-1 h-8 bg-gradient-to-r from-red-50 to-pink-50 text-red-700 border-red-200 hover:from-red-100 hover:to-pink-100 hover:border-red-300 hover:text-red-800 font-medium transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-red-200/50 rounded-lg text-xs'
-            onClick={() => onDelete(currentItem._id)}>
+            className='flex-1 h-8 bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 font-medium transition-colors duration-200 rounded-lg text-xs'
+            onClick={handleDelete}
+          >
             <Trash2 className='w-3 h-3 mr-1.5' />
             Remove
           </Button>
         </div>
       </CardContent>
-
-      {/* Subtle corner accent */}
-      <div className='absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-100/30 to-transparent rounded-bl-2xl' />
     </Card>
   );
-};
+});
