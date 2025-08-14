@@ -219,7 +219,7 @@ function StudentDashboardContent() {
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
-        <div className='text-foreground text-xl'>Loading restaurants...</div>
+         <div className='w-12 h-12 border-4 border-t-transparent border-white rounded-full animate-spin mb-4'></div>
       </div>
     );
   }
@@ -239,6 +239,16 @@ function StudentDashboardContent() {
       </div>
     );
   }
+  const handleClick = () => {
+    setLoading(true);
+
+    // Simulate an async action (like API call)
+    setTimeout(() => {
+      setLoading(false);
+      // Add your actual order logic here
+      console.log('Order placed!');
+    }, 1000);
+  };
 
   return (
     <div className='min-h-screen bg-background'>
@@ -589,11 +599,18 @@ function StudentDashboardContent() {
                       </div>
                     </div>
                     <Link href={`/menu/${restaurant._id}`}>
-                      <Button
-                        className='w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300'
-                        disabled={!restaurant.isOpen}>
-                        {restaurant.isOpen ? 'Order Now' : 'Closed'}
-                      </Button>
+                    <Button
+      className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300 ${
+        !restaurant.isOpen || loading ? 'opacity-70 cursor-not-allowed' : ''
+      }`}
+      disabled={!restaurant.isOpen || loading}
+      onClick={handleClick}
+    >
+      {loading && (
+        <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+      )}
+      {restaurant.isOpen ? (loading ? 'Ordering...' : 'Order Now') : 'Closed'}
+    </Button>
                     </Link>
                   </CardContent>
                 </Card>

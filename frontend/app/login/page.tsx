@@ -189,9 +189,7 @@ export default function LoginPage() {
       {/* Professional Navy Background */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
         {/* Animated Background Elements */}
-        <div className='absolute top-0 left-0 w-96 h-96 bg-red-500/10 rounded-full blur-3xl animate-pulse'></div>
-        <div className='absolute bottom-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse delay-1000'></div>
-        <div className='absolute top-1/2 left-1/2 w-64 h-64 bg-white/5 rounded-full blur-2xl animate-pulse delay-2000'></div>
+        
 
         {/* Floating Food Icons */}
         <div className='absolute top-20 left-20 w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center animate-float'>
@@ -235,8 +233,7 @@ export default function LoginPage() {
                   </div>
                 </div>
                 {/* Orbiting Elements */}
-                <div className='absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-4 w-4 h-4 bg-yellow-400 rounded-full animate-orbit'></div>
-                <div className='absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-4 w-3 h-3 bg-green-400 rounded-full animate-orbit-reverse'></div>
+                
               </div>
               <h1 className='text-5xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent mb-3 transition-all duration-500'>
                 Campus Bites
