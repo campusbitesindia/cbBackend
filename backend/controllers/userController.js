@@ -442,7 +442,7 @@ exports.forgotPass = async (req, res, next) => {
   const resetToken = user1.getresetpass()
   await user1.save({ validateBeforeSave: false })
 
-  const resetPassURL = `http://localhost:3000/resetPass/${resetToken}`
+  const resetPassURL = `https://campus-bites-c7pe.vercel.app/resetPass/${resetToken}`
 
   const message = `Your password reset token is: \n\n ${resetPassURL} \n\nIf you have not send this request, please ignore.`
 

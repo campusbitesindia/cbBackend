@@ -359,3 +359,28 @@ exports.updateGroupOrderItems = async (req, res) => {
     return res.status(500).json({ message: "Internal server error", error: error.message });
   }
 };
+
+exports.getAllGroupOrders = async (req, res) => {
+  try {
+    const groupOrders = await GroupOrder.find()
+      .populate("creator", "name email")
+      .populate("members", "name email")
+      .populate("items.item", "name price")
+      .populate("paymentDetails.amounts.user", "name email")
+      .populate("paymentDetails.transactions.user", "name email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      count: groupOrders.length,
+      groupOrders
+    });
+  } catch (err) {
+    console.error("Error fetching all group orders:", err);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: err.message
+    });
+  }
+};
