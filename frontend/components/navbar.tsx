@@ -411,35 +411,36 @@ function Navbar() {
                 <DropdownMenuContent
                   align='end'
                   className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
-                  <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
-                    <div className='flex items-center space-x-3'>
-                      <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
-                        <Image
-                          src={profileImageSrc}
-                          alt={displayUser?.name || 'User'}
-                          fill
-                          className='object-cover'
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/placeholder-user.jpg';
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <p className='font-semibold text-gray-900 dark:text-white'>
-                          {displayUser?.name}
-                        </p>
-                        <p className='text-sm text-gray-600 dark:text-gray-400'>
-                          {displayUser?.email}
-                        </p>
-                        {displayUser?.role && (
-                          <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
-                            {displayUser.role}
+                 <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
+                        <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shrink-0">
+                          <Image
+                            src={profileImageSrc}
+                            alt={displayUser?.name || 'User'}
+                            fill
+                            className="object-cover rounded-full"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-user.jpg';
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {displayUser?.name}
                           </p>
-                        )}
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[180px]">
+                            {displayUser?.email}
+                          </p>
+                          {displayUser?.role && (
+                            <p className="text-xs text-red-500 dark:text-red-400 capitalize">
+                              {displayUser.role}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+
+                      </div>
 
                   <DropdownMenuItem
                     asChild

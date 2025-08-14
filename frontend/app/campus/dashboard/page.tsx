@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -78,6 +78,23 @@ import { useSocket } from '@/context/socket-context';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
+// Debounce utility
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 function DashboardContent() {
   // Move all hooks to the top
   const router = useRouter();
@@ -103,22 +120,44 @@ function DashboardContent() {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [canteenStats, setCanteenStats] = useState<CanteenStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [menuLoading, setMenuLoading] = useState(false);
-  const [isAddItemOpen, setIsAddItemOpen] = useState(false);
-  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
-  const [notApprovedDialog, setNotApprovedDialog] = useState(false);
 
-  const [canteenId, setCanteenId] = useState('');
+  // State consolidation - group related states
+  const [dataState, setDataState] = useState({
+    menuItems: [] as MenuItem[],
+    orders: [] as Order[],
+    canteenStats: null as CanteenStats | null,
+    canteenId: '',
+  });
+
+
+  const [loadingState, setLoadingState] = useState({
+    loading: true,
+    menuLoading: false,
+    imageUploading: false,
+    personalSubmitting: false,
+    bankSubmitting: false,
+  });
+
+  const [dialogState, setDialogState] = useState({
+    isAddItemOpen: false,
+    isEditItemOpen: false,
+    notApprovedDialog: false,
+    personalSuccess: false,
+    bankSuccess: false,
+  });
+
+  const [imageState, setImageState] = useState({
+    selectedImage: null as File | null,
+    imagePreview: '',
+    profilePicFile: null as File | null,
+    profilePicPreview: '',
+  });
+
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [orderDetails, setOrderDetails] = useState<any | null>(null);
+
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
-
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -130,11 +169,16 @@ function DashboardContent() {
     portion: '',
     quantity: '',
   });
+
+  // Filter states
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [readyFilter, setReadyFilter] = useState('all');
-  const [orderDetails, setOrderDetails] = useState<any | null>(null);
+
+  // Debounce search term to reduce filtering operations
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const [personalData, setPersonalData] = useState({
     vendorName: '',
     contactPerson: '',
@@ -143,10 +187,7 @@ function DashboardContent() {
     address: '',
     profilePic: '',
   });
-  const [personalSubmitting, setPersonalSubmitting] = useState(false);
-  const [personalSuccess, setPersonalSuccess] = useState(false);
-  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
-  const [profilePicPreview, setProfilePicPreview] = useState('');
+
   const [bankDetails, setBankDetails] = useState({
     accountHolderName: '',
     accountNumber: '',
@@ -156,18 +197,57 @@ function DashboardContent() {
     branchName: '',
     upiId: '',
   });
-  const [bankSubmitting, setBankSubmitting] = useState(false);
-  const [bankSuccess, setBankSuccess] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
-  const { getSocket, connectSocket, disconnectSocket } = useSocket();
 
+  const { getSocket, connectSocket, disconnectSocket } = useSocket();
+  const storedId = localStorage.getItem('canteenId');
+
+  // Initialize canteenId from localStorage
   useEffect(() => {
-    const storedId = localStorage.getItem('canteenId');
-    if (storedId) setCanteenId(storedId);
-  }, []);
-  // Fixed Socket Connection Effect
+    if (storedId) {
+      setDataState(prev => ({ ...prev, canteenId: storedId }));
+    }
+  }, [storedId]);
+
+  // Memoized filtered items to prevent unnecessary recalculations
+  const filteredItems = useMemo(() => {
+    return dataState.menuItems.filter((item: MenuItem) => {
+      // Search filter
+      const matchesSearch = item.name
+        .toLowerCase()
+        .includes(debouncedSearchTerm.toLowerCase());
+
+      // Status filter
+      const isActive = 'available' in item ? item.available : true;
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && isActive) ||
+        (statusFilter === 'inactive' && !isActive);
+
+      // Category filter
+      const matchesCategory =
+        categoryFilter === 'all' ||
+        (item.category && item.category.toLowerCase() === categoryFilter);
+
+      // Ready filter
+      const matchesReady =
+        readyFilter === 'all' ||
+        (readyFilter === 'ready' && item.isReady === true) ||
+        (readyFilter === 'not-ready' && item.isReady === false);
+
+      return matchesSearch && matchesStatus && matchesCategory && matchesReady;
+    });
+  }, [dataState.menuItems, debouncedSearchTerm, statusFilter, categoryFilter, readyFilter]);
+
+  // Memoized categories to prevent recalculation
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(dataState.menuItems.map((item) => item.category?.toLowerCase() || ''))
+    ).filter(Boolean);
+  }, [dataState.menuItems]);
+
+  // Optimized Socket Connection Effect
   useEffect(() => {
-    if (!canteenId) return;
+    // if (!dataState.canteenId) return;
   
     connectSocket();
     const socket = getSocket();
@@ -177,7 +257,7 @@ function DashboardContent() {
       return;
     }
   
-    socket.emit("Join_Room", canteenId);
+    socket.emit("Join_Room", dataState.canteenId);
   
     const handleNewOrder = (data: Order) => {
       if (!data?._id) return;
@@ -188,9 +268,12 @@ function DashboardContent() {
         createdAt: data.createdAt ?? new Date().toISOString(),
       };
   
-      setOrders((prev) => {
-        if (prev.some((o) => o._id === transformedOrder._id)) return prev;
-        return [transformedOrder, ...prev]; // latest first
+      setDataState(prev => {
+        if (prev.orders.some(o => o._id === transformedOrder._id)) return prev;
+        return {
+          ...prev,
+          orders: [transformedOrder, ...prev.orders]
+        };
       });
   
       toast({
@@ -205,17 +288,17 @@ function DashboardContent() {
       socket.off("New_Order", handleNewOrder);
       disconnectSocket();
     };
-  }, [canteenId, toast, connectSocket, disconnectSocket, getSocket]);
-  
+  }, [dataState.canteenId, toast, connectSocket, disconnectSocket, getSocket]);
 
-  type BreadcrumbItem = {
-    label: string;
-    href?: string;
-    onClick?: () => void;
-    icon?: React.ComponentType<any>;
-  };
-  
-  const getBreadcrumbItems = (): BreadcrumbItem[] => {
+  // Memoized breadcrumb items
+  const breadcrumbItems = useMemo(() => {
+    type BreadcrumbItem = {
+      label: string;
+      href?: string;
+      onClick?: () => void;
+      icon?: React.ComponentType<any>;
+    };
+
     const base: BreadcrumbItem[] = [
       {
         label: "Dashboard",
@@ -224,7 +307,7 @@ function DashboardContent() {
         icon: Home,
       },
     ];
-  
+
     const tabLabels: Record<string, string> = {
       menu: "Menu Items",
       orders: "Orders",
@@ -232,10 +315,9 @@ function DashboardContent() {
       profile: "Profile",
       payouts: "Payouts",
     };
-  
-    // If overview tab, just return base
+
     if (activeTab === "overview") return base;
-  
+
     const breadcrumbs: BreadcrumbItem[] = [
       ...base,
       {
@@ -243,30 +325,30 @@ function DashboardContent() {
         href: "#",
       },
     ];
-  
+
     if (activeTab === "menu") {
-      if (isAddItemOpen) {
+      if (dialogState.isAddItemOpen) {
         breadcrumbs.push({
           label: "Add New Item",
           href: "#",
           onClick: () => {
-            setIsAddItemOpen(false);
+            setDialogState(prev => ({ ...prev, isAddItemOpen: false }));
             resetForm();
           },
         });
-      } else if (isEditItemOpen && editingItem) {
+      } else if (dialogState.isEditItemOpen && editingItem) {
         breadcrumbs.push({
           label: `Edit ${editingItem.name}`,
           href: "#",
           onClick: () => {
-            setIsEditItemOpen(false);
+            setDialogState(prev => ({ ...prev, isEditItemOpen: false }));
             setEditingItem(null);
             resetForm();
           },
         });
       }
     }
-  
+
     if (activeTab === "orders" && orderDetails) {
       breadcrumbs.push({
         label: `Order #${orderDetails._id?.slice(-6) || "Details"}`,
@@ -274,28 +356,29 @@ function DashboardContent() {
         onClick: () => setOrderDetails(null),
       });
     }
-  
-    return breadcrumbs;
-  };
 
-  const handleProfilePicUpload = async (
+    return breadcrumbs;
+  }, [activeTab, dialogState.isAddItemOpen, dialogState.isEditItemOpen, editingItem, orderDetails]);
+
+  // Optimized profile picture upload with useCallback
+  const handleProfilePicUpload = useCallback(async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
   
-    setProfilePicFile(file);
-  
-    // Immediate preview (faster than FileReader for images)
-    const previewUrl = URL.createObjectURL(file);
-    setProfilePicPreview(previewUrl);
+    setImageState(prev => ({
+      ...prev,
+      profilePicFile: file,
+      profilePicPreview: URL.createObjectURL(file)
+    }));
   
     try {
       const token = localStorage.getItem("token") || "";
       const { uploadProfileImage } = await import("@/services/userService");
       const { imageUrl } = await uploadProfileImage(file, token);
   
-      setPersonalData((prev) =>
+      setPersonalData(prev => 
         prev.profilePic === imageUrl ? prev : { ...prev, profilePic: imageUrl }
       );
   
@@ -305,253 +388,219 @@ function DashboardContent() {
       });
     } catch (err) {
       console.error("Profile picture upload error:", err);
-  
       toast({
         title: "Upload Failed",
-        description:
-          err instanceof Error
-            ? err.message
-            : "Failed to upload profile picture",
+        description: err instanceof Error ? err.message : "Failed to upload profile picture",
         variant: "destructive",
       });
-  
-      // Fallback: keep local preview
-      setPersonalData((prev) => ({
+    }
+  }, [toast]);
+
+  // Single data fetching function with proper error handling
+  const fetchData = useCallback(async (currentCanteenId?: string) => {
+    const token = localStorage.getItem("token") || "";
+
+    if (!isAuthenticated || !user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to access this feature",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const canteenIdToUse = currentCanteenId || dataState.canteenId;
+    if (!canteenIdToUse) {
+      toast({
+        title: "Error",
+        description: "Canteen ID not found. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoadingState(prev => ({ ...prev, loading: true, menuLoading: true }));
+
+    const handleNotApproved = (error: any) => {
+      if (
+        error?.response?.status === 403 &&
+        error?.response?.data?.message?.toLowerCase().includes("not approved")
+      ) {
+        setDialogState(prev => ({ ...prev, notApprovedDialog: true }));
+        return true;
+      }
+      return false;
+    };
+
+    const normalizeMenuData = (data: any) => {
+      if (Array.isArray(data)) return data;
+      if (Array.isArray(data?.data)) return data.data;
+      if (Array.isArray(data?.items)) return data.items;
+      console.warn("Unexpected menu data structure:", data);
+      return [];
+    };
+
+    try {
+      // Fetch all data in parallel for better performance
+      const [menuResponse, ordersResponse, statsResponse] = await Promise.allSettled([
+        axios.get(
+          `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ).then(res => normalizeMenuData(res.data)),
+        
+        getCanteenOrders(canteenIdToUse, token)
+          .then(res => Array.isArray(res?.data) ? res.data : []),
+          
+        getCanteenStats(canteenIdToUse, token)
+          .then(res => res?.data || null)
+      ]);
+
+      // Process results
+      const menuItems = menuResponse.status === 'fulfilled' ? menuResponse.value : [];
+      const orders = ordersResponse.status === 'fulfilled' ? ordersResponse.value : [];
+      const canteenStats = statsResponse.status === 'fulfilled' ? statsResponse.value : null;
+
+      // Handle errors
+      [menuResponse, ordersResponse, statsResponse].forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const errorNames = ['menu items', 'orders', 'statistics'];
+          if (!handleNotApproved(result.reason)) {
+            toast({
+              title: "Error",
+              description: `Failed to fetch ${errorNames[index]}`,
+              variant: "destructive"
+            });
+          }
+        }
+      });
+
+      // Update state in a single operation
+      setDataState(prev => ({
         ...prev,
-        profilePic: previewUrl,
+        menuItems,
+        orders,
+        canteenStats
       }));
-    }
-  };
-  
 
-  // Additional useEffect to refetch data when canteenId changes
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      if (!handleNotApproved(error)) {
+        toast({ 
+          title: "Error", 
+          description: "Failed to fetch data", 
+          variant: "destructive" 
+        });
+      }
+    } finally {
+      setLoadingState(prev => ({ ...prev, loading: false, menuLoading: false }));
+    }
+  }, [dataState.canteenId, isAuthenticated, user, toast]);
+
+  console.log('888888888888888888888888888888888888888', dataState)
+
+  // Effect to fetch data when canteenId changes
   useEffect(() => {
-    if (!canteenId || !isAuthenticated) return;
-  
-    console.log("canteenId changed:", canteenId);
-    console.log("Fetching data due to canteenId change...");
-    fetchData(canteenId);
-    
-    // Only re-run when the canteen ID or authentication status changes
-  }, [canteenId, isAuthenticated]);
+    if (!dataState.canteenId || !isAuthenticated) return;
+    fetchData(dataState.canteenId);
+  }, [dataState.canteenId, isAuthenticated, fetchData]);
 
-  // Fetch all dashboard data (menu items, orders, stats) using dynamic canteenId
- const fetchData = async (currentCanteenId?: string) => {
-  const token = localStorage.getItem("token") || "";
+  // Optimized image upload handler
+  const handleImageUpload = useCallback(async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  // Early auth check
-  if (!isAuthenticated || !user) {
-    toast({
-      title: "Error",
-      description: "You must be logged in to access this feature",
-      variant: "destructive",
-    });
-    return;
-  }
+    setLoadingState(prev => ({ ...prev, imageUploading: true }));
 
-  const canteenIdToUse = currentCanteenId || canteenId;
-  if (!canteenIdToUse) {
-    toast({
-      title: "Error",
-      description: "Canteen ID not found. Please refresh the page.",
-      variant: "destructive",
-    });
-    return;
-  }
+    try {
+      validateImage(file);
+      const previewUrl = URL.createObjectURL(file);
 
-  setLoading(true);
-  console.log("fetchData called with:", {
-    currentCanteenId,
-    stateCanteenId: canteenId,
-    canteenIdToUse,
-    userRole: user?.role,
-    userId: user?.id,
-  });
+      setImageState(prev => ({
+        ...prev,
+        selectedImage: file,
+        imagePreview: previewUrl
+      }));
 
-  const handleNotApproved = (error: any) => {
-    if (
-      error?.response?.status === 403 &&
-      error?.response?.data?.message?.toLowerCase().includes("not approved")
-    ) {
-      setNotApprovedDialog(true);
-      return true;
-    }
-    return false;
-  };
+      setFormData(prev => ({ ...prev, image: '' }));
 
-  const normalizeMenuData = (data: any) => {
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data?.items)) return data.items;
-    console.warn("Unexpected menu data structure:", data);
-    return [];
-  };
-
-  try {
-    // Start menu fetch first (needs separate loader for UI)
-    setMenuLoading(true);
-    const menuPromise = axios
-      .get(
-        `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      .then((res) => normalizeMenuData(res.data))
-      .catch((err) => {
-        if (handleNotApproved(err)) throw err;
-        toast({ title: "Error", description: "Failed to fetch menu items", variant: "destructive" });
-        return [];
-      })
-      .finally(() => setMenuLoading(false));
-
-    // Fetch orders & stats in parallel
-    const ordersPromise = getCanteenOrders(canteenIdToUse, token)
-      .then((res) => (Array.isArray(res?.data) ? res.data : []))
-      .catch((err) => {
-        if (handleNotApproved(err)) throw err;
-        toast({ title: "Error", description: "Failed to fetch orders", variant: "destructive" });
-        return [];
+      toast({
+        title: 'Success',
+        description: 'Image selected successfully!',
       });
+    } catch (err) {
+      console.error('Image validation error:', err);
 
-    const statsPromise = getCanteenStats(canteenIdToUse, token)
-      .then((res) => res?.data || null)
-      .catch((err) => {
-        if (handleNotApproved(err)) throw err;
-        toast({ title: "Error", description: "Failed to fetch statistics", variant: "destructive" });
-        return null;
+      setImageState(prev => ({
+        ...prev,
+        selectedImage: null,
+        imagePreview: ''
+      }));
+      setFormData(prev => ({ ...prev, image: '' }));
+
+      toast({
+        title: 'Invalid Image',
+        description: err instanceof Error ? err.message : 'Please select a valid image file',
+        variant: 'destructive',
       });
-
-    // Run all fetches in parallel
-    const [menuItemsArray, ordersArray, statsData] = await Promise.all([
-      menuPromise,
-      ordersPromise,
-      statsPromise,
-    ]);
-
-    // Set state in minimal updates
-    setMenuItems(menuItemsArray);
-    setOrders(ordersArray);
-    setCanteenStats(statsData);
-
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    if (!handleNotApproved(error)) {
-      toast({ title: "Error", description: "Failed to fetch data", variant: "destructive" });
+    } finally {
+      setLoadingState(prev => ({ ...prev, imageUploading: false }));
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  }, [toast]);
 
-const handleImageUpload = async (
-  event: React.ChangeEvent<HTMLInputElement>
-) => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-
-  setImageUploading(true);
-
-  try {
-    // Validate image
-    validateImage(file);
-
-    // Create preview URL
-    const previewUrl = URL.createObjectURL(file);
-
-    // Update states in one go to avoid multiple renders
-    setSelectedImage(file);
-    setImagePreview(previewUrl);
-    setFormData(prev => ({ ...prev, image: '' })); // Image will be uploaded later
-
-    toast({
-      title: 'Success',
-      description: 'Image selected successfully!',
-    });
-  } catch (err) {
-    console.error('Image validation error:', err);
-
-    // Reset states
-    setSelectedImage(null);
-    setImagePreview('');
-    setFormData(prev => ({ ...prev, image: '' }));
-
-    toast({
-      title: 'Invalid Image',
-      description:
-        err instanceof Error ? err.message : 'Please select a valid image file',
-      variant: 'destructive',
-    });
-  } finally {
-    setImageUploading(false);
-  }
-};
-
-
-  // Handle form submission for creating/updating menu items using dynamic canteenId
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Optimized form submission
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-  
-    if (imageUploading) {
+
+    if (loadingState.imageUploading) {
       return toast({
         title: 'Please wait',
         description: 'Image is still uploading. Please wait a moment.',
         variant: 'destructive',
       });
     }
-  
-    if (!isAuthenticated || !user) {
+
+    if (!isAuthenticated || !user || !dataState.canteenId) {
       return toast({
         title: 'Error',
-        description: 'You must be logged in to access this feature',
+        description: 'Authentication or canteen ID missing',
         variant: 'destructive',
       });
     }
-  
-    if (!canteenId) {
-      console.error('No canteenId available for form submission');
-      return toast({
-        title: 'Error',
-        description: 'Canteen ID not found. Please refresh the page.',
-        variant: 'destructive',
-      });
-    }
-  
+
     try {
-      console.log('Submitting menu item with canteenId:', canteenId);
-  
       const getBase64FromFile = (file: File | Blob) =>
         new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(file);
         });
-  
-      // Determine image data
+
       let imageData: string | undefined;
       if (formData.image?.startsWith('data:')) {
         imageData = formData.image;
       } else if (formData.image?.startsWith('blob:')) {
         const blob = await (await fetch(formData.image)).blob();
         imageData = await getBase64FromFile(blob);
-      } else if (selectedImage) {
-        imageData = await getBase64FromFile(selectedImage);
+      } else if (imageState.selectedImage) {
+        imageData = await getBase64FromFile(imageState.selectedImage);
       }
-  
+
       const itemData = {
         name: formData.name,
         price: parseFloat(formData.price),
-        canteenId,
+        canteenId: dataState.canteenId,
         description: formData.description,
         category: formData.category,
-        canteen: canteenId,
+        canteen: dataState.canteenId,
         isVeg: formData.isVeg,
         available: formData.available,
         portion: formData.portion,
         quantity: formData.quantity,
         image: imageData,
       };
-  
-      console.log('Submitting item data:', itemData);
-  
+
       if (editingItem) {
         await updateMenuItem(editingItem._id, itemData);
         toast({ title: 'Success', description: 'Menu item updated successfully' });
@@ -559,15 +608,18 @@ const handleImageUpload = async (
         await createMenuItem(itemData);
         toast({ title: 'Success', description: 'Menu item added successfully' });
       }
-  
-      // Cleanup
-      setIsAddItemOpen(false);
-      setIsEditItemOpen(false);
+
+      // Reset states
+      setDialogState(prev => ({
+        ...prev,
+        isAddItemOpen: false,
+        isEditItemOpen: false
+      }));
       setEditingItem(null);
       resetForm();
-  
-      // Refresh menu data
-      await fetchData(canteenId);
+
+      // Refresh data
+      await fetchData(dataState.canteenId);
     } catch (error) {
       console.error('Error saving menu item:', error);
       toast({
@@ -578,10 +630,20 @@ const handleImageUpload = async (
         variant: 'destructive',
       });
     }
-  };
-  
+  }, [
+    loadingState.imageUploading, 
+    isAuthenticated, 
+    user, 
+    dataState.canteenId, 
+    formData, 
+    imageState.selectedImage, 
+    editingItem, 
+    toast, 
+    fetchData
+  ]);
 
-  const handleEdit = (item: MenuItem) => {
+  // Optimized edit handler
+  const handleEdit = useCallback((item: MenuItem) => {
     setEditingItem(item);
   
     const {
@@ -608,12 +670,12 @@ const handleImageUpload = async (
       quantity,
     });
   
-    setImagePreview(image);
-    setIsEditItemOpen(true);
-  };
-  
+    setImageState(prev => ({ ...prev, imagePreview: image }));
+    setDialogState(prev => ({ ...prev, isEditItemOpen: true }));
+  }, []);
 
-  const handleDelete = async (itemId: string) => {
+  // Optimized delete handler
+  const handleDelete = useCallback(async (itemId: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
   
     try {
@@ -623,33 +685,31 @@ const handleImageUpload = async (
         description: 'Menu item deleted successfully',
       });
   
-      // Ensure latest data after deletion
       await fetchData();
     } catch (error) {
       console.error('Delete menu item error:', error);
       toast({
         title: 'Error',
-        description:
-          error instanceof Error ? error.message : 'Failed to delete menu item',
+        description: error instanceof Error ? error.message : 'Failed to delete menu item',
         variant: 'destructive',
       });
     }
-  };
-  
+  }, [toast, fetchData]);
 
-  const handleToggleReady = (itemId: string, isReady: boolean) => {
-    setMenuItems(prev =>
-      prev.map(item =>
+  // Optimized toggle ready handler
+  const handleToggleReady = useCallback((itemId: string, isReady: boolean) => {
+    setDataState(prev => ({
+      ...prev,
+      menuItems: prev.menuItems.map(item =>
         item._id === itemId ? { ...item, isReady } : item
       )
-    );
-  };
-  
+    }));
+  }, []);
 
-  const resetForm = () => {
-    // Revoke object URL if it exists to prevent memory leaks
-    if (imagePreview?.startsWith('blob:')) {
-      URL.revokeObjectURL(imagePreview);
+  // Optimized reset form
+  const resetForm = useCallback(() => {
+    if (imageState.imagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(imageState.imagePreview);
     }
   
     setFormData({
@@ -664,13 +724,18 @@ const handleImageUpload = async (
       quantity: '',
     });
   
-    setSelectedImage(null);
-    setImagePreview('');
-    setImageUploading(false);
-  };
-  
+    setImageState({
+      selectedImage: null,
+      imagePreview: '',
+      profilePicFile: null,
+      profilePicPreview: imageState.profilePicPreview,
+    });
+    
+    setLoadingState(prev => ({ ...prev, imageUploading: false }));
+  }, [imageState.imagePreview, imageState.profilePicPreview]);
 
-  const fetchOrderDetails = async (orderId: string) => {
+  // Optimized fetch order details
+  const fetchOrderDetails = useCallback(async (orderId: string) => {
     try {
       const token = localStorage.getItem('token') ?? '';
       const { data } = await getOrderById(orderId, token);
@@ -679,29 +744,27 @@ const handleImageUpload = async (
       console.error('Error fetching order details:', error);
       toast({
         title: 'Error',
-        description:
-          (error as any)?.response?.data?.message || 'Failed to fetch order details',
+        description: (error as any)?.response?.data?.message || 'Failed to fetch order details',
         variant: 'destructive',
       });
     }
-  };
-  
+  }, [toast]);
 
-  const handleOrderStatusUpdate = (orderId: string, newStatus: string) => {
-    // Update the order in the local state
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
+  // Optimized order status update
+  const handleOrderStatusUpdate = useCallback((orderId: string, newStatus: string) => {
+    setDataState(prev => ({
+      ...prev,
+      orders: prev.orders.map(order =>
         order._id === orderId
           ? { ...order, status: newStatus as Order['status'] }
           : order
       )
-    );
+    }));
 
-    // Refresh the data to get updated statistics
-    if (canteenId) {
-      fetchData(canteenId);
+    if (dataState.canteenId) {
+      fetchData(dataState.canteenId);
     }
-  };
+  }, [dataState.canteenId, fetchData]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -711,7 +774,8 @@ const handleImageUpload = async (
     }
   }, [isAuthenticated, user, router]);
 
-  if (loading) {
+  // Early returns for better performance
+  if (loadingState.loading) {
     return (
       <div className='flex items-center justify-center min-h-screen bg-white'>
         <svg
@@ -735,51 +799,14 @@ const handleImageUpload = async (
     );
   }
 
-  // Redirect handled by useEffect above
+  console.log(isAuthenticated, user)
+
   if (!isAuthenticated || !user) {
-    return null; // Show nothing while redirecting
+    console.log(
+      'hahahaha'  
+    )
+    return null;
   }
-
-  // Filter items by search term (case-insensitive)
-  console.log('Current menuItems before filtering:', menuItems);
-  console.log('Current search filters:', {
-    searchTerm,
-    statusFilter,
-    categoryFilter,
-  });
-
-  const filteredItems = menuItems.filter((item: MenuItem) => {
-    // Search filter
-    const matchesSearch = item.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-
-    // Status filter
-    const isActive = 'available' in item ? item.available : true;
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && isActive) ||
-      (statusFilter === 'inactive' && !isActive);
-
-    // Category filter
-    const matchesCategory =
-      categoryFilter === 'all' ||
-      (item.category && item.category.toLowerCase() === categoryFilter);
-
-    // Ready filter
-    const matchesReady =
-      readyFilter === 'all' ||
-      (readyFilter === 'ready' && item.isReady === true) ||
-      (readyFilter === 'not-ready' && item.isReady === false);
-
-    return matchesSearch && matchesStatus && matchesCategory && matchesReady;
-  });
-
-  console.log('Filtered items for rendering:', filteredItems);
-
-  const categories = Array.from(
-    new Set(menuItems.map((item) => item.category?.toLowerCase() || ''))
-  ).filter(Boolean);
 
   return (
     <div className='flex flex-col md:flex-row h-screen bg-gray-50 w-full'>
@@ -797,7 +824,8 @@ const handleImageUpload = async (
           </span>
         </div>
       )}
-      {/* Sidebar: Always render both, hide one with display:none */}
+
+      {/* Sidebar */}
       <div style={{ display: isMobile ? 'block' : 'none' }}>
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetContent
@@ -807,7 +835,7 @@ const handleImageUpload = async (
               activeTab={activeTab}
               setActiveTab={(tab) => {
                 setActiveTab(tab);
-                setDrawerOpen(false); // Close drawer on tab select
+                setDrawerOpen(false);
               }}
               onClose={() => setDrawerOpen(false)}
               isMobile={true}
@@ -818,6 +846,7 @@ const handleImageUpload = async (
       <div style={{ display: isMobile ? 'none' : 'block' }}>
         <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
+
       {/* Main Content */}
       <div className='flex-1 overflow-auto scrollbar-hide w-full'>
         <div className='p-4 sm:p-8 max-w-7xl mx-auto w-full'>
@@ -826,12 +855,12 @@ const handleImageUpload = async (
             <div className='flex items-center justify-between'>
               <Breadcrumb>
                 <BreadcrumbList className='text-sm'>
-                  {getBreadcrumbItems().map((item, index) => (
+                  {breadcrumbItems.map((item, index) => (
                     <React.Fragment key={index}>
                       <BreadcrumbItem>
                         {item.onClick ? (
                           <BreadcrumbLink
-                            href={item.href}
+                            href={item.href || "#"}
                             onClick={(e) => {
                               e.preventDefault();
                               item.onClick?.();
@@ -847,7 +876,7 @@ const handleImageUpload = async (
                           </BreadcrumbPage>
                         )}
                       </BreadcrumbItem>
-                      {index < getBreadcrumbItems().length - 1 && (
+                      {index < breadcrumbItems.length - 1 && (
                         <BreadcrumbSeparator className='text-gray-600 dark:text-gray-400' />
                       )}
                     </React.Fragment>
@@ -855,7 +884,6 @@ const handleImageUpload = async (
                 </BreadcrumbList>
               </Breadcrumb>
 
-              {/* Quick Navigation */}
               {activeTab !== 'overview' && (
                 <Button
                   variant='ghost'
@@ -869,18 +897,17 @@ const handleImageUpload = async (
             </div>
           </div>
 
-          {/* Overview Tab */}
+          {/* Tab Content */}
           {activeTab === 'overview' && (
-            <OverviewTab canteenStats={canteenStats} menuItems={menuItems} />
+            <OverviewTab canteenStats={dataState.canteenStats} menuItems={dataState.menuItems} />
           )}
 
-          {/* Menu Items Tab */}
           {activeTab === 'menu' && (
             <MenuTab
-              menuItems={menuItems}
+              menuItems={dataState.menuItems}
               filteredItems={filteredItems}
               categories={categories}
-              menuLoading={menuLoading}
+              menuLoading={loadingState.menuLoading}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
               statusFilter={statusFilter}
@@ -889,69 +916,73 @@ const handleImageUpload = async (
               setCategoryFilter={setCategoryFilter}
               readyFilter={readyFilter}
               setReadyFilter={setReadyFilter}
-              isAddItemOpen={isAddItemOpen}
-              setIsAddItemOpen={setIsAddItemOpen}
-              isEditItemOpen={isEditItemOpen}
-              setIsEditItemOpen={setIsEditItemOpen}
+              isAddItemOpen={dialogState.isAddItemOpen}
+              setIsAddItemOpen={(open) => setDialogState(prev => ({ ...prev, isAddItemOpen: open }))}
+              isEditItemOpen={dialogState.isEditItemOpen}
+              setIsEditItemOpen={(open) => setDialogState(prev => ({ ...prev, isEditItemOpen: open }))}
               formData={formData}
               setFormData={setFormData}
-              imageUploading={imageUploading}
-              imagePreview={imagePreview}
+              imageUploading={loadingState.imageUploading}
+              imagePreview={imageState.imagePreview}
               editingItem={editingItem}
               onSubmit={handleSubmit}
               onEdit={handleEdit}
               onDelete={handleDelete}
               onImageUpload={handleImageUpload}
-              onRefresh={() => canteenId && fetchData(canteenId)}
+              onRefresh={() => dataState.canteenId && fetchData(dataState.canteenId)}
               resetForm={resetForm}
-              canteenId={canteenId}
+              canteenId={dataState.canteenId}
               onToggleReady={handleToggleReady}
             />
           )}
 
-          {/* Orders Tab */}
           {activeTab === 'orders' && (
             <OrdersTab
-              orders={orders}
-              onRefresh={() => canteenId && fetchData(canteenId)}
+              orders={dataState.orders}
+              onRefresh={() => dataState.canteenId && fetchData(dataState.canteenId)}
               onOrderClick={fetchOrderDetails}
               onStatusUpdate={handleOrderStatusUpdate}
-              canteenId={canteenId}
+              canteenId={dataState.canteenId}
             />
           )}
 
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && canteenId && (
-            <AnalyticsTab canteenId={canteenId} />
+          {activeTab === 'analytics' && dataState.canteenId && (
+            <AnalyticsTab canteenId={dataState.canteenId} />
           )}
 
-          {/* Profile Tab */}
           {activeTab === 'profile' && (
             <ProfileTab
               personalData={personalData}
               setPersonalData={setPersonalData}
               bankDetails={bankDetails}
               setBankDetails={setBankDetails}
-              personalSubmitting={personalSubmitting}
-              setPersonalSubmitting={setPersonalSubmitting}
-              personalSuccess={personalSuccess}
-              setPersonalSuccess={setPersonalSuccess}
-              bankSubmitting={bankSubmitting}
-              setBankSubmitting={setBankSubmitting}
-              bankSuccess={bankSuccess}
-              setBankSuccess={setBankSuccess}
-              profilePicPreview={profilePicPreview}
+              personalSubmitting={loadingState.personalSubmitting}
+              setPersonalSubmitting={(submitting) => 
+                setLoadingState(prev => ({ ...prev, personalSubmitting: submitting }))
+              }
+              personalSuccess={dialogState.personalSuccess}
+              setPersonalSuccess={(success) => 
+                setDialogState(prev => ({ ...prev, personalSuccess: success }))
+              }
+              bankSubmitting={loadingState.bankSubmitting}
+              setBankSubmitting={(submitting) => 
+                setLoadingState(prev => ({ ...prev, bankSubmitting: submitting }))
+              }
+              bankSuccess={dialogState.bankSuccess}
+              setBankSuccess={(success) => 
+                setDialogState(prev => ({ ...prev, bankSuccess: success }))
+              }
+              profilePicPreview={imageState.profilePicPreview}
               handleProfilePicUpload={handleProfilePicUpload}
             />
           )}
 
-          {/* Payouts Tab */}
           {activeTab === 'payouts' && (
             <PayoutsTab
-              canteenStats={canteenStats}
-              orders={orders}
-              onRefresh={() => canteenId && fetchData(canteenId)}
-              canteenId={canteenId}
+              canteenStats={dataState.canteenStats}
+              orders={dataState.orders}
+              onRefresh={() => dataState.canteenId && fetchData(dataState.canteenId)}
+              canteenId={dataState.canteenId}
             />
           )}
         </div>
@@ -968,9 +999,9 @@ const handleImageUpload = async (
 
       {/* Not Approved Dialog */}
       <Dialog
-        open={notApprovedDialog}
+        open={dialogState.notApprovedDialog}
         onOpenChange={(open) => {
-          if (!open) setNotApprovedDialog(false);
+          if (!open) setDialogState(prev => ({ ...prev, notApprovedDialog: false }));
         }}>
         <DialogContent>
           <DialogHeader>
@@ -985,7 +1016,7 @@ const handleImageUpload = async (
             <Button
               className='w-full bg-orange-600 hover:bg-orange-700'
               onClick={() => {
-                setNotApprovedDialog(false);
+                setDialogState(prev => ({ ...prev, notApprovedDialog: false }));
               }}>
               Continue to Dashboard
             </Button>
