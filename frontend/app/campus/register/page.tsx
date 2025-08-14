@@ -1176,7 +1176,7 @@ export default function VendorOnboardingForm() {
                   htmlFor='termsAccepted'
                   className='text-sm leading-relaxed'>
                   I agree to the{' '}
-                  <a href='#' className='text-orange-600 hover:underline'>
+                  <a href='/termsconditions' className='text-orange-600 hover:underline'>
                     Terms and Conditions
                   </a>{' '}
                   of CampusBites *
