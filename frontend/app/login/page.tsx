@@ -371,7 +371,7 @@ export default function LoginPage() {
                               Password
                             </FormLabel>
                             <Link
-                              href='/forgot-password'
+                              href='/forgotpassword'
                               aria-label='forgot password'
                               className='text-sm text-red-400 hover:text-red-300 hover:underline transition-all duration-500'>
                               Forgot password?
