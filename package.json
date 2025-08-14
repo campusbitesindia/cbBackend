@@ -1,5 +1,6 @@
 {
 	"dependencies": {
+		"@kurkle/color": "^0.4.0",
 		"chart.js": "^4.5.0",
 		"chartjs-plugin-annotation": "^3.1.0"
 	},
