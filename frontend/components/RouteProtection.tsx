@@ -28,16 +28,16 @@ export function RouteProtection({
     '/campus/register',
     '/auth/callback',
     '/forgotpassword',
-    '/verify-email',
+    '/account/verify-email',
     '/termsconditions',
     '/privacypolicy',
-    '/resetpassword',
-    
+    '/resetPassword',
   ];
 
   // Check if current route is public
-  const isPublicRoute = publicRoutes.includes(pathname);
-
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
   useEffect(() => {
     setMounted(true);
   }, []);

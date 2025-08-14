@@ -12,7 +12,7 @@ router.route("/verify-email").post(verifyEmail);
 router.route("/login").post(smartLoginMonitoring,loginUser);
 router.route("/logout").post(logoutUser);
 router.route("/forgotPass").post(forgotPass);
-router.route("/resetPass/:token").post(resetPassword);
+router.route("/resetPassword/:token").post(resetPassword);
 router.route("/me").get(isAuthenticated, loadUser);
 
 // Profile management routes
