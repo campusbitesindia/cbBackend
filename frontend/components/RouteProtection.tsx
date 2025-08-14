@@ -27,10 +27,11 @@ export function RouteProtection({
     '/register',
     '/campus/register',
     '/auth/callback',
-    '/forgot-password',
+    '/forgotpassword',
     '/verify-email',
     '/termsconditions',
-    '/privacypolicy'
+    '/privacypolicy',
+    '/resetpassword',
     
   ];
 
