@@ -17,6 +17,10 @@ importers:
       chartjs-plugin-annotation:
         specifier: ^3.1.0
         version: 3.1.0(chart.js@4.5.0)
+    devDependencies:
+      '@types/animejs':
+        specifier: ^3.1.13
+        version: 3.1.13
 
 packages:
 
@@ -25,6 +29,9 @@ packages:
 
   '@kurkle/color@0.4.0':
     resolution: {integrity: sha512-H4MGdCNqaMQW2gz47VNOE7zLy8s1NLLpvzxFTpWIPJzlmkYQMkOD9pRwrMWRDYjyErxL297mbgK6yyLuGdGEbg==}
+
+  '@types/animejs@3.1.13':
+    resolution: {integrity: sha512-yWg9l1z7CAv/TKpty4/vupEh24jDGUZXv4r26StRkpUPQm04ztJaftgpto8vwdFs8SiTq6XfaPKCSI+wjzNMvQ==}
 
   chart.js@4.5.0:
     resolution: {integrity: sha512-aYeC/jDgSEx8SHWZvANYMioYMZ2KX02W6f6uVfyteuCGcadDLcYVHdfdygsTQkQ4TKn5lghoojAsPj5pu0SnvQ==}
@@ -40,6 +47,8 @@ snapshots:
   '@kurkle/color@0.3.4': {}
 
   '@kurkle/color@0.4.0': {}
+
+  '@types/animejs@3.1.13': {}
 
   chart.js@4.5.0:
     dependencies:
