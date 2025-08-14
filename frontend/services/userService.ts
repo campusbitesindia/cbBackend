@@ -237,7 +237,7 @@ export const resetPassword = async (
 ): Promise<{ success: boolean; message: string }> => {
   try {
     const response = await api.post(
-      `/api/v1/users/resetPass/${token}`,
+      `/api/v1/users/resetPassword/${token}`,
       passwordData
     );
     return response.data;

@@ -38,7 +38,7 @@ export default function ResetPasswordPage() {
   const onSubmit = async (data: ResetPasswordForm) => {
     try {
       setLoading(true);
-      const res = await fetch( `https://campusbites-mxpe.onrender.com/api/v1/users/resetPass/${token}`,
+      const res = await fetch( `https://campusbites-mxpe.onrender.com/api/v1/users/resetPassword/${token}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
