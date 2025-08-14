@@ -31,8 +31,8 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/menu" className="text-gray-400 hover:text-white">
-                  Menu
+                <Link href="/quickbite" className="text-gray-400 hover:text-white">
+                  QuickBite
                 </Link>
               </li>
               <li>
@@ -62,12 +62,12 @@ function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-400 hover:text-white">
+                <Link href="/termsconditions" className="text-gray-400 hover:text-white">
                   Terms & Conditions
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-400 hover:text-white">
+                <Link href="/privacypolicy" className="text-gray-400 hover:text-white">
                   Privacy Policy
                 </Link>
               </li>

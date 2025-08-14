@@ -29,6 +29,9 @@ export function RouteProtection({
     '/auth/callback',
     '/forgot-password',
     '/verify-email',
+    '/termsconditions',
+    '/privacypolicy'
+    
   ];
 
   // Check if current route is public
