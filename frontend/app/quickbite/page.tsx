@@ -857,12 +857,6 @@ export default function QuickBitePage() {
       </style>
 
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 pt-24 pb-12 transition-colors duration-300 relative overflow-hidden'>
-        {/* Background Decorations */}
-        <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-          <div className='absolute -top-4 -right-4 w-72 h-72 bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-full blur-3xl animate-pulse'></div>
-          <div className='absolute top-1/4 -left-20 w-96 h-96 bg-gradient-to-br from-emerald-500/5 to-green-500/5 rounded-full blur-3xl animate-pulse delay-1000'></div>
-          <div className='absolute bottom-20 right-1/4 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-pulse delay-2000'></div>
-        </div>
 
         <div className='container mx-auto px-4 sm:px-6 lg:px-8 relative z-10'>
           {/* Enhanced Header Card with Dynamic Elements */}
@@ -898,30 +892,29 @@ export default function QuickBitePage() {
                   </div>
 
                   <h1 className='text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-4 relative z-10 tracking-tight transform hover:scale-105 transition-transform duration-300'>
-                    <span className='inline-block hover:animate-bounce'>Q</span>
+                    <span className='inline-block'>Q</span>
                     <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.1s' }}>
+                      className='inline-block '>
                       u
                     </span>
                     <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.2s' }}>
+                      className='inline-block '
+                      >
                       i
                     </span>
                     <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.3s' }}>
+                      className='inline-block '
+                      >
                       c
                     </span>
                     <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.4s' }}>
+                      className='inline-block '
+                      >
                       k
                     </span>
                     <span
-                      className='text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 animate-gradient-x inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.5s' }}>
+                      className='text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 animate-gradient-x inline-block'
+                      >
                       Bites
                     </span>
                   </h1>

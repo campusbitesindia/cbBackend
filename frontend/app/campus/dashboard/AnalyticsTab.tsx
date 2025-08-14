@@ -289,37 +289,44 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ canteenId }) => {
 
         <Card className='group border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden'>
           <div className={`h-2 ${GRADIENT_CARDS.rating}`}></div>
-          <CardContent className='p-8 bg-gradient-to-br from-white to-amber-50'>
-            <div className='flex items-center justify-between'>
-              <div className='space-y-2'>
-                <p className='text-sm font-semibold text-amber-600 uppercase tracking-wide'>
-                  Average Rating
-                </p>
-                <div className='flex items-center space-x-2'>
-                  <p className='text-3xl font-bold text-gray-800'>
-                    {basic.averageRating}
-                  </p>
-                  <div className='flex space-x-0.5'>
-                    {[...Array(5)].map((_, i) => (
-                      <span
-                        key={i}
-                        className={`text-sm ${
-                          i < Math.floor(Number(basic.averageRating))
-                            ? 'text-amber-500'
-                            : 'text-gray-300'
-                        }`}>
-                        ⭐
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <p className='text-xs text-gray-500'>Customer satisfaction</p>
-              </div>
-              <div className='w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200'>
-                <span className='text-xl text-white'>{Icons.rating}</span>
-              </div>
-            </div>
-          </CardContent>
+          <CardContent className="p-6 sm:p-8 bg-gradient-to-br from-white to-amber-50">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+    {/* Left Section - Rating Info */}
+    <div className="space-y-2 text-center sm:text-left">
+      <p className="text-xs sm:text-sm font-semibold text-amber-600 uppercase tracking-wide">
+        Average Rating
+      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2">
+        <p className="text-2xl sm:text-3xl font-bold text-gray-800">
+          {basic.averageRating}
+        </p>
+        <div className="flex justify-center sm:justify-start space-x-0.5 mt-1 sm:mt-0">
+          {[...Array(5)].map((_, i) => (
+            <span
+              key={i}
+              className={`text-sm sm:text-base ${
+                i < Math.floor(Number(basic.averageRating))
+                  ? "text-amber-500"
+                  : "text-gray-300"
+              }`}
+            >
+              ⭐
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="text-[0.65rem] sm:text-xs text-gray-500">
+        Customer satisfaction
+      </p>
+    </div>
+
+    {/* Right Section - Icon */}
+    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-200 hover:scale-105 mx-auto sm:mx-0">
+      <span className="text-lg sm:text-xl text-white">{Icons.rating}</span>
+    </div>
+  </div>
+</CardContent>
+
         </Card>
       </div>
 
@@ -428,88 +435,116 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ canteenId }) => {
         </Card>
 
         {/* Order Status Distribution */}
-        <Card className='border-0 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300'>
-          <CardHeader className='pb-4 border-b border-gray-100'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-3'>
-                <div className='w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center'>
-                  <span className='text-white text-sm'>{Icons.orders}</span>
-                </div>
-                <div>
-                  <CardTitle className='text-xl font-bold text-gray-800'>
-                    Order Status
-                  </CardTitle>
-                  <p className='text-sm text-gray-500'>
-                    Distribution breakdown
-                  </p>
-                </div>
-              </div>
-              <Badge
-                variant='secondary'
-                className='bg-emerald-100 text-emerald-700 px-3 py-1'>
-                {statusData.reduce((sum, item) => sum + item.value, 0)} total
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className='p-6'>
-            {statusData.length > 0 &&
-            statusData.some((item) => item.value > 0) ? (
-              <ResponsiveContainer width='100%' height={320}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx='50%'
-                    cy='50%'
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={100}
-                    fill='#8884d8'
-                    dataKey='value'
-                    stroke='white'
-                    strokeWidth={3}>
-                    {statusData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
-                      padding: '12px',
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ paddingTop: '20px' }}
-                    iconType='circle'
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className='flex items-center justify-center h-80 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-200'>
-                <div className='text-center space-y-3'>
-                  <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto'>
-                    <span className='text-2xl text-gray-400'>
-                      {Icons.orders}
-                    </span>
-                  </div>
-                  <p className='text-lg font-semibold text-gray-600'>
-                    No Order Data
-                  </p>
-                  <p className='text-sm text-gray-500 max-w-xs'>
-                    Order status distribution will appear here
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Card className="border-0 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300">
+  <CardHeader className="pb-4 sm:pb-6 border-b border-gray-100">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Left Section */}
+      <div className="flex items-center space-x-3">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+          <span className="text-white text-sm sm:text-base">{Icons.orders}</span>
+        </div>
+        <div>
+          <CardTitle className="text-base sm:text-lg md:text-xl font-bold text-gray-800">
+            Order Status
+          </CardTitle>
+          <p className="text-xs sm:text-sm text-gray-500">Distribution breakdown</p>
+        </div>
+      </div>
+
+      {/* Badge */}
+      <Badge
+        variant="secondary"
+        className="
+          bg-emerald-100 text-emerald-700
+          px-2.5 py-0.5 text-[0.65rem]
+          sm:px-3 sm:py-1 sm:text-xs
+          md:px-4 md:py-1.5 md:text-sm
+          rounded-full
+          font-medium
+          self-start sm:self-center
+        "
+      >
+        {statusData.reduce((sum, item) => sum + item.value, 0)} total
+      </Badge>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-3 sm:p-4 md:p-6">
+  {statusData.length > 0 && statusData.some((item) => item.value > 0) ? (
+    <div className="w-full flex flex-col items-center">
+      <ResponsiveContainer
+        width="100%"
+        height={window.innerWidth < 480 ? 220 : window.innerWidth < 768 ? 260 : 300} // adaptive height
+      >
+        <PieChart>
+          <Pie
+            data={statusData}
+            cx="50%"
+            cy="50%"
+            outerRadius="65%"
+            label={({ name, percent }) =>
+              percent > 0.03 ? `${name} ${(percent * 100).toFixed(0)}%` : ""
+            }
+            labelLine
+            fill="#8884d8"
+            dataKey="value"
+            stroke="white"
+            strokeWidth={3}
+          >
+            {statusData.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "white",
+              border: "none",
+              borderRadius: "12px",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+              padding: "12px",
+            }}
+          />
+          <Legend
+            iconType="circle"
+            verticalAlign={window.innerWidth < 480 ? "middle" : "bottom"} // vertical legend on mobile
+            layout={window.innerWidth < 480 ? "vertical" : "horizontal"}
+            wrapperStyle={{
+              paddingTop: window.innerWidth < 480 ? "0" : "10px",
+              fontSize: "clamp(0.65rem, 2vw, 0.8rem)",
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  ) : (
+    <div className="flex items-center justify-center h-56 sm:h-72 md:h-80 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-200">
+      <div className="text-center space-y-3 px-4">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+          <span className="text-lg sm:text-xl md:text-2xl text-gray-400">
+            {Icons.orders}
+          </span>
+        </div>
+        <p className="text-sm sm:text-base md:text-lg font-semibold text-gray-600">
+          No Order Data
+        </p>
+        <p className="text-xs sm:text-sm md:text-base text-gray-500 max-w-xs mx-auto">
+          Order status distribution will appear here
+        </p>
+      </div>
+    </div>
+  )}
+</CardContent>
+
+</Card>
+
+
 
         {/* Hourly Order Distribution */}
         <Card className='border-0 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300'>
@@ -674,94 +709,110 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ canteenId }) => {
       </div>
 
       {/* Enhanced Top Performing Items */}
-      <Card className='border-0 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300'>
-        <CardHeader className='pb-6 border-b border-gray-100'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center space-x-3'>
-              <div className='w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center'>
-                <span className='text-white text-lg'>{Icons.items}</span>
+      <Card className="border-0 shadow-xl bg-white hover:shadow-2xl transition-shadow duration-300">
+  <CardHeader className="pb-4 sm:pb-6 border-b border-gray-100">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Left Section */}
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+          <span className="text-white text-base sm:text-lg">{Icons.items}</span>
+        </div>
+        <div>
+          <CardTitle className="text-lg sm:text-2xl font-bold text-gray-800">
+            Top Performing Items
+          </CardTitle>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Best selling menu items
+          </p>
+        </div>
+      </div>
+
+      {/* Badge */}
+      <Badge
+        variant="secondary"
+        className="bg-emerald-100 text-emerald-700 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm self-start sm:self-center"
+      >
+        {items.allItems.length} total items
+      </Badge>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-4 sm:p-6">
+    <div className="space-y-4">
+      {items.top5Items.length > 0 ? (
+        items.top5Items.map((item, index) => (
+          <div
+            key={item.itemId}
+            className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-6 bg-gradient-to-r from-white to-gray-50 border border-gray-100 rounded-xl hover:shadow-lg hover:border-gray-200 transition-all duration-300"
+          >
+            {/* Left Section */}
+            <div className="flex items-center space-x-4">
+              {/* Rank */}
+              <div className="relative">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                  <span className="text-sm sm:text-lg font-bold text-white">
+                    #{index + 1}
+                  </span>
+                </div>
+                {index === 0 && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-amber-500 rounded-full flex items-center justify-center">
+                    <span className="text-[10px] sm:text-xs text-white">👑</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <CardTitle className='text-2xl font-bold text-gray-800'>
-                  Top Performing Items
-                </CardTitle>
-                <p className='text-sm text-gray-500'>Best selling menu items</p>
+
+              {/* Item Info */}
+              <div className="space-y-1">
+                <h4 className="text-base sm:text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                  {item.name}
+                </h4>
+                <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
+                  <span className="flex items-center space-x-1">
+                    <span>📦</span>
+                    <span>{item.totalQuantity} units sold</span>
+                  </span>
+                  <span className="flex items-center space-x-1">
+                    <span>📊</span>
+                    <span>{item.salesPercentage}% of total sales</span>
+                  </span>
+                </div>
               </div>
             </div>
-            <Badge
-              variant='secondary'
-              className='bg-emerald-100 text-emerald-700 px-4 py-2 text-sm'>
-              {items.allItems.length} total items
-            </Badge>
+
+            {/* Right Section */}
+            <div className="text-left sm:text-right space-y-1">
+              <p className="text-lg sm:text-2xl font-bold text-gray-800">
+                ₹{item.totalRevenue.toFixed(2)}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+                Revenue
+              </p>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent className='p-6'>
-          <div className='space-y-4'>
-            {items.top5Items.length > 0 ? (
-              items.top5Items.map((item, index) => (
-                <div
-                  key={item.itemId}
-                  className='group flex items-center justify-between p-6 bg-gradient-to-r from-white to-gray-50 border border-gray-100 rounded-xl hover:shadow-lg hover:border-gray-200 transition-all duration-300'>
-                  <div className='flex items-center space-x-4'>
-                    <div className='relative'>
-                      <div className='w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200'>
-                        <span className='text-lg font-bold text-white'>
-                          #{index + 1}
-                        </span>
-                      </div>
-                      {index === 0 && (
-                        <div className='absolute -top-1 -right-1 w-6 h-6 bg-amber-500 rounded-full flex items-center justify-center'>
-                          <span className='text-xs text-white'>👑</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className='space-y-1'>
-                      <h4 className='text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors'>
-                        {item.name}
-                      </h4>
-                      <div className='flex items-center space-x-4 text-sm text-gray-600'>
-                        <span className='flex items-center space-x-1'>
-                          <span>📦</span>
-                          <span>{item.totalQuantity} units sold</span>
-                        </span>
-                        <span className='flex items-center space-x-1'>
-                          <span>📊</span>
-                          <span>{item.salesPercentage}% of total sales</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className='text-right space-y-1'>
-                    <p className='text-2xl font-bold text-gray-800'>
-                      ₹{item.totalRevenue.toFixed(2)}
-                    </p>
-                    <p className='text-sm text-gray-500 font-medium'>Revenue</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className='text-center py-16 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-200'>
-                <div className='space-y-4'>
-                  <div className='w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto'>
-                    <span className='text-3xl text-gray-400'>
-                      {Icons.items}
-                    </span>
-                  </div>
-                  <div>
-                    <p className='text-xl font-bold text-gray-600'>
-                      No Sales Data Available
-                    </p>
-                    <p className='text-sm text-gray-500 mt-2 max-w-md mx-auto'>
-                      Item performance will appear here once customers start
-                      ordering from your menu
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+        ))
+      ) : (
+        <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-gray-50 to-white rounded-xl border-2 border-dashed border-gray-200">
+          <div className="space-y-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl sm:text-3xl text-gray-400">
+                {Icons.items}
+              </span>
+            </div>
+            <div>
+              <p className="text-lg sm:text-xl font-bold text-gray-600">
+                No Sales Data Available
+              </p>
+              <p className="text-xs sm:text-sm text-gray-500 mt-2 max-w-md mx-auto">
+                Item performance will appear here once customers start ordering
+                from your menu
+              </p>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+    </div>
+  </CardContent>
+</Card>
 
       {/* Enhanced Additional Metrics */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>

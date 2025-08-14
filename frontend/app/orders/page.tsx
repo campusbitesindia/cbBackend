@@ -97,45 +97,45 @@ const statusConfigs: Record<OrderStatus, StatusConfig> = {
   },
   payment_pending: {
     color: 'bg-orange-500',
-    bgColor: 'bg-orange-50 dark:bg-orange-950/50',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
     textColor: 'text-orange-700 dark:text-orange-300',
-    borderColor: 'border-orange-200 dark:border-orange-800',
+    borderColor: 'border-blue-200 dark:border-blue-800',
     icon: Receipt,
     label: 'Payment Pending',
     description: 'Payment is pending for this order',
   },
   preparing: {
     color: 'bg-yellow-500',
-    bgColor: 'bg-yellow-50 dark:bg-yellow-950/50',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
     textColor: 'text-yellow-700 dark:text-yellow-300',
-    borderColor: 'border-yellow-200 dark:border-yellow-800',
+    borderColor: 'border-blue-200 dark:border-blue-800',
     icon: ChefHat,
     label: 'Preparing',
     description: 'Your food is being prepared',
   },
   ready: {
     color: 'bg-purple-500',
-    bgColor: 'bg-purple-50 dark:bg-purple-950/50',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
     textColor: 'text-purple-700 dark:text-purple-300',
-    borderColor: 'border-purple-200 dark:border-purple-800',
+    borderColor: 'border-blue-200 dark:border-blue-800',
     icon: Package,
     label: 'Ready for Pickup',
     description: 'Your order is ready',
   },
   completed: {
     color: 'bg-green-500',
-    bgColor: 'bg-green-50 dark:bg-green-950/50',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
     textColor: 'text-green-700 dark:text-green-300',
-    borderColor: 'border-green-200 dark:border-green-800',
+    borderColor: 'border-blue-200 dark:border-blue-800',
     icon: CheckCircle2,
     label: 'Completed',
     description: 'Order delivered successfully',
   },
   cancelled: {
     color: 'bg-red-500',
-    bgColor: 'bg-red-50 dark:bg-red-950/50',
+    bgColor: 'bg-blue-50 dark:bg-blue-950/50',
     textColor: 'text-red-700 dark:text-red-300',
-    borderColor: 'border-red-200 dark:border-red-800',
+    borderColor: 'border-blue-200 dark:border-blue-800',
     icon: XCircle,
     label: 'Cancelled',
     description: 'Order was cancelled',
@@ -795,7 +795,7 @@ if (error) {
     "
   >
     {/* Animated Background Elements */}
-    <div className="absolute inset-0 overflow-hidden">
+    {/* <div className="absolute inset-0 overflow-hidden">
       <motion.div
         className="
           absolute top-20 left-20 w-96 h-96
@@ -833,7 +833,7 @@ if (error) {
           delay: 2,
         }}
       />
-    </div>
+    </div> */}
 
     {/* Modern Header with Stats */}
     <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
@@ -943,7 +943,7 @@ if (error) {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6 }}>
                 <div className='flex items-center gap-3 mb-6'>
-                  <div className='w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center'>
+                  <div className='w-8 h-8 bg-gradient-to-r from-red-500 to-red-500 rounded-lg flex items-center justify-center'>
                     <Clock className='w-4 h-4 text-white' />
                   </div>
                   <h2 className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>
@@ -978,7 +978,7 @@ if (error) {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.2 }}>
               <div className='flex items-center gap-3 mb-6'>
-                <div className='w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center'>
+                <div className='w-8 h-8 bg-gradient-to-r from-red-500 to-red-500 rounded-lg flex items-center justify-center'>
                   <Receipt className='w-4 h-4 text-white' />
                 </div>
                 <h2 className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>
@@ -1599,7 +1599,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
           {/* Restaurant Info */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-gray-500 flex items-center justify-center">
                 <ChefHat className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -1676,7 +1676,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className={`${btnBase} border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50`}
+                      className={`${btnBase} bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800`}
                       onClick={() => onViewDetails(order._id)}
                       disabled={orderDetailLoading}
                     >
@@ -1732,6 +1732,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                   )}
                 </DialogContent>
               </Dialog>
+        
 
               {/* Completed Order Actions */}
               {order.status === "completed" && (
@@ -1741,7 +1742,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
                       onClick={onOpenItemSelector}
                       variant="outline"
                       size="sm"
-                      className={`${btnBase} border-2 border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-orange-950/30 dark:hover:to-red-950/30 shadow-lg hover:shadow-xl font-semibold`}
+                      className={`${btnBase} bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 dark:bg-red-700 dark:border-red-800 dark:hover:bg-red-800 shadow-lg hover:shadow-xl font-semibold`}
+
                     >
                       <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current" />
                       <span className="sm:hidden">Review</span>
@@ -1753,7 +1755,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
                     <Button
                       onClick={() => onReorder(order)}
                       size="sm"
-                      className={`${btnBase} bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white shadow-lg hover:shadow-xl font-semibold`}
+                      className={`${btnBase} bg-gradient-to-r from-red-800 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl font-semibold`}
                     >
                       <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                       Reorder
