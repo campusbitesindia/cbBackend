@@ -56,6 +56,8 @@ export interface Order {
   };
   items: Array<{
     _id: string;
+    nameAtPurchase: string;
+    priceAtPurchase: number;
     item: {
       _id: string;
       name: string;

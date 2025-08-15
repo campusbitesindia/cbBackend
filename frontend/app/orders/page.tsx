@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useReducer,useMemo, memo } from 'react';
+import React, { useState, useEffect, useReducer, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -62,7 +62,7 @@ import {
   useSpring,
   useTransform,
   useMotionValue,
- Transition,
+  Transition,
 } from 'framer-motion';
 import ItemReviewSelector from '@/components/ItemReviewSelector';
 
@@ -157,7 +157,8 @@ const paymentConfigs: Record<PaymentMethod, PaymentConfig> = {
   cod: {
     icon: Package,
     label: 'Cash on Delivery',
-    color: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/50',
+    color:
+      'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/50',
   },
   upi: {
     icon: CreditCard,
@@ -167,7 +168,8 @@ const paymentConfigs: Record<PaymentMethod, PaymentConfig> = {
   card: {
     icon: CreditCard,
     label: 'Card Payment',
-    color: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/50',
+    color:
+      'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/50',
   },
 };
 // Define Review State and Actions
@@ -240,7 +242,6 @@ function reviewReducer(state: ReviewState, action: ReviewAction): ReviewState {
 const getPaymentConfig = (method: string): PaymentConfig =>
   paymentConfigs[method as PaymentMethod] ?? paymentConfigs.cod;
 
-
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   month: 'long',
@@ -259,7 +260,6 @@ const formatDate = (dateString?: string): string => {
   return dateFormatter.format(date);
 };
 
-
 // Animated Counter Component
 function AnimatedCounter({
   value,
@@ -271,7 +271,7 @@ function AnimatedCounter({
   const spring = useSpring(value, { mass: 0.8, stiffness: 75, damping: 15 });
 
   // useMotionValue hook to get the current value of spring
-  const [displayValue, setDisplayValue] =useState(Math.round(value));
+  const [displayValue, setDisplayValue] = useState(Math.round(value));
 
   useEffect(() => {
     spring.set(value);
@@ -289,7 +289,6 @@ function OrdersPageContent() {
   const { addToCart, clearCart } = useCart();
   const router = useRouter();
 
-
   // Orders data
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -301,7 +300,10 @@ function OrdersPageContent() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Review state managed by reducer
-  const [reviewState, dispatchReview] = useReducer(reviewReducer, initialReviewState);
+  const [reviewState, dispatchReview] = useReducer(
+    reviewReducer,
+    initialReviewState
+  );
 
   // Viewed reviews tracking
   const [viewedReviews, setViewedReviews] = useState<Set<string>>(new Set());
@@ -310,24 +312,30 @@ function OrdersPageContent() {
   const markReviewAsViewed = (reviewId: string) => {
     setViewedReviews((prev) => new Set(prev).add(reviewId));
   };
-  const [selectedOrderForReview, setSelectedOrderForReview] = useState<Order | null>(null);
-const [selectedItemForReview, setSelectedItemForReview] = useState<any | null>(null);
-const [reviewRating, setReviewRating] = useState(0);
-const [reviewComment, setReviewComment] = useState('');
-const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [selectedOrderForReview, setSelectedOrderForReview] =
+    useState<Order | null>(null);
+  const [selectedItemForReview, setSelectedItemForReview] = useState<
+    any | null
+  >(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
 
-const [showViewReviewDialog, setShowViewReviewDialog] = useState(false);
-const [selectedItemForViewReview, setSelectedItemForViewReview] = useState<any | null>(null);
+  const [showViewReviewDialog, setShowViewReviewDialog] = useState(false);
+  const [selectedItemForViewReview, setSelectedItemForViewReview] = useState<
+    any | null
+  >(null);
 
-const [reviewsLoading, setReviewsLoading] = useState(false);
-const [existingReviews, setExistingReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [existingReviews, setExistingReviews] = useState<Review[]>([]);
 
-const [selectedOrderForSelector, setSelectedOrderForSelector] = useState<Order | null>(null);
-const [showItemSelectorDialog, setShowItemSelectorDialog] = useState(false);
+  const [selectedOrderForSelector, setSelectedOrderForSelector] =
+    useState<Order | null>(null);
+  const [showItemSelectorDialog, setShowItemSelectorDialog] = useState(false);
 
-const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
-const [showThankYouDialog, setShowThankYouDialog] = useState(false);
+  const [showThankYouDialog, setShowThankYouDialog] = useState(false);
 
   // Load viewed reviews from localStorage on component mount
   useEffect(() => {
@@ -354,13 +362,12 @@ const [showThankYouDialog, setShowThankYouDialog] = useState(false);
       }
     }
   }, []);
-  
+
   useEffect(() => {
     if (isAuthenticated && token) {
       fetchOrders();
     }
   }, [isAuthenticated, token]);
-  
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -378,31 +385,29 @@ const [showThankYouDialog, setShowThankYouDialog] = useState(false);
       setLoading(false);
     }
   };
-  
 
-  const handleViewDetails = async (orderId: string) => {
-    setOrderDetailLoading(true);
-    setSelectedOrder(null);
+  const handleViewDetails = async (data: any) => {
+    // setOrderDetailLoading(true);
+    setSelectedOrder(data);
     setIsDetailModalOpen(true);
-  
-    try {
-      const { data } = await getOrderById(orderId, token!);
-      setSelectedOrder(data);
-    } catch (err) {
-      console.error('Failed to fetch order details:', err);
-      setIsDetailModalOpen(false);
-      alert('Failed to load order details. Please try again.');
-    } finally {
-      setOrderDetailLoading(false);
-    }
+
+    // try {
+    //   const { data } = await getOrderById(orderId, token!);
+    //   setSelectedOrder(data);
+    // } catch (err) {
+    //   console.error('Failed to fetch order details:', err);
+    //   setIsDetailModalOpen(false);
+    //   alert('Failed to load order details. Please try again.');
+    // } finally {
+    //   setOrderDetailLoading(false);
+    // }
   };
-  
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 flex items-center justify-center relative overflow-hidden">
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 flex items-center justify-center relative overflow-hidden'>
         {/* Background Animated Blurs */}
-        <div className="absolute inset-0">
+        <div className='absolute inset-0'>
           {[
             {
               className:
@@ -414,56 +419,62 @@ const [showThankYouDialog, setShowThankYouDialog] = useState(false);
               className:
                 'absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-orange-400/20 to-pink-400/20 dark:from-orange-600/20 dark:to-pink-600/20 rounded-full blur-3xl',
               animate: { scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] },
-              transition: { duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 2 },
+              transition: {
+                duration: 10,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: 2,
+              },
             },
           ].map(({ className, animate, transition }, i) => (
             <motion.div
-  key={i}
-  className={className}
-  animate={animate}
-  transition={{
-    duration: 10,
-    repeat: Infinity,
-    ease: 'easeInOut',
-    delay: 2,
-  }}
-/>
-
+              key={i}
+              className={className}
+              animate={animate}
+              transition={{
+                duration: 10,
+                repeat: Infinity,
+                ease: 'easeInOut',
+                delay: 2,
+              }}
+            />
           ))}
         </div>
-  
+
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6 }}
-          className="relative z-10"
-        >
-          <Card className="w-full max-w-md mx-4 shadow-2xl border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-slate-800/50" />
-            <CardContent className="pt-12 pb-8 px-8 text-center relative z-10">
+          className='relative z-10'>
+          <Card className='w-full max-w-md mx-4 shadow-2xl border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-2xl relative overflow-hidden'>
+            <div className='absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-slate-800/50' />
+            <CardContent className='pt-12 pb-8 px-8 text-center relative z-10'>
               <motion.div
-                className="w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
+                className='w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl'
                 whileHover={{ scale: 1.05, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-              >
-                <ShoppingBag className="w-10 h-10 text-white" />
+                transition={{ type: 'spring', stiffness: 300 }}>
+                <ShoppingBag className='w-10 h-10 text-white' />
               </motion.div>
-  
-              <CardTitle className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+
+              <CardTitle className='text-2xl font-bold mb-4 text-gray-800 dark:text-gray-100'>
                 Welcome Back!
               </CardTitle>
-  
-              <CardDescription className="text-gray-600 dark:text-gray-300 mb-8 text-base leading-relaxed">
-                Sign in to view your order history and track your delicious campus meals.
+
+              <CardDescription className='text-gray-600 dark:text-gray-300 mb-8 text-base leading-relaxed'>
+                Sign in to view your order history and track your delicious
+                campus meals.
               </CardDescription>
-  
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}>
                 <Button
                   asChild
-                  className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <Link href="/login" className="flex items-center justify-center">
-                    <ArrowRight className="w-5 h-5 mr-2" />
+                  className='w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 hover:from-orange-600 hover:via-red-600 hover:to-pink-600 text-white font-semibold px-8 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300'>
+                  <Link
+                    href='/login'
+                    className='flex items-center justify-center'>
+                    <ArrowRight className='w-5 h-5 mr-2' />
                     Sign In to Continue
                   </Link>
                 </Button>
@@ -474,7 +485,6 @@ const [showThankYouDialog, setShowThankYouDialog] = useState(false);
       </div>
     );
   }
-  
 
   // Review helper functions
   const handleWriteReview = (order: Order, item: any) => {
@@ -484,40 +494,40 @@ const [showThankYouDialog, setShowThankYouDialog] = useState(false);
     setReviewComment('');
     setShowReviewDialog(true);
   };
-  
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (reviewRating === 0) return toast.error('Please select a rating');
     if (!reviewComment.trim()) return toast.error('Please add a comment');
     if (!selectedItemForReview || !selectedOrderForReview)
       return toast.error('Invalid review data');
-  
+
     setReviewSubmitting(true);
     try {
       const itemId =
         typeof selectedItemForReview.item === 'string'
           ? selectedItemForReview.item
           : selectedItemForReview.item._id;
-  
+
       const reviewData = {
         canteenId: selectedOrderForReview.canteen._id,
         itemId,
         rating: reviewRating,
         comment: reviewComment.trim(),
       };
-  
+
       await createReview(reviewData);
-  
+
       // Reset and close review dialog
       setShowReviewDialog(false);
       setReviewRating(0);
       setReviewComment('');
       setSelectedItemForReview(null);
       setSelectedOrderForReview(null);
-  
+
       setShowThankYouDialog(true);
-  
+
       // Refresh reviews if viewing same item review dialog
       if (showViewReviewDialog && selectedItemForViewReview) {
         const viewItemId =
@@ -536,252 +546,247 @@ const [showThankYouDialog, setShowThankYouDialog] = useState(false);
       setReviewSubmitting(false);
     }
   };
-  
 
   // View review helper functions
   // View review helper functions
-const handleViewReviews = (order: Order, item: any) => {
-  setSelectedOrderForReview(order);
-  setSelectedItemForViewReview(item);
+  const handleViewReviews = (order: Order, item: any) => {
+    setSelectedOrderForReview(order);
+    setSelectedItemForViewReview(item);
 
-  const itemId = typeof item.item === 'string' ? item.item : item.item._id;
+    const itemId = typeof item.item === 'string' ? item.item : item.item._id;
 
-  // Mark this item's reviews as viewed (frontend only)
-  setViewedReviews(prev => {
-    if (prev.has(itemId)) return prev;
-    return new Set(prev).add(itemId);
-  });
+    // Mark this item's reviews as viewed (frontend only)
+    setViewedReviews((prev) => {
+      if (prev.has(itemId)) return prev;
+      return new Set(prev).add(itemId);
+    });
 
-  setShowViewReviewDialog(true);
+    setShowViewReviewDialog(true);
 
-  // Delay to ensure recent reviews are fetched
-  setTimeout(() => fetchItemReviews(itemId), 500);
-};
+    // Delay to ensure recent reviews are fetched
+    setTimeout(() => fetchItemReviews(itemId), 500);
+  };
 
-// Item selector helper functions
-const handleOpenItemSelector = (order: Order) => {
-  setSelectedOrderForSelector(order);
-  setShowItemSelectorDialog(true);
-};
+  // Item selector helper functions
+  const handleOpenItemSelector = (order: Order) => {
+    setSelectedOrderForSelector(order);
+    setShowItemSelectorDialog(true);
+  };
 
-const handleItemSelectorWriteReview = (item: any) => {
-  if (!selectedOrderForSelector) return;
-  setShowItemSelectorDialog(false);
-  handleWriteReview(selectedOrderForSelector, item);
-};
+  const handleItemSelectorWriteReview = (item: any) => {
+    if (!selectedOrderForSelector) return;
+    setShowItemSelectorDialog(false);
+    handleWriteReview(selectedOrderForSelector, item);
+  };
 
-const handleItemSelectorViewReviews = (item: any) => {
-  if (!selectedOrderForSelector) return;
-  handleViewReviews(selectedOrderForSelector, item);
-};
+  const handleItemSelectorViewReviews = (item: any) => {
+    if (!selectedOrderForSelector) return;
+    handleViewReviews(selectedOrderForSelector, item);
+  };
 
-// Fetch item reviews from backend
-const fetchItemReviews = async (itemId: string) => {
-  setReviewsLoading(true);
-  try {
-    const reviews = await getItemReviews(itemId);
-    setExistingReviews(reviews);
+  // Fetch item reviews from backend
+  const fetchItemReviews = async (itemId: string) => {
+    setReviewsLoading(true);
+    try {
+      const reviews = await getItemReviews(itemId);
+      setExistingReviews(reviews);
 
-    if (reviews.length === 0) {
-      toast.info('No reviews found for this item yet.');
-    } else {
-      toast.success(`Found ${reviews.length} review(s) for this item.`);
-    }
-  } catch (error) {
-    console.error('Error fetching reviews:', error);
-    toast.error('Failed to load reviews');
-    setExistingReviews([]);
-  } finally {
-    setReviewsLoading(false);
-  }
-};
-
-
- // Helper to check if item's reviews viewed (frontend only)
-const hasViewedReviews = (itemId: string) => viewedReviews.has(itemId);
-
-// Helper to clear viewed reviews and localStorage
-const clearViewedReviews = () => {
-  setViewedReviews(new Set());
-  localStorage.removeItem('viewedReviews');
-  toast.success('Viewed reviews cleared! 🧹');
-};
-
-// Reorder functionality
-const handleReorder = (order: Order) => {
-  try {
-    clearCart();
-
-    // Add all valid items to cart
-    const itemsAdded = order.items.reduce((count, orderItem) => {
-      const item = orderItem.item;
-      if (item?._id) {
-        addToCart({
-          id: item._id,
-          name: item.name,
-          price: item.price,
-          quantity: orderItem.quantity,
-          image: item.image ?? '/placeholder.svg',
-          canteenId: order.canteen._id,
-        });
-        return count + 1;
+      if (reviews.length === 0) {
+        toast.info('No reviews found for this item yet.');
+      } else {
+        toast.success(`Found ${reviews.length} review(s) for this item.`);
       }
-      return count;
-    }, 0);
-
-    if (itemsAdded > 0) {
-      toast.success(`${itemsAdded} item${itemsAdded > 1 ? 's' : ''} added to cart! 🛒`, {
-        description: 'Redirecting to cart...',
-        duration: 2000,
-      });
-      setTimeout(() => router.push('/cart'), 1000);
-    } else {
-      toast.error('No items could be added to cart');
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      toast.error('Failed to load reviews');
+      setExistingReviews([]);
+    } finally {
+      setReviewsLoading(false);
     }
-  } catch (error) {
-    console.error('Error reordering:', error);
-    toast.error('Failed to reorder. Please try again.');
-  }
-};
-const activeOrders = useMemo(() =>
-  orders.filter((o) =>
-    ['placed', 'preparing', 'ready', 'payment_pending'].includes(o.status)
-  ),
-[orders]
-);
-if (loading) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
-      {/* Loading Header */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
-            My Orders
-          </h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-1 text-sm sm:text-base">
-            Track your delicious journey
-          </p>
-        </div>
-      </div>
+  };
 
-      {/* Loading animation */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <motion.div
-          className="flex flex-col items-center justify-center py-20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="relative">
+  // Helper to check if item's reviews viewed (frontend only)
+  const hasViewedReviews = (itemId: string) => viewedReviews.has(itemId);
+
+  // Helper to clear viewed reviews and localStorage
+  const clearViewedReviews = () => {
+    setViewedReviews(new Set());
+    localStorage.removeItem('viewedReviews');
+    toast.success('Viewed reviews cleared! 🧹');
+  };
+
+  // Reorder functionality
+  const handleReorder = (order: Order) => {
+    try {
+      clearCart();
+
+      // Add all valid items to cart
+      const itemsAdded = order.items.reduce((count, orderItem) => {
+        const item = orderItem.item;
+        if (item?._id) {
+          addToCart({
+            id: item._id,
+            name: item.name,
+            price: item.price,
+            quantity: orderItem.quantity,
+            image: item.image ?? '/placeholder.svg',
+            canteenId: order.canteen._id,
+          });
+          return count + 1;
+        }
+        return count;
+      }, 0);
+
+      if (itemsAdded > 0) {
+        toast.success(
+          `${itemsAdded} item${itemsAdded > 1 ? 's' : ''} added to cart! 🛒`,
+          {
+            description: 'Redirecting to cart...',
+            duration: 2000,
+          }
+        );
+        setTimeout(() => router.push('/cart'), 1000);
+      } else {
+        toast.error('No items could be added to cart');
+      }
+    } catch (error) {
+      console.error('Error reordering:', error);
+      toast.error('Failed to reorder. Please try again.');
+    }
+  };
+  const activeOrders = useMemo(
+    () =>
+      orders.filter((o) =>
+        ['placed', 'preparing', 'ready', 'payment_pending'].includes(o.status)
+      ),
+    [orders]
+  );
+  if (loading) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900'>
+        {/* Loading Header */}
+        <div className='bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
+          <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
+            <h1 className='text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
+              My Orders
+            </h1>
+            <p className='text-gray-600 dark:text-slate-300 mt-1 text-sm sm:text-base'>
+              Track your delicious journey
+            </p>
+          </div>
+        </div>
+
+        {/* Loading animation */}
+        <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-12'>
+          <motion.div
+            className='flex flex-col items-center justify-center py-20'
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6 }}>
+            <div className='relative'>
+              <motion.div
+                className='w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-2xl bg-gradient-to-br from-orange-500 via-red-500 to-pink-500'
+                animate={{
+                  scale: [1, 1.1, 1],
+                  rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}>
+                <Loader2 className='h-8 w-8 sm:h-10 sm:w-10 text-white animate-spin' />
+              </motion.div>
+
+              <motion.div
+                className='absolute -inset-4 sm:-inset-6 rounded-3xl blur-2xl bg-gradient-to-r from-orange-200/40 via-red-200/40 to-pink-200/40 dark:from-orange-500/20 dark:via-red-500/20 dark:to-pink-500/20'
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.6, 0.3],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              />
+            </div>
+
             <motion.div
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 shadow-2xl bg-gradient-to-br from-orange-500 via-red-500 to-pink-500"
-              animate={{
-                scale: [1, 1.1, 1],
-                rotate: [0, 5, -5, 0],
-              }}
+              className='text-center'
+              animate={{ opacity: [0.7, 1, 0.7] }}
               transition={{
                 duration: 2,
                 repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              <Loader2 className="h-8 w-8 sm:h-10 sm:w-10 text-white animate-spin" />
+                ease: 'easeInOut',
+              }}>
+              <p className='text-gray-700 dark:text-slate-300 text-base sm:text-lg font-medium mb-1 sm:mb-2'>
+                Loading your orders...
+              </p>
+              <p className='text-gray-500 dark:text-slate-400 text-xs sm:text-sm'>
+                This won't take long
+              </p>
             </motion.div>
-
-            <motion.div
-              className="absolute -inset-4 sm:-inset-6 rounded-3xl blur-2xl bg-gradient-to-r from-orange-200/40 via-red-200/40 to-pink-200/40 dark:from-orange-500/20 dark:via-red-500/20 dark:to-pink-500/20"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.3, 0.6, 0.3],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            />
-          </div>
-
-          <motion.div
-            className="text-center"
-            animate={{ opacity: [0.7, 1, 0.7] }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <p className="text-gray-700 dark:text-slate-300 text-base sm:text-lg font-medium mb-1 sm:mb-2">
-              Loading your orders...
-            </p>
-            <p className="text-gray-500 dark:text-slate-400 text-xs sm:text-sm">
-              This won't take long
-            </p>
           </motion.div>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
-if (error) {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900">
-      {/* Error Header */}
-      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent">
-            My Orders
-          </h1>
         </div>
       </div>
+    );
+  }
 
-      {/* Error message */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-2xl mx-auto"
-          role="alert"
-        >
-          <Alert className="border-red-200/50 bg-red-50/80 dark:border-red-800/50 dark:bg-red-950/20 backdrop-blur-sm shadow-xl">
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            <AlertTitle className="text-red-800 dark:text-red-300 font-semibold text-lg">
-              Oops! Something went wrong
-            </AlertTitle>
-            <AlertDescription className="text-red-700 dark:text-red-400 mb-6 text-base leading-relaxed">
-              {error}
-            </AlertDescription>
-            <div className="flex flex-col sm:flex-row gap-3">
-              {error.includes("Session expired") && (
+  if (error) {
+    return (
+      <div className='min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900'>
+        {/* Error Header */}
+        <div className='bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
+          <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
+            <h1 className='text-3xl sm:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 dark:from-white dark:via-blue-200 dark:to-indigo-200 bg-clip-text text-transparent'>
+              My Orders
+            </h1>
+          </div>
+        </div>
+
+        {/* Error message */}
+        <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-12'>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className='max-w-2xl mx-auto'
+            role='alert'>
+            <Alert className='border-red-200/50 bg-red-50/80 dark:border-red-800/50 dark:bg-red-950/20 backdrop-blur-sm shadow-xl'>
+              <AlertCircle className='h-5 w-5 text-red-600 dark:text-red-400' />
+              <AlertTitle className='text-red-800 dark:text-red-300 font-semibold text-lg'>
+                Oops! Something went wrong
+              </AlertTitle>
+              <AlertDescription className='text-red-700 dark:text-red-400 mb-6 text-base leading-relaxed'>
+                {error}
+              </AlertDescription>
+              <div className='flex flex-col sm:flex-row gap-3'>
+                {error.includes('Session expired') && (
+                  <Button
+                    asChild
+                    className='bg-red-600 hover:bg-red-700 text-white shadow-lg'>
+                    <Link href='/login'>Login Again</Link>
+                  </Button>
+                )}
                 <Button
-                  asChild
-                  className="bg-red-600 hover:bg-red-700 text-white shadow-lg"
-                >
-                  <Link href="/login">Login Again</Link>
+                  onClick={fetchOrders}
+                  variant='outline'
+                  className='border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 shadow-lg'>
+                  <RefreshCw className='w-4 h-4 mr-2' />
+                  Try Again
                 </Button>
-              )}
-              <Button
-                onClick={fetchOrders}
-                variant="outline"
-                className="border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 shadow-lg"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          </Alert>
-        </motion.div>
+              </div>
+            </Alert>
+          </motion.div>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-  
   return (
     <div
-    className="
+      className='
       min-h-screen
       bg-gradient-to-br
       from-slate-50
@@ -792,10 +797,9 @@ if (error) {
       dark:to-indigo-900
       relative
       overflow-hidden
-    "
-  >
-    {/* Animated Background Elements */}
-    {/* <div className="absolute inset-0 overflow-hidden">
+    '>
+      {/* Animated Background Elements */}
+      {/* <div className="absolute inset-0 overflow-hidden">
       <motion.div
         className="
           absolute top-20 left-20 w-96 h-96
@@ -835,88 +839,86 @@ if (error) {
       />
     </div> */}
 
-    {/* Modern Header with Stats */}
-    <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div>
-            <h1
-              className="
+      {/* Modern Header with Stats */}
+      <div className='bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
+        <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-6'>
+          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6'>
+            <div>
+              <h1
+                className='
                 text-2xl sm:text-3xl md:text-4xl lg:text-5xl
                 font-bold
                 bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900
                 dark:from-white dark:via-blue-200 dark:to-indigo-200
                 bg-clip-text text-transparent
-              "
-            >
-              My Orders
-            </h1>
-            <p className="text-gray-600 dark:text-slate-300 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
-              Track your delicious journey across campus
-            </p>
-          </div>
+              '>
+                My Orders
+              </h1>
+              <p className='text-gray-600 dark:text-slate-300 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base'>
+                Track your delicious journey across campus
+              </p>
+            </div>
 
-          {/* Utility actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {viewedReviews.size > 0 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-1.5 sm:gap-2"
-              >
-                <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs sm:text-sm px-2 sm:px-3 py-1">
-                  {viewedReviews.size} viewed
-                </Badge>
-                <Button
-                  onClick={clearViewedReviews}
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 h-6 px-1.5 sm:px-2"
-                >
-                  Clear
-                </Button>
-              </motion.div>
-            )}
+            {/* Utility actions */}
+            <div className='flex items-center gap-2 sm:gap-3'>
+              {viewedReviews.size > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className='flex items-center gap-1.5 sm:gap-2'>
+                  <Badge className='bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs sm:text-sm px-2 sm:px-3 py-1'>
+                    {viewedReviews.size} viewed
+                  </Badge>
+                  <Button
+                    onClick={clearViewedReviews}
+                    variant='ghost'
+                    size='sm'
+                    className='text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 h-6 px-1.5 sm:px-2'>
+                    Clear
+                  </Button>
+                </motion.div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative z-10">
-      {orders.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-center py-12 sm:py-16 lg:py-24"
-        >
-          <div className="max-w-sm sm:max-w-md mx-auto px-4 sm:px-0">
-            <motion.div
-              className="
+      <div className='container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 relative z-10'>
+        {orders.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className='text-center py-12 sm:py-16 lg:py-24'>
+            <div className='max-w-sm sm:max-w-md mx-auto px-4 sm:px-0'>
+              <motion.div
+                className='
                 w-20 h-20 sm:w-24 sm:h-24
                 mx-auto mb-6 sm:mb-8
                 bg-gradient-to-br from-orange-100 to-red-100
                 dark:from-orange-900/30 dark:to-red-900/30
                 rounded-2xl flex items-center justify-center
-              "
-              whileHover={{ scale: 1.05, rotate: 5 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Inbox className="w-10 h-10 sm:w-12 sm:h-12 text-orange-500" />
-            </motion.div>
+              '
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                transition={{ type: 'spring', stiffness: 300 }}>
+                <Inbox className='w-10 h-10 sm:w-12 sm:h-12 text-orange-500' />
+              </motion.div>
 
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
-              No orders yet
-            </h3>
+              <h3 className='text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4'>
+                No orders yet
+              </h3>
 
-            <p className="text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
-              Start your food journey by exploring our amazing campus restaurants and placing your first order.
-            </p>
+              <p className='text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base'>
+                Start your food journey by exploring our amazing campus
+                restaurants and placing your first order.
+              </p>
 
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                asChild
-                className="
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}>
+                <Button
+                  asChild
+                  className='
                   w-full sm:w-auto
                   bg-gradient-to-r from-orange-500 via-red-500 to-pink-500
                   hover:from-orange-600 hover:via-red-600 hover:to-pink-600
@@ -924,17 +926,16 @@ if (error) {
                   rounded-xl shadow-lg hover:shadow-xl
                   transition-all duration-300
                   text-sm sm:text-base
-                "
-              >
-                <Link href="/menu">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  Browse Menu
-                </Link>
-              </Button>
-            </motion.div>
-          </div>
-        </motion.div>
-      ) : (
+                '>
+                  <Link href='/menu'>
+                    <Plus className='w-4 h-4 sm:w-5 sm:h-5 mr-2' />
+                    Browse Menu
+                  </Link>
+                </Button>
+              </motion.div>
+            </div>
+          </motion.div>
+        ) : (
           <div className='space-y-8 lg:space-y-12'>
             {/* Active Orders Section */}
             {activeOrders.length > 0 && (
@@ -1492,13 +1493,14 @@ if (error) {
     </div>
   );
 }
-const btnBase = "w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300";
+const btnBase =
+  'w-full sm:w-auto h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl transition-all duration-300';
 
 // Enhanced Order Card Component
 interface OrderCardProps {
   order: Order;
   index: number;
-  onViewDetails: (orderId: string) => void;
+  onViewDetails: (order: Order) => void;
   onReorder: (order: Order) => void;
   onOpenItemSelector: () => void;
   orderDetailLoading: boolean;
@@ -1507,12 +1509,13 @@ interface OrderCardProps {
   selectedOrder: Order | null;
 }
 
-const MotionWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const MotionWrapper: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
   <motion.div
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
-    className="w-full sm:w-auto"
-  >
+    className='w-full sm:w-auto'>
     {children}
   </motion.div>
 );
@@ -1528,8 +1531,12 @@ const OrderCard: React.FC<OrderCardProps> = ({
   setIsDetailModalOpen,
   selectedOrder,
 }) => {
-  console.log({order})
-  const statusConfig = useMemo(() => getStatusConfig(order.status), [order.status]);
+  console.log({ order });
+  console.log({ selectedOrder });
+  const statusConfig = useMemo(
+    () => getStatusConfig(order.status),
+    [order.status]
+  );
   const StatusIcon = statusConfig.icon;
   const maxVisible = 3;
 
@@ -1545,48 +1552,47 @@ const OrderCard: React.FC<OrderCardProps> = ({
       whileHover={{
         y: -8,
         transition: { duration: 0.2 },
-      }}
-    >
-      <Card className="relative overflow-hidden border-0 shadow-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl group">
+      }}>
+      <Card className='relative overflow-hidden border-0 shadow-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl group'>
         {/* Hover gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+        <div className='absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none' />
 
         {/* Header */}
-        <CardHeader className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-b-2 relative z-10`}>
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <CardHeader
+          className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-b-2 relative z-10`}>
+          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
             {/* Left: Status Icon & Order Info */}
-            <div className="flex items-center gap-4">
+            <div className='flex items-center gap-4'>
               <motion.div
                 className={`w-14 h-14 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}
                 whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <StatusIcon className="w-7 h-7 text-white" />
+                transition={{ type: 'spring', stiffness: 300 }}>
+                <StatusIcon className='w-7 h-7 text-white' />
               </motion.div>
 
-              <div className="flex-1">
-                <CardTitle className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">
-                {order?.OrderNumber }
-
+              <div className='flex-1'>
+                <CardTitle className='text-xl lg:text-2xl font-bold text-gray-900 dark:text-white'>
+                  {order?.OrderNumber}
                 </CardTitle>
-                <CardDescription className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1">
-                  <Calendar className="w-4 h-4" />
+                <CardDescription className='flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1'>
+                  <Calendar className='w-4 h-4' />
                   {formatDate(order.createdAt)}
                 </CardDescription>
               </div>
             </div>
 
             {/* Right: Status Badge & Payment Info */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <Badge className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-4 py-2 font-semibold text-sm`}>
+            <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
+              <Badge
+                className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-4 py-2 font-semibold text-sm`}>
                 {statusConfig.label}
               </Badge>
-              <div className="text-left sm:text-right">
-                <div className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">
+              <div className='text-left sm:text-right'>
+                <div className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>
                   ₹{order.total.toFixed(2)}
                 </div>
                 {order.payment && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400 capitalize mt-1">
+                  <div className='text-sm text-gray-500 dark:text-gray-400 capitalize mt-1'>
                     {getPaymentConfig(order.payment.method).label}
                   </div>
                 )}
@@ -1595,124 +1601,136 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="p-6 relative z-10">
+        <CardContent className='p-6 relative z-10'>
           {/* Restaurant Info */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-gray-500 flex items-center justify-center">
-                <ChefHat className="w-5 h-5 text-white" />
+          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4'>
+            <div className='flex items-center gap-3'>
+              <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-gray-500 flex items-center justify-center'>
+                <ChefHat className='w-5 h-5 text-white' />
               </div>
               <div>
-                <span className="block font-semibold text-lg text-gray-900 dark:text-white">
-                  {order.canteen?.name ?? "Unknown Restaurant"}
+                <span className='block font-semibold text-lg text-gray-900 dark:text-white'>
+                  {order.canteen?.name ?? 'Unknown Restaurant'}
                 </span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Campus Restaurant</p>
+                <p className='text-sm text-gray-500 dark:text-gray-400'>
+                  Campus Restaurant
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <ShoppingBag className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+            <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
+              <ShoppingBag className='w-4 h-4' />
+              <span className='text-sm font-medium'>
+                {order.items.length} item{order.items.length !== 1 ? 's' : ''}
               </span>
             </div>
           </div>
 
           {/* Order Items Preview */}
-          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-            {order.items.slice(0, maxVisible).map(({ _id, item, quantity }, idx) => {
-              const { name = "Item No Longer Available", image, price = 0 } = item || {};
-              return (
-                <motion.div
-                  key={_id}
-                  className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-                    <div className="relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0">
-                      <Image src={image || "/placeholder.svg"} alt={name} fill className="object-cover" />
+          <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
+            {order.items
+              .slice(0, maxVisible)
+              .map(({ _id, item, quantity }, idx) => {
+                const {
+                  name = 'Item No Longer Available',
+                  image,
+                  price = 0,
+                } = item || {};
+                return (
+                  <motion.div
+                    key={_id}
+                    className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}>
+                    <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
+                      <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
+                        <Image
+                          src={image || '/placeholder.svg'}
+                          alt={name}
+                          fill
+                          className='object-cover'
+                        />
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
+                          {name}
+                        </h4>
+                        <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
+                          Qty: {quantity}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate">
-                        {name}
-                      </h4>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1">Qty: {quantity}</p>
+                    <div className='text-right flex-shrink-0'>
+                      <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
+                        ₹{(quantity * price).toFixed(2)}
+                      </p>
                     </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base">
-                      ₹{(quantity * price).toFixed(2)}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
 
             {order.items.length > maxVisible && (
-              <div className="text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl">
+              <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
                 +{order.items.length - maxVisible} more item
-                {order.items.length - maxVisible !== 1 ? "s" : ""}
+                {order.items.length - maxVisible !== 1 ? 's' : ''}
               </div>
             )}
           </div>
 
-          <Separator className="my-6" />
+          <Separator className='my-6' />
 
           {/* Footer */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm">{statusConfig.description}</span>
+          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
+            <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
+              <Clock className='w-4 h-4' />
+              <span className='text-sm'>{statusConfig.description}</span>
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto'>
               {/* View Details Dialog */}
-              <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+              <Dialog
+                open={isDetailModalOpen}
+                onOpenChange={setIsDetailModalOpen}>
                 <DialogTrigger asChild>
                   <MotionWrapper>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant='outline'
+                      size='sm'
                       className={`${btnBase} bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800`}
-                      onClick={() => onViewDetails(order._id)}
-                      disabled={orderDetailLoading}
-                    >
-                      {orderDetailLoading ? (
-                        <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
-                      ) : (
-                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                      )}
-                      <span className="sm:hidden">Details</span>
-                      <span className="hidden sm:inline">View Details</span>
+                      onClick={() => onViewDetails(order)}>
+                      <span className='sm:hidden'>Details</span>
+                      <span className='hidden sm:inline'>View Details</span>
                     </Button>
                   </MotionWrapper>
                 </DialogTrigger>
 
-                <DialogContent className="max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4">
+                <DialogContent className='max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4'>
                   {orderDetailLoading ? (
                     <>
                       <DialogHeader>
-                        <DialogTitle className="text-xl">Loading Order Details...</DialogTitle>
+                        <DialogTitle className='text-xl'>
+                          Loading Order Details...
+                        </DialogTitle>
                       </DialogHeader>
-                      <div className="flex items-center justify-center py-20">
-                        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                      <div className='flex items-center justify-center py-20'>
+                        <Loader2 className='h-8 w-8 animate-spin text-orange-500' />
                       </div>
                     </>
                   ) : selectedOrder ? (
                     <>
-                      <DialogHeader className="border-b pb-6 dark:border-slate-700">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-16 h-16 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}>
-                            <statusConfig.icon className="w-8 h-8 text-white" />
+                      <DialogHeader className='border-b pb-6 dark:border-slate-700'>
+                        <div className='flex items-center gap-4'>
+                          <div
+                            className={`w-16 h-16 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}>
+                            <statusConfig.icon className='w-8 h-8 text-white' />
                           </div>
                           <div>
-                            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
-                            Order #{order?.OrderNumber?.replace("order#", "") }
+                            <DialogTitle className='text-2xl font-bold text-gray-900 dark:text-white'>
+                              Order #{order?.OrderNumber?.replace('order#', '')}
                             </DialogTitle>
-                            <p className="text-gray-600 dark:text-gray-400 mt-1">
+                            <p className='text-gray-600 dark:text-gray-400 mt-1'>
                               {formatDate(selectedOrder.createdAt)}
                             </p>
                           </div>
@@ -1725,39 +1743,37 @@ const OrderCard: React.FC<OrderCardProps> = ({
                       <DialogHeader>
                         <DialogTitle>Order Details</DialogTitle>
                       </DialogHeader>
-                      <div className="flex items-center justify-center py-20">
-                        <p className="text-gray-500 dark:text-gray-400">No order selected</p>
+                      <div className='flex items-center justify-center py-20'>
+                        <p className='text-gray-500 dark:text-gray-400'>
+                          No order selected
+                        </p>
                       </div>
                     </>
                   )}
                 </DialogContent>
               </Dialog>
-        
 
               {/* Completed Order Actions */}
-              {order.status === "completed" && (
+              {order.status === 'completed' && (
                 <>
                   <MotionWrapper>
                     <Button
                       onClick={onOpenItemSelector}
-                      variant="outline"
-                      size="sm"
-                      className={`${btnBase} bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 dark:bg-red-700 dark:border-red-800 dark:hover:bg-red-800 shadow-lg hover:shadow-xl font-semibold`}
-
-                    >
-                      <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current" />
-                      <span className="sm:hidden">Review</span>
-                      <span className="hidden sm:inline">Write Reviews</span>
+                      variant='outline'
+                      size='sm'
+                      className={`${btnBase} bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 dark:bg-red-700 dark:border-red-800 dark:hover:bg-red-800 shadow-lg hover:shadow-xl font-semibold`}>
+                      <Star className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current' />
+                      <span className='sm:hidden'>Review</span>
+                      <span className='hidden sm:inline'>Write Reviews</span>
                     </Button>
                   </MotionWrapper>
 
                   <MotionWrapper>
                     <Button
                       onClick={() => onReorder(order)}
-                      size="sm"
-                      className={`${btnBase} bg-gradient-to-r from-red-800 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl font-semibold`}
-                    >
-                      <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                      size='sm'
+                      className={`${btnBase} bg-gradient-to-r from-red-800 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl font-semibold`}>
+                      <RefreshCw className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
                       Reorder
                     </Button>
                   </MotionWrapper>
@@ -1768,12 +1784,14 @@ const OrderCard: React.FC<OrderCardProps> = ({
         </CardContent>
       </Card>
     </motion.div>
-      );
-    };
+  );
+};
 
 // Order Details Content Component (Optimized)
 function OrderDetailsContent({ order }: { order: Order | null }) {
   if (!order) return null;
+
+  console.log(order, ' order in details comp');
 
   const isCompleted = (statuses: OrderStatus[]) =>
     statuses.includes(order.status as OrderStatus);
@@ -1840,20 +1858,22 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
   };
 
   const timeline = getOrderTimeline();
-  const progress = timeline.filter((step) => step.isComplete).length / timeline.length;
+  const maxVisible = 3;
+  const progress =
+    timeline.filter((step) => step.isComplete).length / timeline.length;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 py-6">
+    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 py-6'>
       <div>
-        <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2">
-          <Truck className="w-4 h-4 sm:w-5 sm:h-5" />
+        <h3 className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2'>
+          <Truck className='w-4 h-4 sm:w-5 sm:h-5' />
           Order Timeline
         </h3>
 
-        <div className="space-y-3 sm:space-y-4 md:space-y-6 relative">
-          <div className="absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700">
+        <div className='space-y-3 sm:space-y-4 md:space-y-6 relative'>
+          <div className='absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700'>
             <motion.div
-              className="bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top"
+              className='bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top'
               initial={{ scaleY: 0 }}
               animate={{ scaleY: progress }}
               transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
@@ -1868,11 +1888,10 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
             return (
               <motion.div
                 key={step.status}
-                className="flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10"
+                className='flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10'
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-              >
+                transition={{ duration: 0.6, delay: index * 0.2 }}>
                 <motion.div
                   className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 sm:border-3 md:border-4 border-white dark:border-slate-900 shadow-lg ${
                     isCompleted
@@ -1884,8 +1903,7 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
-                  whileHover={{ scale: 1.1 }}
-                >
+                  whileHover={{ scale: 1.1 }}>
                   <StepIcon
                     className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ${
                       isCompleted
@@ -1895,7 +1913,7 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                   />
                 </motion.div>
 
-                <div className="flex-1 min-w-0">
+                <div className='flex-1 min-w-0'>
                   <motion.div
                     className={`font-medium text-xs sm:text-sm md:text-base ${
                       isCompleted
@@ -1904,18 +1922,16 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
                     }`}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.2 + 0.5 }}
-                  >
+                    transition={{ delay: index * 0.2 + 0.5 }}>
                     {step.label}
                   </motion.div>
 
                   {isCompleted && isCurrent && (
                     <motion.div
-                      className="text-xs text-green-600 dark:text-green-400 font-medium"
+                      className='text-xs text-green-600 dark:text-green-400 font-medium'
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.2 + 0.7 }}
-                    >
+                      transition={{ delay: index * 0.2 + 0.7 }}>
                       Current Status
                     </motion.div>
                   )}
@@ -1924,11 +1940,65 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
             );
           })}
         </div>
+
+        {/* Add space after completed timeline */}
+        {order.status === 'completed' && (
+          <div className='mt-6 sm:mt-8 mb-4 sm:mb-6'></div>
+        )}
+
+        <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
+          {order.items.slice(0, maxVisible).map((orderItem, idx) => {
+            const { _id, item, quantity, nameAtPurchase, priceAtPurchase } =
+              orderItem;
+            const { image } = item || {};
+            const name = nameAtPurchase || 'Item No Longer Available';
+            const price = priceAtPurchase || 0;
+
+            return (
+              <motion.div
+                key={_id}
+                className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}>
+                <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
+                  <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
+                    <Image
+                      src={image || '/placeholder.svg'}
+                      alt={name}
+                      fill
+                      className='object-cover'
+                    />
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                    <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
+                      {name}
+                    </h4>
+                    <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
+                      Qty: {quantity}
+                    </p>
+                  </div>
+                </div>
+                <div className='text-right flex-shrink-0'>
+                  <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
+                    ₹{(quantity * price).toFixed(2)}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+
+          {order.items.length > maxVisible && (
+            <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
+              +{order.items.length - maxVisible} more item
+              {order.items.length - maxVisible !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-
 
 // Main page component with route protection
 export default function OrdersPage() {
