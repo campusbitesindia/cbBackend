@@ -12,6 +12,12 @@ import {
   Utensils,
   Users,
   Smile,
+  Search,
+  ShoppingCart,
+  MapPin,
+  Clock,
+  CheckCircle,
+  Sparkles,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
@@ -61,19 +67,19 @@ export default function LandingPageClient() {
 
   const features = [
     {
-      icon: <Heart className="w-10 h-10 text-red-600" />,
+      icon: <Heart className='w-10 h-10 text-red-600' />,
       title: 'Curated for You',
       description:
         'Discover exclusive deals and combos from your favorite campus canteens.',
     },
     {
-      icon: <Truck className="w-10 h-10 text-red-600" />,
+      icon: <Truck className='w-10 h-10 text-red-600' />,
       title: 'Real-Time Tracking',
       description:
         'Know exactly where your order is, from the kitchen to your doorstep.',
     },
     {
-      icon: <GraduationCap className="w-10 h-10 text-red-600" />,
+      icon: <GraduationCap className='w-10 h-10 text-red-600' />,
       title: 'Student-Friendly Prices',
       description:
         "Enjoy delicious meals that won't break the bank. Pocket-friendly is our promise.",
@@ -82,29 +88,27 @@ export default function LandingPageClient() {
 
   return (
     <div
-      className="min-h-screen bg-white text-gray-900 dark:bg-[#0a192f] dark:text-white transition-all duration-500"
+      className='min-h-screen bg-white text-gray-900 dark:bg-[#0a192f] dark:text-white transition-all duration-500'
       style={{
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
         transform: 'translateZ(0)',
         willChange: 'transform',
-      }}
-    >
+      }}>
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center justify-center bg-white dark:bg-[#0a192f]">
-        <div className="container mx-auto px-4 py-20 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <section className='relative min-h-[80vh] flex items-center justify-center bg-white dark:bg-[#0a192f]'>
+        <div className='container mx-auto px-4 py-20 relative z-10'>
+          <div className='grid lg:grid-cols-2 gap-12 items-center'>
             {/* Left Content */}
-            <div className="text-center lg:text-left">
+            <div className='text-center lg:text-left'>
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
-                className="inline-flex items-center gap-2 bg-red-100 border border-red-200 rounded-full px-4 py-2 mb-6"
-              >
-                <Star className="w-5 h-5 text-red-600" />
-                <span className="text-red-600 font-medium">
-                  #1 Campus Food Delivery
+                className='inline-flex items-center gap-2 bg-red-100 border border-red-200 rounded-full px-4 py-2 mb-6'>
+                <Star className='w-5 h-5 text-red-600' />
+                <span className='text-red-600 font-medium'>
+                  #1 Campus Food Ordering
                 </span>
               </motion.div>
 
@@ -112,12 +116,11 @@ export default function LandingPageClient() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.8 }}
-                className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8"
-              >
-                <span className="block text-gray-900 dark:text-white">
+                className='text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8'>
+                <span className='block text-gray-900 dark:text-white'>
                   Ready for the
                 </span>
-                <span className="block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+                <span className='block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'>
                   Feast Fest?
                 </span>
               </motion.h1>
@@ -126,38 +129,34 @@ export default function LandingPageClient() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4, duration: 0.8 }}
-                className="text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-xl mx-auto lg:mx-0"
-              >
-                Don't let hunger slow you down. Get your favorite meals delivered
-                fast,
-                <span className="text-red-600 font-semibold"> 24/7</span>, right to
-                your hostel room.
+                className='text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-10 max-w-xl mx-auto lg:mx-0'>
+                Don't let hunger slow you down. Get your favorite meals
+                delivered fast,
+                <span className='text-red-600 font-semibold'> 24/7</span>, right
+                on your fingertips.
               </motion.p>
 
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.8 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12"
-              >
+                className='flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12'>
                 <Button
                   asChild
-                  size="lg"
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-6 text-lg rounded-full transition-all duration-300"
-                >
-                  <Link href="/menu">
-                    Order Now <ArrowRight className="w-5 h-5 ml-2" />
+                  size='lg'
+                  className='bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-6 text-lg rounded-full transition-all duration-300'>
+                  <Link href='/menu'>
+                    Order Now <ArrowRight className='w-5 h-5 ml-2' />
                   </Link>
                 </Button>
 
                 <Button
                   asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-2 border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-gray-800 hover:text-red-700 dark:hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all duration-300"
-                >
-                  <Link href="#demo">
-                    <span className="mr-2">▶</span>
+                  size='lg'
+                  variant='outline'
+                  className='border-2 border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-gray-800 hover:text-red-700 dark:hover:text-white font-semibold px-8 py-6 text-lg rounded-full transition-all duration-300'>
+                  <Link href='#demo'>
+                    <span className='mr-2'>▶</span>
                     Watch Demo
                   </Link>
                 </Button>
@@ -169,25 +168,34 @@ export default function LandingPageClient() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8 }}
-                className="flex flex-wrap justify-center lg:justify-start gap-8 mt-6"
-              >
+                className='flex flex-wrap justify-center lg:justify-start gap-8 mt-6'>
                 {[
-                  { icon: Utensils, value: 100, plus: true, label: 'Restaurants' },
+                  {
+                    icon: Utensils,
+                    value: 100,
+                    plus: true,
+                    label: 'Restaurants',
+                  },
                   { icon: Users, value: 1, suffix: 'k+', label: 'Customers' },
-                  { icon: Smile, value: 98, suffix: '%', label: 'Satisfaction' },
+                  {
+                    icon: Smile,
+                    value: 98,
+                    suffix: '%',
+                    label: 'Satisfaction',
+                  },
                 ].map((stat, i) => (
-                  <div key={i} className="flex flex-col items-center">
-                    <div className="bg-red-100 p-4 rounded-full mb-2">
-                      <stat.icon className="w-6 h-6 text-red-600" />
+                  <div key={i} className='flex flex-col items-center'>
+                    <div className='bg-red-100 p-4 rounded-full mb-2'>
+                      <stat.icon className='w-6 h-6 text-red-600' />
                     </div>
-                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                    <span className='text-4xl font-extrabold text-gray-900 dark:text-white'>
                       <Counter
                         to={stat.value}
                         isPlus={stat.plus}
                         suffix={stat.suffix}
                       />
                     </span>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide mt-1">
+                    <p className='text-gray-600 dark:text-gray-400 text-sm uppercase tracking-wide mt-1'>
                       {stat.label}
                     </p>
                   </div>
@@ -200,14 +208,12 @@ export default function LandingPageClient() {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.8 }}
-              className="hidden lg:flex items-center justify-center"
-            >
-              <div className="relative w-96 h-96">
-                <div className="absolute top-1/2 left-1/2 w-44 h-44 animated-bg rounded-full shadow-2xl">
+              className='hidden lg:flex items-center justify-center'>
+              <div className='relative w-96 h-96'>
+                <div className='absolute top-1/2 left-1/2 w-44 h-44 animated-bg rounded-full shadow-2xl'>
                   <div
-                    className="absolute top-1/2 left-1/2 text-7xl font-black text-white select-none"
-                    style={{ transform: 'translate(-50%, -50%)' }}
-                  >
+                    className='absolute top-1/2 left-1/2 text-7xl font-black text-white select-none'
+                    style={{ transform: 'translate(-50%, -50%)' }}>
                     CB
                   </div>
                 </div>
@@ -218,18 +224,18 @@ export default function LandingPageClient() {
       </section>
 
       {/* Features Section */}
-      <section className="py-28 bg-gray-100 dark:bg-gray-900 transition-colors duration-500">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">
-              Why <span className="text-red-600">CampusBites</span>?
+      <section className='py-28 bg-gray-100 dark:bg-gray-900 transition-colors duration-500'>
+        <div className='container mx-auto px-4'>
+          <div className='text-center mb-12'>
+            <h2 className='text-4xl font-bold mb-4 text-gray-900 dark:text-white'>
+              Why <span className='text-red-600'>CampusBites</span>?
             </h2>
-            <p className="text-gray-700 dark:text-gray-400 max-w-2xl mx-auto">
-              We're not just another food app. We're built by students, for students,
-              with features that matter to you.
+            <p className='text-gray-700 dark:text-gray-400 max-w-2xl mx-auto'>
+              We're not just another food app. We're built by students, for
+              students, with features that matter to you.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-8'>
             {features.map((feature, i) => (
               <motion.div
                 key={i}
@@ -241,15 +247,16 @@ export default function LandingPageClient() {
                   scale: 1.05,
                   boxShadow: '0px 8px 20px rgba(0,0,0,0.1)',
                 }}
-                className="bg-white p-8 rounded-2xl border border-gray-200 transition-all duration-300 dark:bg-gray-800 dark:border-gray-700"
-              >
-                <div className="flex items-center justify-center bg-red-100 rounded-full w-20 h-20 mb-6">
+                className='bg-white p-8 rounded-2xl border border-gray-200 transition-all duration-300 dark:bg-gray-800 dark:border-gray-700'>
+                <div className='flex items-center justify-center bg-red-100 rounded-full w-20 h-20 mb-6'>
                   {feature.icon}
                 </div>
-                <h3 className="text-2xl font-bold mb-3 text-gray-900 dark:text-white">
+                <h3 className='text-2xl font-bold mb-3 text-gray-900 dark:text-white'>
                   {feature.title}
                 </h3>
-                <p className="text-gray-700 dark:text-gray-400">{feature.description}</p>
+                <p className='text-gray-700 dark:text-gray-400'>
+                  {feature.description}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -257,57 +264,59 @@ export default function LandingPageClient() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-24 transition-colors duration-500">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16 text-gray-900 dark:text-white">
-            Get Started in <span className="text-red-600">3 Easy Steps</span>
-          </h2>
-          <div className="relative">
-            <div className="absolute left-1/2 top-0 h-full w-0.5 bg-gray-300 dark:bg-gray-700 hidden md:block" />
+      <section className='relative py-24 transition-colors duration-500 overflow-hidden'>
+        {/* Background image */}
+        <div
+          className='absolute inset-0 bg-cover bg-center filter blur-sm opacity-40'
+          style={{ backgroundImage: "url('/canteen-bg.jpg')" }}></div>
 
+        {/* Gradient overlay */}
+        <div className='absolute inset-0 bg-gradient-to-b from-white/80 via-white/60 to-white/90 dark:from-gray-900/80 dark:via-gray-900/60 dark:to-gray-900/90'></div>
+
+        <div className='relative container mx-auto px-4'>
+          <h2 className='text-4xl font-bold text-center mb-16 text-gray-900 dark:text-white'>
+            Get Started in <span className='text-red-600'>3 Easy Steps</span>
+          </h2>
+
+          <div className='relative space-y-12 justify-center'>
             {/* Step 1 */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="md:grid md:grid-cols-2 md:gap-12 items-center mb-16"
-            >
-              <div className="text-center md:text-left mb-8 md:mb-0">
-                <h3 className="text-3xl font-bold mb-3 text-red-600">1. Browse & Select</h3>
-                <p className="text-gray-700 dark:text-gray-400">
-                  Explore menus from all campus canteens in one place. Find your favorite
-                  dish or try something new!
+              className='bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-lg hover:shadow-xl transition-all p-8 md:grid md:grid-cols-2 md:gap-12 items-center backdrop-blur-sm'>
+              <div className='text-center md:text-left'>
+                <h3 className='text-3xl font-bold mb-3 text-red-600'>
+                  1. Browse & Select
+                </h3>
+                <p className='text-gray-700 dark:text-gray-300'>
+                  Explore menus from all campus canteens in one place. Find your
+                  favorite dish or try something new!
                 </p>
-              </div>
-              <div className="relative flex justify-center items-center">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full border border-gray-200 dark:border-gray-700">
-                  <p className="text-gray-600 dark:text-gray-300">Browse Screen Mockup</p>
-                </div>
               </div>
             </motion.div>
 
             {/* Step 2 */}
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="md:grid md:grid-cols-2 md:gap-12 items-center mb-16"
-            >
-              <div className="relative flex justify-center items-center md:order-2">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full border border-gray-200 dark:border-gray-700">
-                  <p className="text-gray-600 dark:text-gray-300">Cart/Checkout Mockup</p>
-                </div>
-              </div>
-              <div className="text-center md:text-right mt-8 md:mt-0 md:order-1">
-                <h3 className="text-3xl font-bold mb-3 text-red-600">2. Place Your Order</h3>
-                <p className="text-gray-700 dark:text-gray-400">
-                  Add items to your cart, choose your payment method, and confirm your order
-                  in a few taps.
-                </p>
-              </div>
-            </motion.div>
+  initial={{ opacity: 0, x: 50 }}
+  whileInView={{ opacity: 1, x: 0 }}
+  viewport={{ once: true }}
+  transition={{ duration: 0.6 }}
+  className='bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-lg hover:shadow-xl transition-all p-8 md:grid md:grid-cols-2 md:gap-12 items-center backdrop-blur-sm'
+>
+  <div className='text-center md:text-left'>
+    <h3 className='text-3xl font-bold mb-3 text-red-600'>
+      2. Place Your Order
+    </h3>
+    <p className='text-gray-700 dark:text-gray-300'>
+      Add items to your cart, choose your payment method, and
+      confirm your order in a few taps.
+    </p>
+  </div>
+</motion.div>
+
+
 
             {/* Step 3 */}
             <motion.div
@@ -315,19 +324,15 @@ export default function LandingPageClient() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
-              className="md:grid md:grid-cols-2 md:gap-12 items-center"
-            >
-              <div className="text-center md:text-left mb-8 md:mb-0">
-                <h3 className="text-3xl font-bold mb-3 text-red-600">3. Track & Enjoy</h3>
-                <p className="text-gray-700 dark:text-gray-400">
-                  Follow your order in real-time and get notified when it's arriving. Hot and
-                  fresh, right at your door!
+              className='bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-lg hover:shadow-xl transition-all p-8 md:grid md:grid-cols-2 md:gap-12 items-center backdrop-blur-sm'>
+              <div className='text-center md:text-left'>
+                <h3 className='text-3xl font-bold mb-3 text-red-600'>
+                  3. Track & Enjoy
+                </h3>
+                <p className='text-gray-700 dark:text-gray-300'>
+                  Follow your order in real-time and get notified when it's
+                  arriving. Hot and fresh, right at your door!
                 </p>
-              </div>
-              <div className="relative flex justify-center items-center">
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full border border-gray-200 dark:border-gray-700">
-                  <p className="text-gray-600 dark:text-gray-300">Tracking Screen Mockup</p>
-                </div>
               </div>
             </motion.div>
           </div>
@@ -337,12 +342,24 @@ export default function LandingPageClient() {
       {/* CSS for animated background */}
       <style jsx global>{`
         @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
         }
         .animated-bg {
-          background: linear-gradient(-45deg, #ff4b2b, #ff416c, #ff4b2b, #ff416c);
+          background: linear-gradient(
+            -45deg,
+            #ff4b2b,
+            #ff416c,
+            #ff4b2b,
+            #ff416c
+          );
           background-size: 400% 400%;
           animation: gradientMove 15s ease infinite;
         }
