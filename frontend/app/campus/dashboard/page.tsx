@@ -1,5 +1,13 @@
 'use client';
-import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useMemo,
+  useCallback,
+  Suspense,
+  lazy,
+} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -26,12 +34,34 @@ import { getOrderById } from '@/services/orderService';
 import axios from 'axios';
 import { DashboardSidebar } from '@/app/campus/dashboard/DashboardSidebar';
 import { OverviewTab } from '@/app/campus/dashboard/OverviewTab';
-import { MenuTab } from '@/app/campus/dashboard/MenuTab';
-import { OrdersTab } from '@/app/campus/dashboard/OrdersTab';
-import { AnalyticsTab } from '@/app/campus/dashboard/AnalyticsTab';
-import { ProfileTab } from '@/app/campus/dashboard/ProfileTab';
-import { PayoutsTab } from '@/app/campus/dashboard/PayoutsTab';
-import { OrderDetailsDialog } from '@/app/campus/dashboard/OrderDetailsDialog';
+
+// Lazy load heavy components to improve initial load time
+const MenuTab = lazy(() => import('@/app/campus/dashboard/MenuTab'));
+const OrdersTab = lazy(() =>
+  import('@/app/campus/dashboard/OrdersTab').then((module) => ({
+    default: module.OrdersTab,
+  }))
+);
+const AnalyticsTab = lazy(() =>
+  import('@/app/campus/dashboard/AnalyticsTab').then((module) => ({
+    default: module.AnalyticsTab,
+  }))
+);
+const ProfileTab = lazy(() =>
+  import('@/app/campus/dashboard/ProfileTab').then((module) => ({
+    default: module.ProfileTab,
+  }))
+);
+const PayoutsTab = lazy(() =>
+  import('@/app/campus/dashboard/PayoutsTab').then((module) => ({
+    default: module.PayoutsTab,
+  }))
+);
+const OrderDetailsDialog = lazy(() =>
+  import('@/app/campus/dashboard/OrderDetailsDialog').then((module) => ({
+    default: module.OrderDetailsDialog,
+  }))
+);
 import {
   Card,
   CardTitle,
@@ -48,6 +78,7 @@ import {
   RefreshCw,
   TrendingUp,
   Home,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMobile } from '@/hooks/use-mobile';
@@ -95,6 +126,20 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue;
 };
 
+// Loading component for lazy-loaded tabs
+const TabLoadingSpinner = ({
+  message = 'Loading...',
+}: {
+  message?: string;
+}) => (
+  <div className='flex items-center justify-center py-12'>
+    <div className='flex flex-col items-center gap-3'>
+      <Loader2 className='h-8 w-8 animate-spin text-blue-500' />
+      <p className='text-sm text-gray-600'>{message}</p>
+    </div>
+  </div>
+);
+
 function DashboardContent() {
   // Move all hooks to the top
   const router = useRouter();
@@ -128,7 +173,6 @@ function DashboardContent() {
     canteenStats: null as CanteenStats | null,
     canteenId: '',
   });
-
 
   const [loadingState, setLoadingState] = useState({
     loading: true,
@@ -204,7 +248,7 @@ function DashboardContent() {
   // Initialize canteenId from localStorage
   useEffect(() => {
     if (storedId) {
-      setDataState(prev => ({ ...prev, canteenId: storedId }));
+      setDataState((prev) => ({ ...prev, canteenId: storedId }));
     }
   }, [storedId]);
 
@@ -236,59 +280,73 @@ function DashboardContent() {
 
       return matchesSearch && matchesStatus && matchesCategory && matchesReady;
     });
-  }, [dataState.menuItems, debouncedSearchTerm, statusFilter, categoryFilter, readyFilter]);
+  }, [
+    dataState.menuItems,
+    debouncedSearchTerm,
+    statusFilter,
+    categoryFilter,
+    readyFilter,
+  ]);
 
   // Memoized categories to prevent recalculation
   const categories = useMemo(() => {
     return Array.from(
-      new Set(dataState.menuItems.map((item) => item.category?.toLowerCase() || ''))
+      new Set(
+        dataState.menuItems.map((item) => item.category?.toLowerCase() || '')
+      )
     ).filter(Boolean);
   }, [dataState.menuItems]);
 
-  // Optimized Socket Connection Effect
+  // Optimized Socket Connection Effect - memoized to prevent unnecessary reconnections
+  const socketEffectDeps = useMemo(
+    () => [dataState.canteenId],
+    [dataState.canteenId]
+  );
+
   useEffect(() => {
-    // if (!dataState.canteenId) return;
-  
+    if (!dataState.canteenId) return;
+
     connectSocket();
     const socket = getSocket();
-  
+
     if (!socket) {
-      console.error("Socket not available");
+      console.error('Socket not available');
       return;
     }
-  
-    socket.emit("Join_Room", dataState.canteenId);
-  
+
+    socket.emit('Join_Room', dataState.canteenId);
+
     const handleNewOrder = (data: Order) => {
       if (!data?._id) return;
-  
+
       const transformedOrder: Order = {
         ...data,
-        status: data.status ?? "pending",
+        status: data.status ?? 'pending',
         createdAt: data.createdAt ?? new Date().toISOString(),
       };
-  
-      setDataState(prev => {
-        if (prev.orders.some(o => o._id === transformedOrder._id)) return prev;
+
+      setDataState((prev) => {
+        if (prev.orders.some((o) => o._id === transformedOrder._id))
+          return prev;
         return {
           ...prev,
-          orders: [transformedOrder, ...prev.orders]
+          orders: [transformedOrder, ...prev.orders],
         };
       });
-  
+
       toast({
-        title: "New Order Received!",
+        title: 'New Order Received!',
         description: `Order #${data._id.slice(-6)} has been placed.`,
       });
     };
-  
-    socket.on("New_Order", handleNewOrder);
-  
+
+    socket.on('New_Order', handleNewOrder);
+
     return () => {
-      socket.off("New_Order", handleNewOrder);
+      socket.off('New_Order', handleNewOrder);
       disconnectSocket();
     };
-  }, [dataState.canteenId, toast, connectSocket, disconnectSocket, getSocket]);
+  }, [...socketEffectDeps, toast, connectSocket, disconnectSocket, getSocket]);
 
   // Memoized breadcrumb items
   const breadcrumbItems = useMemo(() => {
@@ -301,47 +359,47 @@ function DashboardContent() {
 
     const base: BreadcrumbItem[] = [
       {
-        label: "Dashboard",
-        href: "#",
-        onClick: () => setActiveTab("overview"),
+        label: 'Dashboard',
+        href: '#',
+        onClick: () => setActiveTab('overview'),
         icon: Home,
       },
     ];
 
     const tabLabels: Record<string, string> = {
-      menu: "Menu Items",
-      orders: "Orders",
-      analytics: "Analytics",
-      profile: "Profile",
-      payouts: "Payouts",
+      menu: 'Menu Items',
+      orders: 'Orders',
+      analytics: 'Analytics',
+      profile: 'Profile',
+      payouts: 'Payouts',
     };
 
-    if (activeTab === "overview") return base;
+    if (activeTab === 'overview') return base;
 
     const breadcrumbs: BreadcrumbItem[] = [
       ...base,
       {
         label: tabLabels[activeTab] || activeTab,
-        href: "#",
+        href: '#',
       },
     ];
 
-    if (activeTab === "menu") {
+    if (activeTab === 'menu') {
       if (dialogState.isAddItemOpen) {
         breadcrumbs.push({
-          label: "Add New Item",
-          href: "#",
+          label: 'Add New Item',
+          href: '#',
           onClick: () => {
-            setDialogState(prev => ({ ...prev, isAddItemOpen: false }));
+            setDialogState((prev) => ({ ...prev, isAddItemOpen: false }));
             resetForm();
           },
         });
       } else if (dialogState.isEditItemOpen && editingItem) {
         breadcrumbs.push({
           label: `Edit ${editingItem.name}`,
-          href: "#",
+          href: '#',
           onClick: () => {
-            setDialogState(prev => ({ ...prev, isEditItemOpen: false }));
+            setDialogState((prev) => ({ ...prev, isEditItemOpen: false }));
             setEditingItem(null);
             resetForm();
           },
@@ -349,154 +407,186 @@ function DashboardContent() {
       }
     }
 
-    if (activeTab === "orders" && orderDetails) {
+    if (activeTab === 'orders' && orderDetails) {
       breadcrumbs.push({
-        label: `Order #${orderDetails._id?.slice(-6) || "Details"}`,
-        href: "#",
+        label: `Order #${orderDetails._id?.slice(-6) || 'Details'}`,
+        href: '#',
         onClick: () => setOrderDetails(null),
       });
     }
 
     return breadcrumbs;
-  }, [activeTab, dialogState.isAddItemOpen, dialogState.isEditItemOpen, editingItem, orderDetails]);
+  }, [
+    activeTab,
+    dialogState.isAddItemOpen,
+    dialogState.isEditItemOpen,
+    editingItem,
+    orderDetails,
+  ]);
 
   // Optimized profile picture upload with useCallback
-  const handleProfilePicUpload = useCallback(async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-  
-    setImageState(prev => ({
-      ...prev,
-      profilePicFile: file,
-      profilePicPreview: URL.createObjectURL(file)
-    }));
-  
-    try {
-      const token = localStorage.getItem("token") || "";
-      const { uploadProfileImage } = await import("@/services/userService");
-      const { imageUrl } = await uploadProfileImage(file, token);
-  
-      setPersonalData(prev => 
-        prev.profilePic === imageUrl ? prev : { ...prev, profilePic: imageUrl }
-      );
-  
-      toast({
-        title: "Success",
-        description: "Profile picture uploaded successfully!",
-      });
-    } catch (err) {
-      console.error("Profile picture upload error:", err);
-      toast({
-        title: "Upload Failed",
-        description: err instanceof Error ? err.message : "Failed to upload profile picture",
-        variant: "destructive",
-      });
-    }
-  }, [toast]);
+  const handleProfilePicUpload = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
 
-  // Single data fetching function with proper error handling
-  const fetchData = useCallback(async (currentCanteenId?: string) => {
-    const token = localStorage.getItem("token") || "";
-
-    if (!isAuthenticated || !user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to access this feature",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const canteenIdToUse = currentCanteenId || dataState.canteenId;
-    if (!canteenIdToUse) {
-      toast({
-        title: "Error",
-        description: "Canteen ID not found. Please refresh the page.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoadingState(prev => ({ ...prev, loading: true, menuLoading: true }));
-
-    const handleNotApproved = (error: any) => {
-      if (
-        error?.response?.status === 403 &&
-        error?.response?.data?.message?.toLowerCase().includes("not approved")
-      ) {
-        setDialogState(prev => ({ ...prev, notApprovedDialog: true }));
-        return true;
-      }
-      return false;
-    };
-
-    const normalizeMenuData = (data: any) => {
-      if (Array.isArray(data)) return data;
-      if (Array.isArray(data?.data)) return data.data;
-      if (Array.isArray(data?.items)) return data.items;
-      console.warn("Unexpected menu data structure:", data);
-      return [];
-    };
-
-    try {
-      // Fetch all data in parallel for better performance
-      const [menuResponse, ordersResponse, statsResponse] = await Promise.allSettled([
-        axios.get(
-          `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        ).then(res => normalizeMenuData(res.data)),
-        
-        getCanteenOrders(canteenIdToUse, token)
-          .then(res => Array.isArray(res?.data) ? res.data : []),
-          
-        getCanteenStats(canteenIdToUse, token)
-          .then(res => res?.data || null)
-      ]);
-
-      // Process results
-      const menuItems = menuResponse.status === 'fulfilled' ? menuResponse.value : [];
-      const orders = ordersResponse.status === 'fulfilled' ? ordersResponse.value : [];
-      const canteenStats = statsResponse.status === 'fulfilled' ? statsResponse.value : null;
-
-      // Handle errors
-      [menuResponse, ordersResponse, statsResponse].forEach((result, index) => {
-        if (result.status === 'rejected') {
-          const errorNames = ['menu items', 'orders', 'statistics'];
-          if (!handleNotApproved(result.reason)) {
-            toast({
-              title: "Error",
-              description: `Failed to fetch ${errorNames[index]}`,
-              variant: "destructive"
-            });
-          }
-        }
-      });
-
-      // Update state in a single operation
-      setDataState(prev => ({
+      setImageState((prev) => ({
         ...prev,
-        menuItems,
-        orders,
-        canteenStats
+        profilePicFile: file,
+        profilePicPreview: URL.createObjectURL(file),
       }));
 
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      if (!handleNotApproved(error)) {
-        toast({ 
-          title: "Error", 
-          description: "Failed to fetch data", 
-          variant: "destructive" 
+      try {
+        const token = localStorage.getItem('token') || '';
+        const { uploadProfileImage } = await import('@/services/userService');
+        const { imageUrl } = await uploadProfileImage(file, token);
+
+        setPersonalData((prev) =>
+          prev.profilePic === imageUrl
+            ? prev
+            : { ...prev, profilePic: imageUrl }
+        );
+
+        toast({
+          title: 'Success',
+          description: 'Profile picture uploaded successfully!',
+        });
+      } catch (err) {
+        console.error('Profile picture upload error:', err);
+        toast({
+          title: 'Upload Failed',
+          description:
+            err instanceof Error
+              ? err.message
+              : 'Failed to upload profile picture',
+          variant: 'destructive',
         });
       }
-    } finally {
-      setLoadingState(prev => ({ ...prev, loading: false, menuLoading: false }));
-    }
-  }, [dataState.canteenId, isAuthenticated, user, toast]);
+    },
+    [toast]
+  );
 
-  console.log('888888888888888888888888888888888888888', dataState)
+  // Single data fetching function with proper error handling
+  const fetchData = useCallback(
+    async (currentCanteenId?: string) => {
+      const token = localStorage.getItem('token') || '';
+
+      if (!isAuthenticated || !user) {
+        toast({
+          title: 'Error',
+          description: 'You must be logged in to access this feature',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const canteenIdToUse = currentCanteenId || dataState.canteenId;
+      if (!canteenIdToUse) {
+        toast({
+          title: 'Error',
+          description: 'Canteen ID not found. Please refresh the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setLoadingState((prev) => ({
+        ...prev,
+        loading: true,
+        menuLoading: true,
+      }));
+
+      const handleNotApproved = (error: any) => {
+        if (
+          error?.response?.status === 403 &&
+          error?.response?.data?.message?.toLowerCase().includes('not approved')
+        ) {
+          setDialogState((prev) => ({ ...prev, notApprovedDialog: true }));
+          return true;
+        }
+        return false;
+      };
+
+      const normalizeMenuData = (data: any) => {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.data)) return data.data;
+        if (Array.isArray(data?.items)) return data.items;
+        console.warn('Unexpected menu data structure:', data);
+        return [];
+      };
+
+      try {
+        // Fetch all data in parallel for better performance
+        const [menuResponse, ordersResponse, statsResponse] =
+          await Promise.allSettled([
+            axios
+              .get(
+                `https://campusbites-mxpe.onrender.com/api/v1/items/getItems/${canteenIdToUse}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              )
+              .then((res) => normalizeMenuData(res.data)),
+
+            getCanteenOrders(canteenIdToUse, token).then((res) =>
+              Array.isArray(res?.data) ? res.data : []
+            ),
+
+            getCanteenStats(canteenIdToUse, token).then(
+              (res) => res?.data || null
+            ),
+          ]);
+
+        // Process results
+        const menuItems =
+          menuResponse.status === 'fulfilled' ? menuResponse.value : [];
+        const orders =
+          ordersResponse.status === 'fulfilled' ? ordersResponse.value : [];
+        const canteenStats =
+          statsResponse.status === 'fulfilled' ? statsResponse.value : null;
+
+        // Handle errors
+        [menuResponse, ordersResponse, statsResponse].forEach(
+          (result, index) => {
+            if (result.status === 'rejected') {
+              const errorNames = ['menu items', 'orders', 'statistics'];
+              if (!handleNotApproved(result.reason)) {
+                toast({
+                  title: 'Error',
+                  description: `Failed to fetch ${errorNames[index]}`,
+                  variant: 'destructive',
+                });
+              }
+            }
+          }
+        );
+
+        // Update state in a single operation
+        setDataState((prev) => ({
+          ...prev,
+          menuItems,
+          orders,
+          canteenStats,
+        }));
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        if (!handleNotApproved(error)) {
+          toast({
+            title: 'Error',
+            description: 'Failed to fetch data',
+            variant: 'destructive',
+          });
+        }
+      } finally {
+        setLoadingState((prev) => ({
+          ...prev,
+          loading: false,
+          menuLoading: false,
+        }));
+      }
+    },
+    [dataState.canteenId, isAuthenticated, user, toast]
+  );
+
+  // Remove console.log for production performance;
 
   // Effect to fetch data when canteenId changes
   useEffect(() => {
@@ -505,147 +595,160 @@ function DashboardContent() {
   }, [dataState.canteenId, isAuthenticated, fetchData]);
 
   // Optimized image upload handler
-  const handleImageUpload = useCallback(async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const handleImageUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
 
-    setLoadingState(prev => ({ ...prev, imageUploading: true }));
+      setLoadingState((prev) => ({ ...prev, imageUploading: true }));
 
-    try {
-      validateImage(file);
-      const previewUrl = URL.createObjectURL(file);
+      try {
+        validateImage(file);
+        const previewUrl = URL.createObjectURL(file);
 
-      setImageState(prev => ({
-        ...prev,
-        selectedImage: file,
-        imagePreview: previewUrl
-      }));
+        setImageState((prev) => ({
+          ...prev,
+          selectedImage: file,
+          imagePreview: previewUrl,
+        }));
 
-      setFormData(prev => ({ ...prev, image: '' }));
+        setFormData((prev) => ({ ...prev, image: '' }));
 
-      toast({
-        title: 'Success',
-        description: 'Image selected successfully!',
-      });
-    } catch (err) {
-      console.error('Image validation error:', err);
+        toast({
+          title: 'Success',
+          description: 'Image selected successfully!',
+        });
+      } catch (err) {
+        console.error('Image validation error:', err);
 
-      setImageState(prev => ({
-        ...prev,
-        selectedImage: null,
-        imagePreview: ''
-      }));
-      setFormData(prev => ({ ...prev, image: '' }));
+        setImageState((prev) => ({
+          ...prev,
+          selectedImage: null,
+          imagePreview: '',
+        }));
+        setFormData((prev) => ({ ...prev, image: '' }));
 
-      toast({
-        title: 'Invalid Image',
-        description: err instanceof Error ? err.message : 'Please select a valid image file',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingState(prev => ({ ...prev, imageUploading: false }));
-    }
-  }, [toast]);
+        toast({
+          title: 'Invalid Image',
+          description:
+            err instanceof Error
+              ? err.message
+              : 'Please select a valid image file',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoadingState((prev) => ({ ...prev, imageUploading: false }));
+      }
+    },
+    [toast]
+  );
 
   // Optimized form submission
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
 
-    if (loadingState.imageUploading) {
-      return toast({
-        title: 'Please wait',
-        description: 'Image is still uploading. Please wait a moment.',
-        variant: 'destructive',
-      });
-    }
-
-    if (!isAuthenticated || !user || !dataState.canteenId) {
-      return toast({
-        title: 'Error',
-        description: 'Authentication or canteen ID missing',
-        variant: 'destructive',
-      });
-    }
-
-    try {
-      const getBase64FromFile = (file: File | Blob) =>
-        new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
+      if (loadingState.imageUploading) {
+        return toast({
+          title: 'Please wait',
+          description: 'Image is still uploading. Please wait a moment.',
+          variant: 'destructive',
         });
-
-      let imageData: string | undefined;
-      if (formData.image?.startsWith('data:')) {
-        imageData = formData.image;
-      } else if (formData.image?.startsWith('blob:')) {
-        const blob = await (await fetch(formData.image)).blob();
-        imageData = await getBase64FromFile(blob);
-      } else if (imageState.selectedImage) {
-        imageData = await getBase64FromFile(imageState.selectedImage);
       }
 
-      const itemData = {
-        name: formData.name,
-        price: parseFloat(formData.price),
-        canteenId: dataState.canteenId,
-        description: formData.description,
-        category: formData.category,
-        canteen: dataState.canteenId,
-        isVeg: formData.isVeg,
-        available: formData.available,
-        portion: formData.portion,
-        quantity: formData.quantity,
-        image: imageData,
-      };
-
-      if (editingItem) {
-        await updateMenuItem(editingItem._id, itemData);
-        toast({ title: 'Success', description: 'Menu item updated successfully' });
-      } else {
-        await createMenuItem(itemData);
-        toast({ title: 'Success', description: 'Menu item added successfully' });
+      if (!isAuthenticated || !user || !dataState.canteenId) {
+        return toast({
+          title: 'Error',
+          description: 'Authentication or canteen ID missing',
+          variant: 'destructive',
+        });
       }
 
-      // Reset states
-      setDialogState(prev => ({
-        ...prev,
-        isAddItemOpen: false,
-        isEditItemOpen: false
-      }));
-      setEditingItem(null);
-      resetForm();
+      try {
+        const getBase64FromFile = (file: File | Blob) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
 
-      // Refresh data
-      await fetchData(dataState.canteenId);
-    } catch (error) {
-      console.error('Error saving menu item:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to save menu item: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-        variant: 'destructive',
-      });
-    }
-  }, [
-    loadingState.imageUploading, 
-    isAuthenticated, 
-    user, 
-    dataState.canteenId, 
-    formData, 
-    imageState.selectedImage, 
-    editingItem, 
-    toast, 
-    fetchData
-  ]);
+        let imageData: string | undefined;
+        if (formData.image?.startsWith('data:')) {
+          imageData = formData.image;
+        } else if (formData.image?.startsWith('blob:')) {
+          const blob = await (await fetch(formData.image)).blob();
+          imageData = await getBase64FromFile(blob);
+        } else if (imageState.selectedImage) {
+          imageData = await getBase64FromFile(imageState.selectedImage);
+        }
+
+        const itemData = {
+          name: formData.name,
+          price: parseFloat(formData.price),
+          canteenId: dataState.canteenId,
+          description: formData.description,
+          category: formData.category,
+          canteen: dataState.canteenId,
+          isVeg: formData.isVeg,
+          available: formData.available,
+          portion: formData.portion,
+          quantity: formData.quantity,
+          image: imageData,
+        };
+
+        if (editingItem) {
+          await updateMenuItem(editingItem._id, itemData);
+          toast({
+            title: 'Success',
+            description: 'Menu item updated successfully',
+          });
+        } else {
+          await createMenuItem(itemData);
+          toast({
+            title: 'Success',
+            description: 'Menu item added successfully',
+          });
+        }
+
+        // Reset states
+        setDialogState((prev) => ({
+          ...prev,
+          isAddItemOpen: false,
+          isEditItemOpen: false,
+        }));
+        setEditingItem(null);
+        resetForm();
+
+        // Refresh data
+        await fetchData(dataState.canteenId);
+      } catch (error) {
+        console.error('Error saving menu item:', error);
+        toast({
+          title: 'Error',
+          description: `Failed to save menu item: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`,
+          variant: 'destructive',
+        });
+      }
+    },
+    [
+      loadingState.imageUploading,
+      isAuthenticated,
+      user,
+      dataState.canteenId,
+      formData,
+      imageState.selectedImage,
+      editingItem,
+      toast,
+      fetchData,
+    ]
+  );
 
   // Optimized edit handler
   const handleEdit = useCallback((item: MenuItem) => {
     setEditingItem(item);
-  
+
     const {
       name,
       price,
@@ -657,7 +760,7 @@ function DashboardContent() {
       portion = '',
       quantity = '',
     } = item;
-  
+
     setFormData({
       name,
       price: price.toString(),
@@ -669,40 +772,46 @@ function DashboardContent() {
       portion,
       quantity,
     });
-  
-    setImageState(prev => ({ ...prev, imagePreview: image }));
-    setDialogState(prev => ({ ...prev, isEditItemOpen: true }));
+
+    setImageState((prev) => ({ ...prev, imagePreview: image }));
+    setDialogState((prev) => ({ ...prev, isEditItemOpen: true }));
   }, []);
 
   // Optimized delete handler
-  const handleDelete = useCallback(async (itemId: string) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-  
-    try {
-      await deleteMenuItem(itemId);
-      toast({
-        title: 'Success',
-        description: 'Menu item deleted successfully',
-      });
-  
-      await fetchData();
-    } catch (error) {
-      console.error('Delete menu item error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to delete menu item',
-        variant: 'destructive',
-      });
-    }
-  }, [toast, fetchData]);
+  const handleDelete = useCallback(
+    async (itemId: string) => {
+      if (!confirm('Are you sure you want to delete this item?')) return;
+
+      try {
+        await deleteMenuItem(itemId);
+        toast({
+          title: 'Success',
+          description: 'Menu item deleted successfully',
+        });
+
+        await fetchData();
+      } catch (error) {
+        console.error('Delete menu item error:', error);
+        toast({
+          title: 'Error',
+          description:
+            error instanceof Error
+              ? error.message
+              : 'Failed to delete menu item',
+          variant: 'destructive',
+        });
+      }
+    },
+    [toast, fetchData]
+  );
 
   // Optimized toggle ready handler
   const handleToggleReady = useCallback((itemId: string, isReady: boolean) => {
-    setDataState(prev => ({
+    setDataState((prev) => ({
       ...prev,
-      menuItems: prev.menuItems.map(item =>
+      menuItems: prev.menuItems.map((item) =>
         item._id === itemId ? { ...item, isReady } : item
-      )
+      ),
     }));
   }, []);
 
@@ -711,7 +820,7 @@ function DashboardContent() {
     if (imageState.imagePreview?.startsWith('blob:')) {
       URL.revokeObjectURL(imageState.imagePreview);
     }
-  
+
     setFormData({
       name: '',
       price: '',
@@ -723,48 +832,56 @@ function DashboardContent() {
       portion: '',
       quantity: '',
     });
-  
+
     setImageState({
       selectedImage: null,
       imagePreview: '',
       profilePicFile: null,
       profilePicPreview: imageState.profilePicPreview,
     });
-    
-    setLoadingState(prev => ({ ...prev, imageUploading: false }));
+
+    setLoadingState((prev) => ({ ...prev, imageUploading: false }));
   }, [imageState.imagePreview, imageState.profilePicPreview]);
 
   // Optimized fetch order details
-  const fetchOrderDetails = useCallback(async (orderId: string) => {
-    try {
-      const token = localStorage.getItem('token') ?? '';
-      const { data } = await getOrderById(orderId, token);
-      setOrderDetails(data);
-    } catch (error) {
-      console.error('Error fetching order details:', error);
-      toast({
-        title: 'Error',
-        description: (error as any)?.response?.data?.message || 'Failed to fetch order details',
-        variant: 'destructive',
-      });
-    }
-  }, [toast]);
+  const fetchOrderDetails = useCallback(
+    async (orderId: string) => {
+      try {
+        const token = localStorage.getItem('token') ?? '';
+        const { data } = await getOrderById(orderId, token);
+        setOrderDetails(data);
+      } catch (error) {
+        console.error('Error fetching order details:', error);
+        toast({
+          title: 'Error',
+          description:
+            (error as any)?.response?.data?.message ||
+            'Failed to fetch order details',
+          variant: 'destructive',
+        });
+      }
+    },
+    [toast]
+  );
 
   // Optimized order status update
-  const handleOrderStatusUpdate = useCallback((orderId: string, newStatus: string) => {
-    setDataState(prev => ({
-      ...prev,
-      orders: prev.orders.map(order =>
-        order._id === orderId
-          ? { ...order, status: newStatus as Order['status'] }
-          : order
-      )
-    }));
+  const handleOrderStatusUpdate = useCallback(
+    (orderId: string, newStatus: string) => {
+      setDataState((prev) => ({
+        ...prev,
+        orders: prev.orders.map((order) =>
+          order._id === orderId
+            ? { ...order, status: newStatus as Order['status'] }
+            : order
+        ),
+      }));
 
-    if (dataState.canteenId) {
-      fetchData(dataState.canteenId);
-    }
-  }, [dataState.canteenId, fetchData]);
+      if (dataState.canteenId) {
+        fetchData(dataState.canteenId);
+      }
+    },
+    [dataState.canteenId, fetchData]
+  );
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -799,12 +916,10 @@ function DashboardContent() {
     );
   }
 
-  console.log(isAuthenticated, user)
+  // Remove console.log for production performance;
 
   if (!isAuthenticated || !user) {
-    console.log(
-      'hahahaha'  
-    )
+    // User not authenticated
     return null;
   }
 
@@ -860,7 +975,7 @@ function DashboardContent() {
                       <BreadcrumbItem>
                         {item.onClick ? (
                           <BreadcrumbLink
-                            href={item.href || "#"}
+                            href={item.href || '#'}
                             onClick={(e) => {
                               e.preventDefault();
                               item.onClick?.();
@@ -897,111 +1012,154 @@ function DashboardContent() {
             </div>
           </div>
 
-          {/* Tab Content */}
+          {/* Tab Content - Only render active tab with lazy loading */}
           {activeTab === 'overview' && (
-            <OverviewTab canteenStats={dataState.canteenStats} menuItems={dataState.menuItems} />
+            <OverviewTab
+              canteenStats={dataState.canteenStats}
+              menuItems={dataState.menuItems}
+            />
           )}
 
           {activeTab === 'menu' && (
-            <MenuTab
-              menuItems={dataState.menuItems}
-              filteredItems={filteredItems}
-              categories={categories}
-              menuLoading={loadingState.menuLoading}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              statusFilter={statusFilter}
-              setStatusFilter={setStatusFilter}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              readyFilter={readyFilter}
-              setReadyFilter={setReadyFilter}
-              isAddItemOpen={dialogState.isAddItemOpen}
-              setIsAddItemOpen={(open) => setDialogState(prev => ({ ...prev, isAddItemOpen: open }))}
-              isEditItemOpen={dialogState.isEditItemOpen}
-              setIsEditItemOpen={(open) => setDialogState(prev => ({ ...prev, isEditItemOpen: open }))}
-              formData={formData}
-              setFormData={setFormData}
-              imageUploading={loadingState.imageUploading}
-              imagePreview={imageState.imagePreview}
-              editingItem={editingItem}
-              onSubmit={handleSubmit}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onImageUpload={handleImageUpload}
-              onRefresh={() => dataState.canteenId && fetchData(dataState.canteenId)}
-              resetForm={resetForm}
-              canteenId={dataState.canteenId}
-              onToggleReady={handleToggleReady}
-            />
+            <Suspense
+              fallback={
+                <TabLoadingSpinner message='Loading menu management...' />
+              }>
+              <MenuTab
+                menuItems={dataState.menuItems}
+                filteredItems={filteredItems}
+                categories={categories}
+                menuLoading={loadingState.menuLoading}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                readyFilter={readyFilter}
+                setReadyFilter={setReadyFilter}
+                isAddItemOpen={dialogState.isAddItemOpen}
+                setIsAddItemOpen={(open) =>
+                  setDialogState((prev) => ({ ...prev, isAddItemOpen: open }))
+                }
+                isEditItemOpen={dialogState.isEditItemOpen}
+                setIsEditItemOpen={(open) =>
+                  setDialogState((prev) => ({ ...prev, isEditItemOpen: open }))
+                }
+                formData={formData}
+                setFormData={setFormData}
+                imageUploading={loadingState.imageUploading}
+                imagePreview={imageState.imagePreview}
+                editingItem={editingItem}
+                onSubmit={handleSubmit}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onImageUpload={handleImageUpload}
+                onRefresh={() =>
+                  dataState.canteenId && fetchData(dataState.canteenId)
+                }
+                resetForm={resetForm}
+                canteenId={dataState.canteenId}
+                onToggleReady={handleToggleReady}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'orders' && (
-            <OrdersTab
-              orders={dataState.orders}
-              onRefresh={() => dataState.canteenId && fetchData(dataState.canteenId)}
-              onOrderClick={fetchOrderDetails}
-              onStatusUpdate={handleOrderStatusUpdate}
-              canteenId={dataState.canteenId}
-            />
+            <Suspense
+              fallback={<TabLoadingSpinner message='Loading orders...' />}>
+              <OrdersTab
+                orders={dataState.orders}
+                onRefresh={() =>
+                  dataState.canteenId && fetchData(dataState.canteenId)
+                }
+                onOrderClick={fetchOrderDetails}
+                onStatusUpdate={handleOrderStatusUpdate}
+                canteenId={dataState.canteenId}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'analytics' && dataState.canteenId && (
-            <AnalyticsTab canteenId={dataState.canteenId} />
+            <Suspense
+              fallback={<TabLoadingSpinner message='Loading analytics...' />}>
+              <AnalyticsTab canteenId={dataState.canteenId} />
+            </Suspense>
           )}
 
           {activeTab === 'profile' && (
-            <ProfileTab
-              personalData={personalData}
-              setPersonalData={setPersonalData}
-              bankDetails={bankDetails}
-              setBankDetails={setBankDetails}
-              personalSubmitting={loadingState.personalSubmitting}
-              setPersonalSubmitting={(submitting) => 
-                setLoadingState(prev => ({ ...prev, personalSubmitting: submitting }))
-              }
-              personalSuccess={dialogState.personalSuccess}
-              setPersonalSuccess={(success) => 
-                setDialogState(prev => ({ ...prev, personalSuccess: success }))
-              }
-              bankSubmitting={loadingState.bankSubmitting}
-              setBankSubmitting={(submitting) => 
-                setLoadingState(prev => ({ ...prev, bankSubmitting: submitting }))
-              }
-              bankSuccess={dialogState.bankSuccess}
-              setBankSuccess={(success) => 
-                setDialogState(prev => ({ ...prev, bankSuccess: success }))
-              }
-              profilePicPreview={imageState.profilePicPreview}
-              handleProfilePicUpload={handleProfilePicUpload}
-            />
+            <Suspense
+              fallback={<TabLoadingSpinner message='Loading profile...' />}>
+              <ProfileTab
+                personalData={personalData}
+                setPersonalData={setPersonalData}
+                bankDetails={bankDetails}
+                setBankDetails={setBankDetails}
+                personalSubmitting={loadingState.personalSubmitting}
+                setPersonalSubmitting={(submitting: boolean) =>
+                  setLoadingState((prev) => ({
+                    ...prev,
+                    personalSubmitting: submitting,
+                  }))
+                }
+                personalSuccess={dialogState.personalSuccess}
+                setPersonalSuccess={(success: boolean) =>
+                  setDialogState((prev) => ({
+                    ...prev,
+                    personalSuccess: success,
+                  }))
+                }
+                bankSubmitting={loadingState.bankSubmitting}
+                setBankSubmitting={(submitting: boolean) =>
+                  setLoadingState((prev) => ({
+                    ...prev,
+                    bankSubmitting: submitting,
+                  }))
+                }
+                bankSuccess={dialogState.bankSuccess}
+                setBankSuccess={(success: boolean) =>
+                  setDialogState((prev) => ({ ...prev, bankSuccess: success }))
+                }
+                profilePicPreview={imageState.profilePicPreview}
+                handleProfilePicUpload={handleProfilePicUpload}
+              />
+            </Suspense>
           )}
 
           {activeTab === 'payouts' && (
-            <PayoutsTab
-              canteenStats={dataState.canteenStats}
-              orders={dataState.orders}
-              onRefresh={() => dataState.canteenId && fetchData(dataState.canteenId)}
-              canteenId={dataState.canteenId}
-            />
+            <Suspense
+              fallback={<TabLoadingSpinner message='Loading payouts...' />}>
+              <PayoutsTab
+                canteenStats={dataState.canteenStats}
+                orders={dataState.orders}
+                onRefresh={() =>
+                  dataState.canteenId && fetchData(dataState.canteenId)
+                }
+                canteenId={dataState.canteenId}
+              />
+            </Suspense>
           )}
         </div>
       </div>
 
-      {/* Order Details Modal */}
+      {/* Order Details Modal - Lazy loaded */}
       {orderDetails && (
-        <OrderDetailsDialog
-          orderDetails={orderDetails}
-          setOrderDetails={setOrderDetails}
-          onStatusUpdate={handleOrderStatusUpdate}
-        />
+        <Suspense
+          fallback={<TabLoadingSpinner message='Loading order details...' />}>
+          <OrderDetailsDialog
+            orderDetails={orderDetails}
+            setOrderDetails={setOrderDetails}
+            onStatusUpdate={handleOrderStatusUpdate}
+          />
+        </Suspense>
       )}
 
       {/* Not Approved Dialog */}
       <Dialog
         open={dialogState.notApprovedDialog}
-        onOpenChange={(open) => {
-          if (!open) setDialogState(prev => ({ ...prev, notApprovedDialog: false }));
+        onOpenChange={(open: boolean) => {
+          if (!open)
+            setDialogState((prev) => ({ ...prev, notApprovedDialog: false }));
         }}>
         <DialogContent>
           <DialogHeader>
@@ -1016,7 +1174,10 @@ function DashboardContent() {
             <Button
               className='w-full bg-orange-600 hover:bg-orange-700'
               onClick={() => {
-                setDialogState(prev => ({ ...prev, notApprovedDialog: false }));
+                setDialogState((prev) => ({
+                  ...prev,
+                  notApprovedDialog: false,
+                }));
               }}>
               Continue to Dashboard
             </Button>

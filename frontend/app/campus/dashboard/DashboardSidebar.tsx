@@ -187,7 +187,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
 
       {/* Enhanced Sidebar */}
       <div
-        className={`h-full bg-gradient-to-br from-white via-slate-50 to-blue-50/30 border-r border-slate-200/60 backdrop-blur-xl flex flex-col overflow-y-auto overflow-x-hidden z-50 transition-all duration-500 ease-in-out shadow-xl ${
+        className={`h-full bg-gradient-to-br from-white via-slate-50 to-blue-50/30 border-r border-slate-200/60 backdrop-blur-xl flex flex-col scrollbar-hide z-50 transition-all duration-500 ease-in-out shadow-xl ${
           collapsed ? 'w-16' : 'w-64'
         }`}
         onClick={(e) => e.stopPropagation()}>
@@ -229,7 +229,7 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         </div>
 
         {/* Enhanced Navigation Sections */}
-        <div className='flex-1 flex flex-col gap-2 py-6'>
+        <div className={`flex-1 flex flex-col gap-2 py-6 overflow-y-auto ${collapsed ? '' : 'scrollbar-hide'}`}>
           {sections.map((section, idx) => (
             <React.Fragment key={section}>
               {/* Enhanced Section Header */}
