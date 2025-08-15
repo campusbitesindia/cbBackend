@@ -810,7 +810,8 @@ exports.createAdminAccount = async (req, res) => {
   }
 }
 
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+const { sendMail } = require("../utils/sendMail");
 
 exports.adminLogin = (req, res) => {
   const { username, password } = req.body
@@ -909,7 +910,8 @@ exports.approveVendor = async (req, res) => {
     }
 
     await canteen.save()
-
+    const Owner=await User.findById(canteen.owner);
+    await sendMail(Owner.email,"Canteen Request Update",`Request for Your canteen has been ${approved}`)
     // Update user status if needed
     const owner = canteen.owner
     if (owner) {
