@@ -1,6 +1,61 @@
 import api from '@/lib/axios';
 import { Order } from '@/types';
 
+// Simple in-memory cache for requests
+const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+
+// Cache TTL in milliseconds (5 minutes for orders, 1 minute for order details)
+const CACHE_TTL = {
+  orders: 5 * 60 * 1000,
+  orderDetails: 1 * 60 * 1000,
+  default: 2 * 60 * 1000,
+};
+
+// Cache utility functions
+const getCacheKey = (url: string, params?: any): string => {
+  return `${url}${params ? JSON.stringify(params) : ''}`;
+};
+
+const getFromCache = (key: string): any | null => {
+  const cached = cache.get(key);
+  if (!cached) return null;
+
+  if (Date.now() - cached.timestamp > cached.ttl) {
+    cache.delete(key);
+    return null;
+  }
+
+  return cached.data;
+};
+
+const setCache = (
+  key: string,
+  data: any,
+  ttl: number = CACHE_TTL.default
+): void => {
+  cache.set(key, {
+    data,
+    timestamp: Date.now(),
+    ttl,
+  });
+};
+
+// Clear cache for specific patterns
+const clearCachePattern = (pattern: string): void => {
+  for (const key of cache.keys()) {
+    if (key.includes(pattern)) {
+      cache.delete(key);
+    }
+  }
+};
+
+// Export cache management utilities
+export const cacheUtils = {
+  clear: () => cache.clear(),
+  clearPattern: clearCachePattern,
+  size: () => cache.size,
+};
+
 // Custom error class for authentication issues
 export class AuthError extends Error {
   constructor(message: string, public code?: string) {
@@ -51,8 +106,23 @@ export interface CreateOrderResponse {
   data: Order;
 }
 
-// Get user's orders
-export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
+// Get user's orders with caching
+export const getMyOrders = async (
+  token: string,
+  useCache: boolean = true
+): Promise<OrdersResponse> => {
+  const cacheKey = getCacheKey('/api/v1/order/getStudentAllOrders', {
+    token: token.slice(-10),
+  }); // Use last 10 chars for cache key
+
+  // Try cache first if enabled
+  if (useCache) {
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
   try {
     const response = await api.get<OrdersResponse>(
       '/api/v1/order/getStudentAllOrders',
@@ -62,6 +132,12 @@ export const getMyOrders = async (token: string): Promise<OrdersResponse> => {
         },
       }
     );
+
+    // Cache the response
+    if (useCache) {
+      setCache(cacheKey, response.data, CACHE_TTL.orders);
+    }
+
     return response.data;
   } catch (error) {
     console.log(error);
@@ -85,6 +161,10 @@ export const createOrder = async (
         },
       }
     );
+
+    // Clear orders cache after creating new order
+    clearCachePattern('/api/v1/order/getStudentAllOrders');
+
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -92,11 +172,24 @@ export const createOrder = async (
   }
 };
 
-// Get order by ID
+// Get order by ID with caching
 export const getOrderById = async (
   orderId: string,
-  token: string
+  token: string,
+  useCache: boolean = true
 ): Promise<{ success: boolean; data: Order }> => {
+  const cacheKey = getCacheKey(`/api/v1/order/getOrderDetails/${orderId}`, {
+    token: token.slice(-10),
+  });
+
+  // Try cache first if enabled
+  if (useCache) {
+    const cached = getFromCache(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
   try {
     const response = await api.get<{ success: boolean; data: Order }>(
       `/api/v1/order/getOrderDetails/${orderId}`,
@@ -106,6 +199,12 @@ export const getOrderById = async (
         },
       }
     );
+
+    // Cache the response
+    if (useCache) {
+      setCache(cacheKey, response.data, CACHE_TTL.orderDetails);
+    }
+
     return response.data;
   } catch (error) {
     handleAuthError(error);
@@ -129,6 +228,11 @@ export const updateOrderStatus = async (
         },
       }
     );
+
+    // Clear relevant caches after status update
+    clearCachePattern('/api/v1/order/getStudentAllOrders');
+    clearCachePattern(`/api/v1/order/getOrderDetails/${orderId}`);
+
     return response.data;
   } catch (error) {
     handleAuthError(error);

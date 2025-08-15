@@ -201,7 +201,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               </div>
             </div>
 
-            <div className='p-8'>
+            <div className='p-4 sm:p-8'>
               <form
                 className='space-y-6'
                 onSubmit={async (e) => {
@@ -237,7 +237,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                   <label className='block text-sm font-semibold text-slate-700 mb-4'>
                     Profile Picture
                   </label>
-                  <div className='flex items-center space-x-6'>
+                  <div className='flex flex-wrap items-center gap-4 sm:space-x-6'>
                     <div className='relative'>
                       <div className='w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg'>
                         {profilePicPreview ? (
@@ -406,8 +406,8 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
           </div>
 
           {/* Bank/Payout Details Section */}
-          <div className='bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden'>
-            <div className='bg-gradient-to-r from-emerald-600 to-teal-600 px-8 py-6'>
+          <div className='bg-white rounded-2xl shadow-xl border border-slate-200/50 bg-white rounded-2xl shadow-xl border border-slate-20 overflow-hidden'>
+            <div className='bg-gradient-to-r from-emerald-600 to-teal-600 px-4 sm:px-6 lg:px-8 py-4 sm:py-6'>
               <div className='flex items-center space-x-3'>
                 <div className='p-2 bg-white/20 rounded-lg'>
                   <CreditCard className='w-6 h-6 text-white' />
@@ -440,7 +440,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                           <Shield className='w-5 h-5 text-blue-600' />
                         </div>
                         <div className='flex-1'>
-                          <div className='flex items-center space-x-2 mb-2'>
+                          <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-2 space-y-1 sm:space-y-0'>
                             <h4 className='font-semibold text-slate-900'>
                               Verification Status
                             </h4>

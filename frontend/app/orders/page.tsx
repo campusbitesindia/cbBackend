@@ -260,8 +260,8 @@ const formatDate = (dateString?: string): string => {
   return dateFormatter.format(date);
 };
 
-// Animated Counter Component
-function AnimatedCounter({
+// Memoized Animated Counter Component
+const AnimatedCounter = memo(function AnimatedCounter({
   value,
   duration = 1,
 }: {
@@ -282,7 +282,7 @@ function AnimatedCounter({
   }, [value, spring]);
 
   return <motion.span>{displayValue}</motion.span>;
-}
+});
 
 function OrdersPageContent() {
   const { isAuthenticated, token } = useAuth();
@@ -654,11 +654,17 @@ function OrdersPageContent() {
       toast.error('Failed to reorder. Please try again.');
     }
   };
+  // Memoize expensive computations
   const activeOrders = useMemo(
     () =>
       orders.filter((o) =>
         ['placed', 'preparing', 'ready', 'payment_pending'].includes(o.status)
       ),
+    [orders]
+  );
+
+  const completedOrders = useMemo(
+    () => orders.filter((o) => ['completed', 'cancelled'].includes(o.status)),
     [orders]
   );
   if (loading) {
@@ -986,30 +992,24 @@ function OrdersPageContent() {
                   Order History
                 </h2>
                 <Badge className='bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'>
-                  {
-                    orders.filter((o) =>
-                      ['completed', 'cancelled'].includes(o.status)
-                    ).length
-                  }
+                  {completedOrders.length}
                 </Badge>
               </div>
               <div className='grid gap-4 lg:gap-6'>
-                {orders
-                  .filter((o) => ['completed', 'cancelled'].includes(o.status))
-                  .map((order, index) => (
-                    <OrderCard
-                      key={order._id}
-                      order={order}
-                      index={index}
-                      onViewDetails={handleViewDetails}
-                      onReorder={handleReorder}
-                      onOpenItemSelector={() => handleOpenItemSelector(order)}
-                      orderDetailLoading={orderDetailLoading}
-                      isDetailModalOpen={isDetailModalOpen}
-                      setIsDetailModalOpen={setIsDetailModalOpen}
-                      selectedOrder={selectedOrder}
-                    />
-                  ))}
+                {completedOrders.map((order, index) => (
+                  <OrderCard
+                    key={order._id}
+                    order={order}
+                    index={index}
+                    onViewDetails={handleViewDetails}
+                    onReorder={handleReorder}
+                    onOpenItemSelector={() => handleOpenItemSelector(order)}
+                    orderDetailLoading={orderDetailLoading}
+                    isDetailModalOpen={isDetailModalOpen}
+                    setIsDetailModalOpen={setIsDetailModalOpen}
+                    selectedOrder={selectedOrder}
+                  />
+                ))}
               </div>
             </motion.section>
           </div>
@@ -1520,278 +1520,281 @@ const MotionWrapper: React.FC<{ children: React.ReactNode }> = ({
   </motion.div>
 );
 
-const OrderCard: React.FC<OrderCardProps> = ({
-  order,
-  index,
-  onViewDetails,
-  onReorder,
-  onOpenItemSelector,
-  orderDetailLoading,
-  isDetailModalOpen,
-  setIsDetailModalOpen,
-  selectedOrder,
-}) => {
-  console.log({ order });
-  console.log({ selectedOrder });
-  const statusConfig = useMemo(
-    () => getStatusConfig(order.status),
-    [order.status]
-  );
-  const StatusIcon = statusConfig.icon;
-  const maxVisible = 3;
+const OrderCard: React.FC<OrderCardProps> = memo(
+  ({
+    order,
+    index,
+    onViewDetails,
+    onReorder,
+    onOpenItemSelector,
+    orderDetailLoading,
+    isDetailModalOpen,
+    setIsDetailModalOpen,
+    selectedOrder,
+  }) => {
+    const statusConfig = useMemo(
+      () => getStatusConfig(order.status),
+      [order.status]
+    );
+    const StatusIcon = statusConfig.icon;
+    const maxVisible = 3;
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.5,
-        delay: index * 0.1,
-        ease: [0.32, 0.72, 0, 1],
-      }}
-      whileHover={{
-        y: -8,
-        transition: { duration: 0.2 },
-      }}>
-      <Card className='relative overflow-hidden border-0 shadow-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl group'>
-        {/* Hover gradient overlay */}
-        <div className='absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none' />
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.5,
+          delay: index * 0.1,
+          ease: [0.32, 0.72, 0, 1],
+        }}
+        whileHover={{
+          y: -8,
+          transition: { duration: 0.2 },
+        }}>
+        <Card className='relative overflow-hidden border-0 shadow-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm transition-all duration-300 hover:shadow-2xl group'>
+          {/* Hover gradient overlay */}
+          <div className='absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/5 dark:to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none' />
 
-        {/* Header */}
-        <CardHeader
-          className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-b-2 relative z-10`}>
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
-            {/* Left: Status Icon & Order Info */}
-            <div className='flex items-center gap-4'>
-              <motion.div
-                className={`w-14 h-14 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: 'spring', stiffness: 300 }}>
-                <StatusIcon className='w-7 h-7 text-white' />
-              </motion.div>
+          {/* Header */}
+          <CardHeader
+            className={`${statusConfig.bgColor} ${statusConfig.borderColor} border-b-2 relative z-10`}>
+            <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
+              {/* Left: Status Icon & Order Info */}
+              <div className='flex items-center gap-4'>
+                <motion.div
+                  className={`w-14 h-14 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  transition={{ type: 'spring', stiffness: 300 }}>
+                  <StatusIcon className='w-7 h-7 text-white' />
+                </motion.div>
 
-              <div className='flex-1'>
-                <CardTitle className='text-xl lg:text-2xl font-bold text-gray-900 dark:text-white'>
-                  {order?.OrderNumber}
-                </CardTitle>
-                <CardDescription className='flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1'>
-                  <Calendar className='w-4 h-4' />
-                  {formatDate(order.createdAt)}
-                </CardDescription>
+                <div className='flex-1'>
+                  <CardTitle className='text-xl lg:text-2xl font-bold text-gray-900 dark:text-white'>
+                    {order?.OrderNumber}
+                  </CardTitle>
+                  <CardDescription className='flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1'>
+                    <Calendar className='w-4 h-4' />
+                    {formatDate(order.createdAt)}
+                  </CardDescription>
+                </div>
+              </div>
+
+              {/* Right: Status Badge & Payment Info */}
+              <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
+                <Badge
+                  className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-4 py-2 font-semibold text-sm`}>
+                  {statusConfig.label}
+                </Badge>
+                <div className='text-left sm:text-right'>
+                  <div className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>
+                    ₹{order.total.toFixed(2)}
+                  </div>
+                  {order.payment && (
+                    <div className='text-sm text-gray-500 dark:text-gray-400 capitalize mt-1'>
+                      {getPaymentConfig(order.payment.method).label}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className='p-6 relative z-10'>
+            {/* Restaurant Info */}
+            <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4'>
+              <div className='flex items-center gap-3'>
+                <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-gray-500 flex items-center justify-center'>
+                  <ChefHat className='w-5 h-5 text-white' />
+                </div>
+                <div>
+                  <span className='block font-semibold text-lg text-gray-900 dark:text-white'>
+                    {order.canteen?.name ?? 'Unknown Restaurant'}
+                  </span>
+                  <p className='text-sm text-gray-500 dark:text-gray-400'>
+                    Campus Restaurant
+                  </p>
+                </div>
+              </div>
+
+              <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
+                <ShoppingBag className='w-4 h-4' />
+                <span className='text-sm font-medium'>
+                  {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                </span>
               </div>
             </div>
 
-            {/* Right: Status Badge & Payment Info */}
-            <div className='flex flex-col sm:flex-row items-start sm:items-center gap-3'>
-              <Badge
-                className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-4 py-2 font-semibold text-sm`}>
-                {statusConfig.label}
-              </Badge>
-              <div className='text-left sm:text-right'>
-                <div className='text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white'>
-                  ₹{order.total.toFixed(2)}
+            {/* Order Items Preview */}
+            <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
+              {order.items
+                .slice(0, maxVisible)
+                .map(({ _id, item, quantity }, idx) => {
+                  const {
+                    name = 'Item No Longer Available',
+                    image,
+                    price = 0,
+                  } = item || {};
+                  return (
+                    <motion.div
+                      key={_id}
+                      className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}>
+                      <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
+                        <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
+                          <Image
+                            src={image || '/placeholder.svg'}
+                            alt={name}
+                            fill
+                            className='object-cover'
+                          />
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
+                            {name}
+                          </h4>
+                          <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
+                            Qty: {quantity}
+                          </p>
+                        </div>
+                      </div>
+                      <div className='text-right flex-shrink-0'>
+                        <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
+                          ₹{(quantity * price).toFixed(2)}
+                        </p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+              {order.items.length > maxVisible && (
+                <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
+                  +{order.items.length - maxVisible} more item
+                  {order.items.length - maxVisible !== 1 ? 's' : ''}
                 </div>
-                {order.payment && (
-                  <div className='text-sm text-gray-500 dark:text-gray-400 capitalize mt-1'>
-                    {getPaymentConfig(order.payment.method).label}
-                  </div>
+              )}
+            </div>
+
+            <Separator className='my-6' />
+
+            {/* Footer */}
+            <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
+              <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
+                <Clock className='w-4 h-4' />
+                <span className='text-sm'>{statusConfig.description}</span>
+              </div>
+
+              {/* Buttons */}
+              <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto'>
+                {/* View Details Dialog */}
+                <Dialog
+                  open={isDetailModalOpen}
+                  onOpenChange={setIsDetailModalOpen}>
+                  <DialogTrigger asChild>
+                    <MotionWrapper>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className={`${btnBase} bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800`}
+                        onClick={() => onViewDetails(order)}>
+                        <span className='sm:hidden'>Details</span>
+                        <span className='hidden sm:inline'>View Details</span>
+                      </Button>
+                    </MotionWrapper>
+                  </DialogTrigger>
+
+                  <DialogContent className='max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4'>
+                    {orderDetailLoading ? (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle className='text-xl'>
+                            Loading Order Details...
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className='flex items-center justify-center py-20'>
+                          <Loader2 className='h-8 w-8 animate-spin text-orange-500' />
+                        </div>
+                      </>
+                    ) : selectedOrder ? (
+                      <>
+                        <DialogHeader className='border-b pb-6 dark:border-slate-700'>
+                          <div className='flex items-center gap-4'>
+                            <div
+                              className={`w-16 h-16 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}>
+                              <statusConfig.icon className='w-8 h-8 text-white' />
+                            </div>
+                            <div>
+                              <DialogTitle className='text-2xl font-bold text-gray-900 dark:text-white'>
+                                Order #
+                                {order?.OrderNumber?.replace('order#', '')}
+                              </DialogTitle>
+                              <p className='text-gray-600 dark:text-gray-400 mt-1'>
+                                {formatDate(selectedOrder.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </DialogHeader>
+                        <OrderDetailsContent order={selectedOrder} />
+                      </>
+                    ) : (
+                      <>
+                        <DialogHeader>
+                          <DialogTitle>Order Details</DialogTitle>
+                        </DialogHeader>
+                        <div className='flex items-center justify-center py-20'>
+                          <p className='text-gray-500 dark:text-gray-400'>
+                            No order selected
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </DialogContent>
+                </Dialog>
+
+                {/* Completed Order Actions */}
+                {order.status === 'completed' && (
+                  <>
+                    <MotionWrapper>
+                      <Button
+                        onClick={onOpenItemSelector}
+                        variant='outline'
+                        size='sm'
+                        className={`${btnBase} bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 dark:bg-red-700 dark:border-red-800 dark:hover:bg-red-800 shadow-lg hover:shadow-xl font-semibold`}>
+                        <Star className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current' />
+                        <span className='sm:hidden'>Review</span>
+                        <span className='hidden sm:inline'>Write Reviews</span>
+                      </Button>
+                    </MotionWrapper>
+
+                    <MotionWrapper>
+                      <Button
+                        onClick={() => onReorder(order)}
+                        size='sm'
+                        className={`${btnBase} bg-gradient-to-r from-red-800 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl font-semibold`}>
+                        <RefreshCw className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
+                        Reorder
+                      </Button>
+                    </MotionWrapper>
+                  </>
                 )}
               </div>
             </div>
-          </div>
-        </CardHeader>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+);
 
-        <CardContent className='p-6 relative z-10'>
-          {/* Restaurant Info */}
-          <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4'>
-            <div className='flex items-center gap-3'>
-              <div className='w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-gray-500 flex items-center justify-center'>
-                <ChefHat className='w-5 h-5 text-white' />
-              </div>
-              <div>
-                <span className='block font-semibold text-lg text-gray-900 dark:text-white'>
-                  {order.canteen?.name ?? 'Unknown Restaurant'}
-                </span>
-                <p className='text-sm text-gray-500 dark:text-gray-400'>
-                  Campus Restaurant
-                </p>
-              </div>
-            </div>
-
-            <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
-              <ShoppingBag className='w-4 h-4' />
-              <span className='text-sm font-medium'>
-                {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-
-          {/* Order Items Preview */}
-          <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
-            {order.items
-              .slice(0, maxVisible)
-              .map(({ _id, item, quantity }, idx) => {
-                const {
-                  name = 'Item No Longer Available',
-                  image,
-                  price = 0,
-                } = item || {};
-                return (
-                  <motion.div
-                    key={_id}
-                    className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}>
-                    <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
-                      <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
-                        <Image
-                          src={image || '/placeholder.svg'}
-                          alt={name}
-                          fill
-                          className='object-cover'
-                        />
-                      </div>
-                      <div className='flex-1 min-w-0'>
-                        <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
-                          {name}
-                        </h4>
-                        <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
-                          Qty: {quantity}
-                        </p>
-                      </div>
-                    </div>
-                    <div className='text-right flex-shrink-0'>
-                      <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
-                        ₹{(quantity * price).toFixed(2)}
-                      </p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-
-            {order.items.length > maxVisible && (
-              <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
-                +{order.items.length - maxVisible} more item
-                {order.items.length - maxVisible !== 1 ? 's' : ''}
-              </div>
-            )}
-          </div>
-
-          <Separator className='my-6' />
-
-          {/* Footer */}
-          <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
-            <div className='flex items-center gap-2 text-gray-600 dark:text-gray-400'>
-              <Clock className='w-4 h-4' />
-              <span className='text-sm'>{statusConfig.description}</span>
-            </div>
-
-            {/* Buttons */}
-            <div className='flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto'>
-              {/* View Details Dialog */}
-              <Dialog
-                open={isDetailModalOpen}
-                onOpenChange={setIsDetailModalOpen}>
-                <DialogTrigger asChild>
-                  <MotionWrapper>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      className={`${btnBase} bg-red-600 text-white hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800`}
-                      onClick={() => onViewDetails(order)}>
-                      <span className='sm:hidden'>Details</span>
-                      <span className='hidden sm:inline'>View Details</span>
-                    </Button>
-                  </MotionWrapper>
-                </DialogTrigger>
-
-                <DialogContent className='max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4'>
-                  {orderDetailLoading ? (
-                    <>
-                      <DialogHeader>
-                        <DialogTitle className='text-xl'>
-                          Loading Order Details...
-                        </DialogTitle>
-                      </DialogHeader>
-                      <div className='flex items-center justify-center py-20'>
-                        <Loader2 className='h-8 w-8 animate-spin text-orange-500' />
-                      </div>
-                    </>
-                  ) : selectedOrder ? (
-                    <>
-                      <DialogHeader className='border-b pb-6 dark:border-slate-700'>
-                        <div className='flex items-center gap-4'>
-                          <div
-                            className={`w-16 h-16 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}>
-                            <statusConfig.icon className='w-8 h-8 text-white' />
-                          </div>
-                          <div>
-                            <DialogTitle className='text-2xl font-bold text-gray-900 dark:text-white'>
-                              Order #{order?.OrderNumber?.replace('order#', '')}
-                            </DialogTitle>
-                            <p className='text-gray-600 dark:text-gray-400 mt-1'>
-                              {formatDate(selectedOrder.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                      </DialogHeader>
-                      <OrderDetailsContent order={selectedOrder} />
-                    </>
-                  ) : (
-                    <>
-                      <DialogHeader>
-                        <DialogTitle>Order Details</DialogTitle>
-                      </DialogHeader>
-                      <div className='flex items-center justify-center py-20'>
-                        <p className='text-gray-500 dark:text-gray-400'>
-                          No order selected
-                        </p>
-                      </div>
-                    </>
-                  )}
-                </DialogContent>
-              </Dialog>
-
-              {/* Completed Order Actions */}
-              {order.status === 'completed' && (
-                <>
-                  <MotionWrapper>
-                    <Button
-                      onClick={onOpenItemSelector}
-                      variant='outline'
-                      size='sm'
-                      className={`${btnBase} bg-red-600 text-white border-2 border-red-700 hover:bg-red-700 dark:bg-red-700 dark:border-red-800 dark:hover:bg-red-800 shadow-lg hover:shadow-xl font-semibold`}>
-                      <Star className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 fill-current' />
-                      <span className='sm:hidden'>Review</span>
-                      <span className='hidden sm:inline'>Write Reviews</span>
-                    </Button>
-                  </MotionWrapper>
-
-                  <MotionWrapper>
-                    <Button
-                      onClick={() => onReorder(order)}
-                      size='sm'
-                      className={`${btnBase} bg-gradient-to-r from-red-800 to-red-600 hover:from-red-600 hover:to-red-700 text-white shadow-lg hover:shadow-xl font-semibold`}>
-                      <RefreshCw className='w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2' />
-                      Reorder
-                    </Button>
-                  </MotionWrapper>
-                </>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
-};
-
-// Order Details Content Component (Optimized)
-function OrderDetailsContent({ order }: { order: Order | null }) {
+// Memoized Order Details Content Component
+const OrderDetailsContent = memo(function OrderDetailsContent({
+  order,
+}: {
+  order: Order | null;
+}) {
   if (!order) return null;
-
-  console.log(order, ' order in details comp');
 
   const isCompleted = (statuses: OrderStatus[]) =>
     statuses.includes(order.status as OrderStatus);
@@ -1998,7 +2001,7 @@ function OrderDetailsContent({ order }: { order: Order | null }) {
       </div>
     </div>
   );
-}
+});
 
 // Main page component with route protection
 export default function OrdersPage() {
