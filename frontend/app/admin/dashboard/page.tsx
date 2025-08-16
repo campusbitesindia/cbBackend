@@ -501,17 +501,17 @@ export default function AdminDashboard() {
     ],
   }
 
-  // New Combined Revenue Chart Data
+ 
   const combinedRevenueChartData = {
     labels: Array.from(new Set([
       ...revenueWeekly.map(r => r._id || r.week),
       ...revenueMonthly.map(r => r._id || r.month),
-    ])).sort((a, b) => a.localeCompare(b)), // Sort labels chronologically
+    ])).sort((a, b) => a.localeCompare(b)),
     datasets: [
       {
         label: "Weekly Revenue",
         data: revenueWeekly.map((r) => ({ x: r._id || r.week, y: r.revenue || r.total || r.totalAmount })),
-        borderColor: "#bae6fd", // Light Blue
+        borderColor: "#bae6fd",
         backgroundColor: "rgba(186, 230, 253, 0.2)",
         borderWidth: 3,
         fill: false,
@@ -522,7 +522,7 @@ export default function AdminDashboard() {
       {
         label: "Monthly Revenue",
         data: revenueMonthly.map((r) => ({ x: r._id || r.month, y: r.revenue || r.total || r.totalAmount })),
-        borderColor: "#bbf7d0", // Light Green
+        borderColor: "#bbf7d0",
         backgroundColor: "rgba(187, 247, 208, 0.2)",
         borderWidth: 3,
         fill: false,
@@ -531,63 +531,7 @@ export default function AdminDashboard() {
         pointHoverRadius: 8,
       },
     ],
-  }
-
-  const combinedRevenueChartOptions: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          color: '#fff',
-          font: { size: 14, weight: 'bold' as const },
-        },
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        borderColor: '#fff',
-        borderWidth: 1,
-        caretPadding: 10,
-        callbacks: {
-          label: function(context) {
-            let label = context.dataset.label || '';
-            if (label) {
-              label += ': ';
-            }
-            if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
-            }
-            return label;
-          }
-        }
-      },
-    },
-    scales: {
-      x: {
-        type: 'category',
-        ticks: { color: '#fff', font: { size: 12, weight: 'bold' as const } },
-        grid: { color: 'rgba(255,255,255,0.1)' },
-        title: { display: true, text: 'Period', color: '#fff', font: { size: 14, weight: 'bold' as const } },
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: '#fff',
-          font: { size: 12, weight: 'bold' as const },
-          callback: function(value) {
-            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value as number);
-          }
-        },
-        grid: { color: 'rgba(255,255,255,0.1)' },
-        title: { display: true, text: 'Revenue (₹)', color: '#fff', font: { size: 14, weight: 'bold' as const } },
-      },
-    },
   };
-
 
   const orderStatusChartData = orderStatus
     ? {
@@ -798,25 +742,109 @@ export default function AdminDashboard() {
     ],
   };
 
-  const revenueChartOptions: ChartOptions<'line'> = {
+  // Chart color scheme
+  const chartColors = {
+    primary: {
+      light: '#60a5fa',
+      DEFAULT: '#3b82f6',
+      dark: '#2563eb',
+    },
+    success: {
+      light: '#4ade80',
+      DEFAULT: '#22c55e',
+      dark: '#16a34a',
+    },
+    warning: {
+      light: '#fbbf24',
+      DEFAULT: '#f59e0b',
+      dark: '#d97706',
+    },
+    danger: {
+      light: '#f87171',
+      DEFAULT: '#ef4444',
+      dark: '#dc2626',
+    },
+    purple: {
+      light: '#a78bfa',
+      DEFAULT: '#8b5cf6',
+      dark: '#7c3aed',
+    },
+    pink: {
+      light: '#f472b6',
+      DEFAULT: '#ec4899',
+      dark: '#db2777',
+    },
+    gradient: {
+      blue: 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%)',
+      green: 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)',
+      purple: 'linear-gradient(90deg, #8b5cf6 0%, #ec4899 100%)',
+      orange: 'linear-gradient(90deg, #f59e0b 0%, #ef4444 100%)',
+    }
+  };
+
+  // Common chart configuration
+  const chartDefaults = {
     responsive: true,
     maintainAspectRatio: false,
+    animation: {
+      duration: 1000,
+      easing: 'easeInOutQuart'
+    },
+    layout: {
+      padding: 16
+    },
+    elements: {
+      line: {
+        tension: 0.3,
+        borderWidth: 2,
+        fill: false
+      },
+      point: {
+        radius: 4,
+        hoverRadius: 6,
+        borderWidth: 2,
+        hoverBorderWidth: 3
+      },
+      bar: {
+        borderRadius: 6,
+        borderSkipped: false,
+      }
+    },
     plugins: {
       legend: {
+        position: 'top' as const,
         labels: {
-          color: '#fff',
-          font: { size: 14, weight: 'bold' as const },
+          color: '#e2e8f0',
+          font: { 
+            size: 12, 
+            weight: '600',
+            family: "'Inter', sans-serif"
+          },
+          padding: 20,
+          usePointStyle: true,
+          pointStyle: 'circle'
         },
       },
       tooltip: {
         mode: 'index',
         intersect: false,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        titleColor: '#fff',
-        bodyColor: '#fff',
-        borderColor: '#fff',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#f8fafc',
+        bodyColor: '#e2e8f0',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
         borderWidth: 1,
-        caretPadding: 10,
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: {
+          size: 12,
+          weight: '600',
+          family: "'Inter', sans-serif"
+        },
+        bodyFont: {
+          size: 12,
+          weight: '500',
+          family: "'Inter', sans-serif"
+        },
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -824,7 +852,11 @@ export default function AdminDashboard() {
               label += ': ';
             }
             if (context.parsed.y !== null) {
-              label += new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(context.parsed.y);
+              label += new Intl.NumberFormat('en-IN', { 
+                style: 'currency', 
+                currency: 'INR',
+                maximumFractionDigits: 0
+              }).format(context.parsed.y);
             }
             return label;
           }
@@ -834,23 +866,103 @@ export default function AdminDashboard() {
     scales: {
       x: {
         type: 'category',
-        ticks: { color: '#fff', font: { size: 12, weight: 'bold' as const } },
-        grid: { color: 'rgba(255,255,255,0.1)' },
-        title: { display: true, text: 'Period', color: '#fff', font: { size: 14, weight: 'bold' as const } },
+        grid: { 
+          display: false,
+          drawBorder: false
+        },
+        ticks: { 
+          color: '#94a3b8', 
+          font: { 
+            size: 12, 
+            weight: '500',
+            family: "'Inter', sans-serif"
+          } 
+        },
       },
       y: {
         beginAtZero: true,
-        ticks: {
-          color: '#fff',
-          font: { size: 12, weight: 'bold' as const },
-          callback: function(value) {
-            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value as number);
-          }
+        grid: { 
+          color: 'rgba(255, 255, 255, 0.05)',
+          drawBorder: false,
+          drawTicks: false
         },
-        grid: { color: 'rgba(255,255,255,0.1)' },
-        title: { display: true, text: 'Revenue (₹)', color: '#fff', font: { size: 14, weight: 'bold' as const } },
+        ticks: {
+          color: '#94a3b8',
+          font: { 
+            size: 11, 
+            weight: '500',
+            family: "'Inter', sans-serif"
+          },
+          callback: function(value) {
+            if (value >= 1000000) {
+              return '₹' + (Number(value) / 1000000).toFixed(1) + 'M';
+            }
+            if (value >= 1000) {
+              return '₹' + (Number(value) / 1000).toFixed(0) + 'K';
+            }
+            return '₹' + value;
+          },
+          padding: 8
+        }
       },
     },
+  };
+
+  // Revenue chart options
+  const revenueChartOptions: ChartOptions<'line'> = {
+    ...chartDefaults,
+    plugins: {
+      ...chartDefaults.plugins,
+      title: {
+        display: true,
+        text: 'Monthly Revenue',
+        color: '#f8fafc',
+        font: {
+          size: 16,
+          weight: 600,
+          family: "'Inter', sans-serif"
+        },
+        padding: {
+          bottom: 20
+        }
+      },
+      legend: {
+        ...chartDefaults.plugins.legend,
+        labels: {
+          ...chartDefaults.plugins.legend.labels,
+          color: '#94a3b8'
+        }
+      }
+    },
+    scales: {
+      ...chartDefaults.scales,
+      y: {
+        ...chartDefaults.scales.y,
+        title: { 
+          display: true, 
+          text: 'Revenue', 
+          color: '#94a3b8',
+          font: { 
+            size: 12, 
+            weight: 500,
+            family: "'Inter', sans-serif"
+          } 
+        },
+      },
+      x: {
+        ...chartDefaults.scales.x,
+        title: { 
+          display: true, 
+          text: 'Month', 
+          color: '#94a3b8',
+          font: { 
+            size: 12, 
+            weight: 500,
+            family: "'Inter', sans-serif"
+          } 
+        },
+      }
+    }
   };
 
   return (
@@ -958,7 +1070,7 @@ export default function AdminDashboard() {
                           <span className="text-green-400 text-sm font-medium">Cumulative earnings</span>
                         </div>
                       </div>
-                      <div className="mx-3 w-24 h-11 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <div className="mx-3 w-24 h-11 bg-gradient-to-r from-yellow-500 to-red-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                         <DollarSign className="w-8 h-6 text-white" />
                       </div>
                     </div>
@@ -999,8 +1111,8 @@ export default function AdminDashboard() {
                         <DollarSign className="w-10 h-10 text-black drop-shadow-lg" />
                           </span>
                         </div>
-                    <span className="text-4xl font-extrabold text-black mb-2">Daily Revenue</span>
-                    <span className="text-3xl font-bold text-black">₹<CountUp end={dailyRevenueValue} decimals={2} /></span>
+                    <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-black mb-2 text-center px-2">Daily Revenue</span>
+                    <span className="text-2xl sm:text-3xl font-bold text-black">₹<CountUp end={dailyRevenueValue} decimals={2} /></span>
                     <div className="flex items-center mt-4 text-black">
                       <TrendingUp className="w-5 h-5 mr-2" />
                       <span className="text-base font-medium">Today's Earnings</span>
@@ -1016,13 +1128,13 @@ export default function AdminDashboard() {
                 <CardContent className="flex flex-col items-center justify-center h-72 w-full">
                     <div className="flex flex-col items-center justify-center w-full h-full">
                       <div className="flex items-center justify-center mb-4">
-                        <span className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 shadow-lg">
-                          <Crown className="w-10 h-10 text-black drop-shadow-lg" />
+                        <span className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-white/20 shadow-lg">
+                          <Crown className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-black drop-shadow-lg" />
                         </span>
                       </div>
-                      <span className="text-4xl font-extrabold text-black mb-2">Top Spender</span>
-                      <span className="text-3xl font-bold text-black">{topSpenders[0].name || topSpenders[0].username}</span>
-                      <span className="text-xl font-medium text-black mt-2">₹<CountUp end={topSpenders[0].amount || topSpenders[0].totalSpent} decimals={2} /></span>
+                      <span className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-black mb-2 text-center px-2">Top Spender</span>
+                      <span className="text-xl sm:text-2xl md:text-3xl font-bold text-black text-center px-2 truncate max-w-full">{topSpenders[0].name || topSpenders[0].username}</span>
+                      <span className="text-lg sm:text-xl font-medium text-black mt-2">₹<CountUp end={topSpenders[0].amount || topSpenders[0].totalSpent} decimals={2} /></span>
                       <div className="flex items-center mt-4 text-black">
                         <Star className="w-5 h-5 mr-2" />
                         <span className="text-base font-medium">Highest Spending User</span>
@@ -1086,7 +1198,7 @@ export default function AdminDashboard() {
             </motion.div>
               </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <motion.div variants={cardVariants}>
               <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
                 <CardHeader className="pb-4">
@@ -1101,7 +1213,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div style={{ height: '300px' }} className="flex items-center justify-center h-full">
+                  <div className="w-full h-[300px] min-h-[300px] max-h-[400px] flex items-center justify-center">
                     {usersMonthly.length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Line 
@@ -1148,7 +1260,7 @@ export default function AdminDashboard() {
               </div>
                 </CardHeader>
                 <CardContent>
-                  <div style={{ height: '300px' }} className="flex items-center justify-center h-full">
+                  <div className="w-full h-[300px] min-h-[300px] max-h-[400px] flex items-center justify-center">
                     {ordersMonthly.length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Line 
@@ -1195,7 +1307,7 @@ export default function AdminDashboard() {
                 </div>
                 </CardHeader>
                 <CardContent>
-                  <div style={{ height: '300px' }} className="flex items-center justify-center h-full">
+                  <div className="w-full h-[300px] min-h-[300px] max-h-[400px] flex items-center justify-center">
                     {topCanteens.length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Bar 
@@ -1209,7 +1321,7 @@ export default function AdminDashboard() {
             </motion.div>
               </div>
               
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <motion.div variants={cardVariants}>
               <Card className="bg-white/10 backdrop-blur-xl border border-white/20">
                 <CardHeader className="pb-4">
@@ -1224,7 +1336,7 @@ export default function AdminDashboard() {
               </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
+                  <div className="w-full h-[300px] min-h-[300px] max-h-[400px] flex items-center justify-center mx-auto">
                     {!orderStatus || Object.keys(orderStatus).length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Pie 
@@ -1268,7 +1380,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
+                  <div className="w-full h-[300px] min-h-[300px] max-h-[400px] flex items-center justify-center mx-auto">
                     {!userRoles || Object.keys(userRoles).length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No data available</div> : 
                       <Pie 
@@ -1311,7 +1423,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col items-center justify-center w-full" style={{ height: '340px', width: '340px', margin: '0 auto' }}>
+                  <div className="w-full h-[300px] min-h-[300px] max-h-[400px] flex items-center justify-center mx-auto">
                     {!revenueByPaymentMethod || revenueByPaymentMethod.length === 0 ? 
                       <div className="flex items-center justify-center h-full text-slate-400">No payment data available</div> : 
                       <Pie 
@@ -1346,8 +1458,8 @@ export default function AdminDashboard() {
             <Card className="bg-white/10 backdrop-blur-xl border border-white/20 w-full">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
-                    <UserX className="w-5 h-5 text-orange-400" />
+                  <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center">
+                    <UserX className="w-5 h-5 text-red-400" />
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-white">Suspected Users</h3>
