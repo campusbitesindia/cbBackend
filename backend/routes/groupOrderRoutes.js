@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 
 const { isAuthenticated, isStudent } = require("../middleware/auth");
-const { createGroupOrder, joinGroupOrder, updateGroupOrder, getGroupOrderByLink, updateGroupOrderItems, getAllGroupOrders } = require('../controllers/groupOrder');
+const { createGroupOrder, joinGroupOrder, updateGroupOrder, getGroupOrderByLink, updateGroupOrderItems, getAllGroupOrders, paySelf } = require('../controllers/groupOrder');
 
 router.post('/create-order', isAuthenticated, createGroupOrder);
 router.post('/join-group', isAuthenticated, joinGroupOrder);
@@ -11,5 +11,6 @@ router.post("/join", isAuthenticated, joinGroupOrder);
 router.get("/:groupLink", isAuthenticated, getGroupOrderByLink);
 router.post("/items", isAuthenticated, updateGroupOrderItems);
 router.get("/getAll", isAuthenticated, getAllGroupOrders);
+router.post('/pay-self', isAuthenticated, paySelf); 
 
 module.exports = router;

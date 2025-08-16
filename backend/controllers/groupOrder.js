@@ -316,38 +316,39 @@ exports.getGroupOrderByLink = async (req, res) => {
 exports.updateGroupOrderItems = async (req, res) => {
   try {
     const { groupOrderId, items } = req.body;
-
-    if (!groupOrderId || !items) {
-      return res.status(400).json({ message: "Group Order ID and items are required." });
-    }
+    if (!groupOrderId || !items) return res.status(400).json({ message: "Group Order ID and items are required." });
 
     const groupOrder = await GroupOrder.findById(groupOrderId);
-
-    if (!groupOrder) {
-      return res.status(404).json({ message: "Group Order not found." });
-    }
+    if (!groupOrder) return res.status(404).json({ message: "Group Order not found." });
 
     const updatedItemsForDb = [];
     let newTotalAmount = 0;
 
     for (const itemData of items) {
-      const menuItem = await Item.findById(itemData.item);
-      if (!menuItem) {
-        return res.status(404).json({ message: `Menu item with ID ${itemData.item} not found.` });
+      const itemId = typeof itemData.item === 'object' ? itemData.item._id : itemData.item;
+      const menuItem = await Item.findById(itemId);
+      if (!menuItem) return res.status(404).json({ message: `Menu item with ID ${itemId} not found.` });
+
+      if (!groupOrder.members.includes(itemData.user)) {
+        return res.status(403).json({ message: `User ${itemData.user} is not a member of this group.` });
       }
+
       updatedItemsForDb.push({
         item: menuItem._id,
         quantity: itemData.quantity,
         nameAtPurchase: menuItem.name,
         priceAtPurchase: menuItem.price,
+        user: itemData.user,
       });
       newTotalAmount += menuItem.price * itemData.quantity;
     }
 
     groupOrder.items = updatedItemsForDb;
     groupOrder.totalAmount = newTotalAmount;
-
     await groupOrder.save();
+
+    // Broadcast update to group order room
+    global.broadcastGroupOrderUpdate(groupOrder.groupLink, groupOrder);
 
     return res.status(200).json({
       success: true,
@@ -360,27 +361,61 @@ exports.updateGroupOrderItems = async (req, res) => {
   }
 };
 
-exports.getAllGroupOrders = async (req, res) => {
+exports.paySelf = async (req, res) => {
   try {
-    const groupOrders = await GroupOrder.find()
-      .populate("creator", "name email")
-      .populate("members", "name email")
-      .populate("items.item", "name price")
-      .populate("paymentDetails.amounts.user", "name email")
-      .populate("paymentDetails.transactions.user", "name email")
-      .sort({ createdAt: -1 })
-      .lean();
+    const { groupOrderId, userId, amount } = req.body;
+    const groupOrder = await GroupOrder.findById(groupOrderId);
+    if (!groupOrder) return res.status(404).json({ message: "Group order not found" });
+    if (!groupOrder.members.includes(userId)) return res.status(403).json({ message: "Unauthorized" });
+
+    // Verify amount
+    let userTotal = 0;
+    groupOrder.items.forEach(item => {
+      if (item.user?.toString() === userId) {
+        userTotal += item.priceAtPurchase * item.quantity;
+      }
+    });
+    if (userTotal !== amount || amount <= 0) return res.status(400).json({ message: "Invalid amount" });
+
+    const receipt = `self_${groupOrderId.slice(-4)}_${userId.slice(-4)}`;
+    const razorpayOrder = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: "INR",
+      receipt,
+    });
+
+    const transaction = await Transaction.create({
+      userId,
+      razorpayOrderId: razorpayOrder.id,
+      amount,
+      currency: "INR",
+      status: "created",
+      paymentMethod: "upi",
+    });
+
+    groupOrder.paymentDetails.splitType = 'self';
+    groupOrder.paymentDetails.amounts.push({ user: userId, amount });
+    groupOrder.paymentDetails.transactions.push({
+      user: userId,
+      transactionId: transaction._id,
+      status: "created",
+    });
+    groupOrder.status = "payment_pending";
+    await groupOrder.save();
+
+    // Broadcast update
+    global.broadcastGroupOrderUpdate(groupOrder.groupLink, groupOrder);
 
     return res.status(200).json({
       success: true,
-      count: groupOrders.length,
-      groupOrders
+      transaction: {
+        transactionId: transaction._id,
+        razorpayOrderId: razorpayOrder.id,
+        amount,
+      },
     });
   } catch (err) {
-    console.error("Error fetching all group orders:", err);
-    return res.status(500).json({
-      message: "Internal server error",
-      error: err.message
-    });
+    console.error("Pay Self Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
