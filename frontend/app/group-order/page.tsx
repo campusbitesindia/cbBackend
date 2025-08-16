@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import io from 'socket.io-client';
 
 declare global {
   interface Window {
@@ -226,7 +227,6 @@ export default function GroupOrderPage() {
   >([]);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string | null>(null);
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
-  const [ws, setWs] = useState<WebSocket | null>(null);
 
   const groupLink = searchParams.get('link');
   if (!groupLink) {
@@ -234,6 +234,7 @@ export default function GroupOrderPage() {
   }
 
   const updateTimeout = useRef<NodeJS.Timeout | null>(null);
+  const socketRef = useRef<ReturnType<typeof io> | null>(null);
 
   // Load Razorpay SDK
   useEffect(() => {
@@ -251,7 +252,9 @@ export default function GroupOrderPage() {
       document.body.appendChild(script);
 
       return () => {
-        document.body.removeChild(script);
+        if (document.body.contains(script)) {
+          document.body.removeChild(script);
+        }
       };
     }
   }, [toast]);
@@ -263,65 +266,64 @@ export default function GroupOrderPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Initialize WebSocket for real-time updates
+  // Initialize Socket.IO for real-time updates
   useEffect(() => {
     if (!groupLink || !token) return;
 
-    const websocket = new WebSocket(`wss://campusbites-mxpe.onrender.com/ws/groupOrder/${groupLink}`);
-    setWs(websocket);
+    const socket = io('https://campusbites-mxpe.onrender.com', {
+      path: '/socket.io',
+      query: { token },
+      transports: ['websocket'],
+      withCredentials: true,
+    });
+    socketRef.current = socket;
 
-    websocket.onopen = () => {
-      console.log('WebSocket connected');
-    };
+    socket.on('connect', () => {
+      console.log('Socket.IO connected');
+      socket.emit('joinGroupOrder', groupLink);
+    });
 
-    websocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'ORDER_UPDATED') {
-          setGroupOrder(data.groupOrder);
-          setItems(data.groupOrder.items || []);
-          setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
-          setAmounts(data.groupOrder.paymentDetails.amounts || []);
-          toast({
-            title: 'Order Updated',
-            description: 'Group order has been updated by a member.',
-          });
-        }
-      } catch (err) {
-        toast({
-          variant: 'destructive',
-          title: 'WebSocket Error',
-          description: 'Failed to process update.',
-        });
-      }
-    };
+    socket.on('ORDER_UPDATED', (data) => {
+      setGroupOrder(data.groupOrder);
+      setItems(data.groupOrder.items || []);
+      setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
+      setAmounts(data.groupOrder.paymentDetails.amounts || []);
+      toast({
+        title: 'Order Updated',
+        description: 'Group order has been updated by a member.',
+      });
+    });
 
-    websocket.onclose = () => {
+    socket.on('connect_error', (err) => {
+      console.error('Socket.IO connection error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Connection Error',
+        description: 'Failed to connect to real-time updates.',
+      });
+    });
+
+    socket.on('disconnect', () => {
       toast({
         variant: 'destructive',
         title: 'Connection Lost',
-        description: 'WebSocket connection closed.',
+        description: 'Socket.IO connection closed.',
       });
-    };
-
-    websocket.onerror = () => {
-      toast({
-        variant: 'destructive',
-        title: 'WebSocket Error',
-        description: 'An error occurred with the WebSocket connection.',
-      });
-    };
+    });
 
     return () => {
-      websocket.close();
+      socket.disconnect();
     };
   }, [groupLink, token, toast]);
 
-  // Fetch group order
+  // Fallback polling if Socket.IO fails
   useEffect(() => {
-    fetchGroupOrder();
+    if (!groupLink || !token) return;
+    const interval = setInterval(fetchGroupOrder, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, [groupLink, token]);
 
+  // Fetch group order
   async function fetchGroupOrder() {
     setLoading(true);
     try {
@@ -385,7 +387,8 @@ export default function GroupOrderPage() {
       const updatePayload = {
         groupOrderId: groupOrder._id,
         items: updatedItems.map((item) => ({
-          ...item,
+          item: typeof item.item === 'object' ? item.item._id : item.item,
+          quantity: item.quantity,
           user: item.user || user?.id,
         })),
       };
@@ -572,7 +575,7 @@ export default function GroupOrderPage() {
         i.user === userId
           ? acc +
             (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) *
-              i.quantity
+            i.quantity
           : acc,
       0
     );
@@ -660,7 +663,6 @@ export default function GroupOrderPage() {
         groupOrderId: groupOrder._id,
         userId: user.id,
         amount: userTotal,
-        splitType: 'self',
       };
 
       const res = await fetch(
