@@ -7,7 +7,7 @@ exports.getMenuByCanteenId = async (req, res) => {
 
         const canteen = await Canteen.findById(canteenId);
         if (!canteen || !canteen.isApproved) {
-            return res.status(403).json({ message: 'Canteen is not available.' });
+            return res.status(403).json({success:false, message: 'Canteen is not available.' });
         }
         // Find menu items associated with the canteen
         const menuItems = await Menu.find({ canteen: canteenId })
@@ -20,7 +20,7 @@ exports.getMenuByCanteenId = async (req, res) => {
         });
     } catch (error) {
         console.error("Error fetching menu items:", error);
-        res.status(500).json({ message: "Internal server error", error: error.message });
+        res.status(500).json({success:false, message: "Internal server error", error: error.message });
     }
 };
 

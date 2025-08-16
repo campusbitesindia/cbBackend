@@ -33,10 +33,11 @@ exports.getItems = async (req, res) => {
 // POST create item
 exports.createItem = async (req, res) => {
   try {
-    const { name, price, canteenId } = req.body;
+    const { name, price, canteenId,available,description,isVeg,category,quantity,portion } = req.body;
+  
     const Image = req.file;
-
-    if (!name || !price || !canteenId || !Image) {
+   
+    if (!name || !price || !canteenId || !Image ||available || description || isVeg || category || quantity || portion ) {
       return res.status(400).json({
         success: false,
         message: 'name ,price,Image or canteenId is missing',
@@ -54,11 +55,12 @@ exports.createItem = async (req, res) => {
       resource_type: 'auto',
       folder: process.env.ItemsFolder,
     });
-    const item = Item.create({
+    const item =await  Item.create({
       name,
       price,
       canteen: canteen._id,
       image: uploaded.secure_url,
+      available,description,isVeg,category,quantity,portion 
     });
     return res.status(200).json({
       success: true,
@@ -103,12 +105,13 @@ exports.updateItem = async (req, res) => {
     }
     await item.save();
     return res.status(200).json({
-      success: false,
+      success:true,
       message: 'item Updated SuccessFully',
       data: item,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    
+    res.status(500).json({ success:false, error: err.message });
   }
 };
 // works
@@ -134,7 +137,7 @@ exports.deleteItem = async (req, res) => {
       data: {},
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({success:false, error: err.message });
   }
 };
 // works
