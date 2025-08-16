@@ -455,7 +455,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Header */}
-      <div className='bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50'>
+      <div className='bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border-b border-slate-200/50 dark:border-slate-700/50'>
         <div className='container mx-auto px-6 py-6'>
           <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
             {/* Top row: Back button (full width on mobile) */}
