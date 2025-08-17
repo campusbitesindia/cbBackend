@@ -1626,54 +1626,76 @@ const OrderCard: React.FC<OrderCardProps> = memo(
             </div>
 
             {/* Order Items Preview */}
-            <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
+            <div className='space-y-3 sm:space-y-4 mb-6 sm:mb-8'>
               {order.items
                 .slice(0, maxVisible)
-                .map(({ _id, item, quantity }, idx) => {
-                  const {
-                    name = 'Item No Longer Available',
-                    image,
-                    price = 0,
-                  } = item || {};
-                  return (
-                    <motion.div
-                      key={_id}
-                      className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05 }}>
-                      <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
-                        <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
-                          <Image
-                            src={image || '/placeholder.svg'}
-                            alt={name}
-                            fill
-                            className='object-cover'
-                          />
+                .map(
+                  (
+                    { _id, item, quantity, nameAtPurchase, priceAtPurchase },
+                    idx
+                  ) => {
+                    const {
+                      name = nameAtPurchase || 'Item No Longer Available',
+                      image,
+                      price = priceAtPurchase || 0,
+                    } = item || {};
+                    return (
+                      <motion.div
+                        key={_id}
+                        className='flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-gradient-to-r from-white/80 via-gray-50/60 to-white/80 dark:from-slate-700/60 dark:via-slate-800/40 dark:to-slate-700/60 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-gray-100/80 dark:border-slate-600/50 hover:shadow-lg transition-all duration-300'
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        whileHover={{ scale: 1.02 }}>
+                        <div className='flex items-center gap-3 sm:gap-4 flex-1 min-w-0'>
+                          <div className='relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl sm:rounded-2xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0 shadow-lg'>
+                            <Image
+                              src={image || '/placeholder.svg'}
+                              alt={name}
+                              fill
+                              className='object-cover'
+                            />
+                          </div>
+                          <div className='flex-1 min-w-0'>
+                            <h4 className='font-semibold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg truncate mb-1'>
+                              {name}
+                            </h4>
+                            <div className='flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
+                              <span className='bg-gray-200/80 dark:bg-slate-600/80 px-2 py-1 rounded-lg font-medium'>
+                                Qty: {quantity}
+                              </span>
+                              <span className='text-gray-400 dark:text-gray-500'></span>
+                              <span className='font-medium'>
+                                ₹{(priceAtPurchase || price).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className='flex-1 min-w-0'>
-                          <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
-                            {name}
-                          </h4>
-                          <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
-                            Qty: {quantity}
+                        <div className='text-right flex-shrink-0'>
+                          <p className='font-bold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg'>
+                            ₹
+                            {(quantity * (priceAtPurchase || price)).toFixed(2)}
                           </p>
                         </div>
-                      </div>
-                      <div className='text-right flex-shrink-0'>
-                        <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
-                          ₹{(quantity * price).toFixed(2)}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                      </motion.div>
+                    );
+                  }
+                )}
 
               {order.items.length > maxVisible && (
-                <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
-                  +{order.items.length - maxVisible} more item
-                  {order.items.length - maxVisible !== 1 ? 's' : ''}
-                </div>
+                <motion.div
+                  className='text-center py-3 sm:py-4 text-gray-500 dark:text-gray-400 text-sm sm:text-base font-medium bg-gradient-to-r from-gray-50/60 via-white/40 to-gray-50/60 dark:from-slate-700/40 dark:via-slate-800/30 dark:to-slate-700/40 rounded-xl sm:rounded-2xl border border-gray-100/80 dark:border-slate-600/50'
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}>
+                  <div className='flex items-center justify-center gap-2'>
+                    <Plus className='w-4 h-4 text-gray-400' />
+                    <span>
+                      {order.items.length - maxVisible} more item
+                      {order.items.length - maxVisible !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </motion.div>
               )}
             </div>
 
@@ -1705,7 +1727,7 @@ const OrderCard: React.FC<OrderCardProps> = memo(
                     </MotionWrapper>
                   </DialogTrigger>
 
-                  <DialogContent className='max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4'>
+                  <DialogContent className='max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-6xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 mx-2 sm:mx-4 p-0'>
                     {orderDetailLoading ? (
                       <>
                         <DialogHeader>
@@ -1719,24 +1741,32 @@ const OrderCard: React.FC<OrderCardProps> = memo(
                       </>
                     ) : selectedOrder ? (
                       <>
-                        <DialogHeader className='border-b pb-6 dark:border-slate-700'>
-                          <div className='flex items-center gap-4'>
+                        <DialogHeader className='border-b pb-4 sm:pb-6 dark:border-slate-700 p-4 sm:p-6'>
+                          <div className='flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4'>
                             <div
-                              className={`w-16 h-16 ${statusConfig.color} rounded-2xl flex items-center justify-center shadow-lg`}>
-                              <statusConfig.icon className='w-8 h-8 text-white' />
+                              className={`w-12 h-12 sm:w-16 sm:h-16 ${statusConfig.color} rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg mx-auto sm:mx-0`}>
+                              <statusConfig.icon className='w-6 h-6 sm:w-8 sm:h-8 text-white' />
                             </div>
-                            <div>
-                              <DialogTitle className='text-2xl font-bold text-gray-900 dark:text-white'>
+                            <div className='text-center sm:text-left flex-1'>
+                              <DialogTitle className='text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white'>
                                 Order #
                                 {order?.OrderNumber?.replace('order#', '')}
                               </DialogTitle>
-                              <p className='text-gray-600 dark:text-gray-400 mt-1'>
+                              <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1'>
                                 {formatDate(selectedOrder.createdAt)}
                               </p>
+                              <div className='flex items-center justify-center sm:justify-start gap-2 mt-2'>
+                                <Badge
+                                  className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 px-3 py-1 font-semibold text-xs sm:text-sm`}>
+                                  {statusConfig.label}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
                         </DialogHeader>
-                        <OrderDetailsContent order={selectedOrder} />
+                        <div className='p-4 sm:p-6'>
+                          <OrderDetailsContent order={selectedOrder} />
+                        </div>
                       </>
                     ) : (
                       <>
@@ -1866,137 +1896,206 @@ const OrderDetailsContent = memo(function OrderDetailsContent({
     timeline.filter((step) => step.isComplete).length / timeline.length;
 
   return (
-    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 py-6'>
-      <div>
-        <h3 className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2'>
-          <Truck className='w-4 h-4 sm:w-5 sm:h-5' />
-          Order Timeline
-        </h3>
+    <div className='grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8'>
+      <div className='space-y-6 sm:space-y-8'>
+        <div>
+          <h3 className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2'>
+            <Truck className='w-4 h-4 sm:w-5 sm:h-5' />
+            Order Timeline
+          </h3>
 
-        <div className='space-y-3 sm:space-y-4 md:space-y-6 relative'>
-          <div className='absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700'>
-            <motion.div
-              className='bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top'
-              initial={{ scaleY: 0 }}
-              animate={{ scaleY: progress }}
-              transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
-            />
-          </div>
-
-          {timeline.map((step, index) => {
-            const StepIcon = step.icon;
-            const isCompleted = step.isComplete;
-            const isCurrent = isCurrentStatus(step.status);
-
-            return (
+          <div className='space-y-3 sm:space-y-4 md:space-y-6 relative'>
+            <div className='absolute left-4 sm:left-5 md:left-6 top-4 sm:top-5 md:top-6 bottom-4 sm:bottom-5 md:bottom-6 w-0.5 bg-gray-200 dark:bg-slate-700'>
               <motion.div
-                key={step.status}
-                className='flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10'
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}>
-                <motion.div
-                  className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 sm:border-3 md:border-4 border-white dark:border-slate-900 shadow-lg ${
-                    isCompleted
-                      ? step.status === 'cancelled'
-                        ? 'bg-red-500'
-                        : 'bg-green-500'
-                      : 'bg-gray-200 dark:bg-slate-700'
-                  }`}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
-                  whileHover={{ scale: 1.1 }}>
-                  <StepIcon
-                    className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ${
-                      isCompleted
-                        ? 'text-white'
-                        : 'text-gray-400 dark:text-slate-500'
-                    }`}
-                  />
-                </motion.div>
+                className='bg-gradient-to-b from-green-500 to-blue-500 w-full origin-top'
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: progress }}
+                transition={{ duration: 1.5, ease: 'easeOut', delay: 0.5 }}
+              />
+            </div>
 
-                <div className='flex-1 min-w-0'>
+            {timeline.map((step, index) => {
+              const StepIcon = step.icon;
+              const isCompleted = step.isComplete;
+              const isCurrent = isCurrentStatus(step.status);
+
+              return (
+                <motion.div
+                  key={step.status}
+                  className='flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10'
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.2 }}>
                   <motion.div
-                    className={`font-medium text-xs sm:text-sm md:text-base ${
+                    className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 sm:border-3 md:border-4 border-white dark:border-slate-900 shadow-lg ${
                       isCompleted
-                        ? 'text-gray-800 dark:text-gray-200'
-                        : 'text-gray-400 dark:text-slate-500'
+                        ? step.status === 'cancelled'
+                          ? 'bg-red-500'
+                          : 'bg-green-500'
+                        : 'bg-gray-200 dark:bg-slate-700'
                     }`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: index * 0.2 + 0.5 }}>
-                    {step.label}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.5, delay: index * 0.2 + 0.3 }}
+                    whileHover={{ scale: 1.1 }}>
+                    <StepIcon
+                      className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ${
+                        isCompleted
+                          ? 'text-white'
+                          : 'text-gray-400 dark:text-slate-500'
+                      }`}
+                    />
                   </motion.div>
 
-                  {isCompleted && isCurrent && (
+                  <div className='flex-1 min-w-0'>
                     <motion.div
-                      className='text-xs text-green-600 dark:text-green-400 font-medium'
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.2 + 0.7 }}>
-                      Current Status
+                      className={`font-medium text-xs sm:text-sm md:text-base ${
+                        isCompleted
+                          ? 'text-gray-800 dark:text-gray-200'
+                          : 'text-gray-400 dark:text-slate-500'
+                      }`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.2 + 0.5 }}>
+                      {step.label}
                     </motion.div>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
+
+                    {isCompleted && isCurrent && (
+                      <motion.div
+                        className='text-xs text-green-600 dark:text-green-400 font-medium'
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.2 + 0.7 }}>
+                        Current Status
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Add space after completed timeline */}
-        {order.status === 'completed' && (
-          <div className='mt-6 sm:mt-8 mb-4 sm:mb-6'></div>
-        )}
+        <div>
+          <h3 className='text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4 sm:mb-6 flex items-center gap-2'>
+            <ShoppingBag className='w-4 h-4 sm:w-5 sm:h-5 text-orange-500' />
+            Order Summary
+          </h3>
 
-        <div className='space-y-2 sm:space-y-3 mb-4 sm:mb-6'>
-          {order.items.slice(0, maxVisible).map((orderItem, idx) => {
-            const { _id, item, quantity, nameAtPurchase, priceAtPurchase } =
-              orderItem;
-            const { image } = item || {};
-            const name = nameAtPurchase || 'Item No Longer Available';
-            const price = priceAtPurchase || 0;
+          <div className='space-y-3 sm:space-y-4 mb-6 sm:mb-8'>
+            {order.items.slice(0, maxVisible).map((orderItem, idx) => {
+              const { _id, item, quantity, nameAtPurchase, priceAtPurchase } =
+                orderItem;
+              const { image } = item || {};
+              const name = nameAtPurchase || 'Item No Longer Available';
+              const price = priceAtPurchase || 0;
 
-            return (
-              <motion.div
-                key={_id}
-                className='flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 bg-gray-50/80 dark:bg-slate-700/50 rounded-xl backdrop-blur-sm'
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.05 }}>
-                <div className='flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0'>
-                  <div className='relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0'>
-                    <Image
-                      src={image || '/placeholder.svg'}
-                      alt={name}
-                      fill
-                      className='object-cover'
-                    />
+              return (
+                <motion.div
+                  key={_id}
+                  className='flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-gradient-to-r from-gray-50/90 via-white/50 to-gray-50/90 dark:from-slate-700/50 dark:via-slate-800/30 dark:to-slate-700/50 rounded-xl sm:rounded-2xl backdrop-blur-sm border border-gray-100 dark:border-slate-600 hover:shadow-md transition-all duration-200'
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}>
+                  <div className='flex items-center gap-3 sm:gap-4 flex-1 min-w-0'>
+                    <div className='relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-xl sm:rounded-2xl overflow-hidden bg-gray-200 dark:bg-slate-600 flex-shrink-0 shadow-lg'>
+                      <Image
+                        src={image || '/placeholder.svg'}
+                        alt={name}
+                        fill
+                        className='object-cover'
+                      />
+                    </div>
+                    <div className='flex-1 min-w-0'>
+                      <h4 className='font-semibold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg truncate mb-1'>
+                        {name}
+                      </h4>
+                      <div className='flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400'>
+                        <span className='bg-gray-200 dark:bg-slate-600 px-2 py-1 rounded-lg font-medium'>
+                          Qty: {quantity}
+                        </span>
+                        <span className='text-gray-400 dark:text-gray-500'></span>
+                        <span className='font-medium'>₹{price.toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className='flex-1 min-w-0'>
-                    <h4 className='font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base truncate'>
-                      {name}
-                    </h4>
-                    <p className='text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1'>
-                      Qty: {quantity}
+                  <div className='text-right flex-shrink-0'>
+                    <p className='font-bold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg'>
+                      ₹{(quantity * price).toFixed(2)}
                     </p>
                   </div>
-                </div>
-                <div className='text-right flex-shrink-0'>
-                  <p className='font-semibold text-gray-800 dark:text-gray-200 text-xs sm:text-sm md:text-base'>
-                    ₹{(quantity * price).toFixed(2)}
-                  </p>
+                </motion.div>
+              );
+            })}
+
+            {order.items.length > maxVisible && (
+              <motion.div
+                className='text-center py-3 sm:py-4 text-gray-500 dark:text-gray-400 text-sm sm:text-base font-medium bg-gradient-to-r from-gray-50/50 via-white/30 to-gray-50/50 dark:from-slate-700/30 dark:via-slate-800/20 dark:to-slate-700/30 rounded-xl sm:rounded-2xl border border-gray-100 dark:border-slate-600'
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}>
+                <div className='flex items-center justify-center gap-2'>
+                  <Plus className='w-4 h-4 text-gray-400' />
+                  <span>
+                    {order.items.length - maxVisible} more item
+                    {order.items.length - maxVisible !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </motion.div>
-            );
-          })}
+            )}
+          </div>
 
-          {order.items.length > maxVisible && (
-            <div className='text-center py-2 sm:py-3 text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium bg-gray-50/50 dark:bg-slate-700/30 rounded-xl'>
-              +{order.items.length - maxVisible} more item
-              {order.items.length - maxVisible !== 1 ? 's' : ''}
+          {/* Order Total Breakdown */}
+          <motion.div
+            className='bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-4 sm:p-6 border-2 border-blue-100 dark:border-blue-800 mb-6 sm:mb-8'
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}>
+            <h4 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2'>
+              <Receipt className='w-5 h-5 text-blue-500' />
+              Order Total
+            </h4>
+
+            <div className='space-y-2 sm:space-y-3'>
+              {/* Subtotal */}
+              <div className='flex justify-between items-center text-sm sm:text-base'>
+                <span className='text-gray-600 dark:text-gray-400'>
+                  Subtotal ({order.items.length} items)
+                </span>
+                <span className='font-medium text-gray-800 dark:text-gray-200'>
+                  ₹
+                  {order.items
+                    .reduce(
+                      (sum, item) =>
+                        sum + item.quantity * (item.priceAtPurchase || 0),
+                      0
+                    )
+                    .toFixed(2)}
+                </span>
+              </div>
+
+              {/* Additional fees and discounts can be shown here when available */}
+
+              <Separator className='my-3 sm:my-4' />
+
+              {/* Total */}
+              <div className='flex justify-between items-center'>
+                <span className='text-lg sm:text-xl font-bold text-gray-900 dark:text-white'>
+                  Total Amount
+                </span>
+                <div className='text-right'>
+                  <span className='text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent'>
+                    ₹{order.total.toFixed(2)}
+                  </span>
+                  {order.payment && (
+                    <div className='text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 capitalize'>
+                      Paid via {getPaymentConfig(order.payment.method).label}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
+          </motion.div>
         </div>
       </div>
     </div>
