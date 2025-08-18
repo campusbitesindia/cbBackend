@@ -347,13 +347,21 @@ exports.updateGroupOrderItems = async (req, res) => {
     groupOrder.totalAmount = newTotalAmount;
     await groupOrder.save();
 
-    // Broadcast update to group order room
-    global.broadcastGroupOrderUpdate(groupOrder.groupLink, groupOrder);
+    // Populate before broadcasting
+    const populatedGroupOrder = await GroupOrder.findById(groupOrderId)
+      .populate("creator", "name email")
+      .populate("members", "name email")
+      .populate("items.item", "name price")
+      .populate("paymentDetails.amounts.user", "name email")
+      .populate("paymentDetails.transactions.user", "name email")
+      .lean();
+
+    global.broadcastGroupOrderUpdate(groupOrder.groupLink, populatedGroupOrder);
 
     return res.status(200).json({
       success: true,
       message: "Group order items updated successfully.",
-      data: { groupOrder },
+      data: { groupOrder: populatedGroupOrder },
     });
   } catch (error) {
     console.error("Error updating group order items:", error);

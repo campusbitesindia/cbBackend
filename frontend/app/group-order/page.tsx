@@ -120,10 +120,9 @@ const TransactionRowDesktop = ({
       </td>
       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            statusColors[txn.status as keyof typeof statusColors] ||
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] ||
             'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-          }`}
+            }`}
         >
           {loadingSpinner}
           {statusText}
@@ -191,10 +190,9 @@ const TransactionRowMobile = ({
       <div className="flex flex-col items-end space-y-1">
         <div className="font-semibold">₹{amount.toFixed(2)}</div>
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-            statusColors[txn.status as keyof typeof statusColors] ||
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] ||
             'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-          }`}
+            }`}
         >
           {loadingSpinner}
           {statusText}
@@ -266,58 +264,6 @@ export default function GroupOrderPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Initialize Socket.IO for real-time updates
-  useEffect(() => {
-    if (!groupLink || !token) return;
-
-    const socket = io('https://campusbites-mxpe.onrender.com', {
-      path: '/socket.io',
-      query: { token },
-      transports: ['websocket'],
-      withCredentials: true,
-    });
-    socketRef.current = socket;
-
-    socket.on('connect', () => {
-      console.log('Socket.IO connected');
-      socket.emit('joinGroupOrder', groupLink);
-    });
-
-    socket.on('ORDER_UPDATED', (data) => {
-      console.log('Received ORDER_UPDATED:', data);
-      setGroupOrder(data.groupOrder);
-      setItems(data.groupOrder.items || []);
-      setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
-      setAmounts(data.groupOrder.paymentDetails.amounts || []);
-      toast({
-        title: 'Order Updated',
-        description: 'Group order has been updated by a member.',
-      });
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('Socket.IO connection error:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Connection Error',
-        description: 'Failed to connect to real-time updates. Retrying...',
-      });
-      setTimeout(() => socket.connect(), 5000); // Attempt to reconnect
-    });
-
-    socket.on('disconnect', () => {
-      toast({
-        variant: 'destructive',
-        title: 'Connection Lost',
-        description: 'Socket.IO connection closed. Retrying...',
-      });
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [groupLink, token, toast]);
-
   // Fetch group order
   const fetchGroupOrder = useCallback(async () => {
     if (!groupLink || !token) return;
@@ -352,6 +298,62 @@ export default function GroupOrderPage() {
   useEffect(() => {
     fetchGroupOrder();
   }, [fetchGroupOrder]);
+
+
+  useEffect(() => {
+    if (!groupLink || !token) return;
+
+    const socket = io('https://campusbites-mxpe.onrender.com', {
+      path: '/socket.io',
+      query: { token },
+      transports: ['websocket'],
+      withCredentials: true,
+    });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('Socket.IO connected');
+      socket.emit('joinGroupOrder', groupLink);
+    });
+
+    socket.on('ORDER_UPDATED', (data) => {
+      console.log('Received ORDER_UPDATED:', data);
+      setGroupOrder(data.groupOrder);
+      setItems(data.groupOrder.items || []);
+      setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
+      setAmounts(data.groupOrder.paymentDetails.amounts || []);
+      toast({
+        title: 'Order Updated',
+        description: 'Group order has been updated by a member.',
+      });
+      // Fallback: If membership check fails after update, refetch
+      if (!data.groupOrder.members.some((m: { _id: string | undefined; }) => m._id === user?.id)) {
+        fetchGroupOrder();
+      }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error('Socket.IO connection error:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Connection Error',
+        description: 'Failed to connect to real-time updates.',
+      });
+    });
+
+    socket.on('disconnect', () => {
+      toast({
+        variant: 'destructive',
+        title: 'Connection Lost',
+        description: 'Socket.IO connection closed.',
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [groupLink, token, toast, user, fetchGroupOrder]);
+
 
   // Fetch menu items
   useEffect(() => {
@@ -526,20 +528,17 @@ export default function GroupOrderPage() {
   }, [selectedMenuItemId, newItemQuantity, menuItems, items, user, toast, persistItemsToBackend]);
 
   // Calculate total for a specific user
-  const calculateUserTotal = useCallback(
-    (userId: string) => {
-      return items.reduce(
-        (acc, i) =>
-          i.user === userId
-            ? acc +
-              (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) *
-              i.quantity
-            : acc,
-        0
-      );
-    },
-    [items]
+  function calculateUserTotal(userId: string) {
+  return items.reduce(
+    (acc, i) =>
+      i.user.toString() === userId
+        ? acc +
+          (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) *
+          i.quantity
+        : acc,
+    0
   );
+}
 
   // Calculate total for all items
   const calculateTotal = useCallback(() => {
@@ -642,9 +641,9 @@ export default function GroupOrderPage() {
             ? amounts.length > 0
               ? amounts
               : groupOrder.members.map((m) => ({
-                  user: m._id,
-                  amount: calculateTotal() / groupOrder.members.length,
-                }))
+                user: m._id,
+                amount: calculateTotal() / groupOrder.members.length,
+              }))
             : [{ user: user.id, amount: calculateUserTotal(user.id) }],
         pickupTime: new Date().toISOString(),
         canteen: groupOrder.canteen,
@@ -1038,7 +1037,7 @@ export default function GroupOrderPage() {
                         </h4>
                         <div className="space-y-4">
                           {memberItems.map((item, idx) => {
-                            const itemId = typeof item.item === 'object' ? item.item._id : item.item;
+                            console.log('Rendering item:', item); // Debug log
                             const displayName = item.nameAtPurchase || (typeof item.item === 'object' ? item.item.name : 'Unknown item');
                             const displayPrice = item.priceAtPurchase ?? (typeof item.item === 'object' ? item.item.price : 0);
                             const totalPrice = displayPrice * item.quantity;
@@ -1046,7 +1045,7 @@ export default function GroupOrderPage() {
 
                             return (
                               <div
-                                key={item._id || `${itemId}-${idx}`}
+                                key={item._id || idx}
                                 className="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700"
                               >
                                 <div className="flex-1">
@@ -1067,7 +1066,7 @@ export default function GroupOrderPage() {
                                       value={item.quantity}
                                       onChange={(e) =>
                                         updateItemQuantityDebounced(
-                                          itemId,
+                                          typeof item.item === 'object' ? item.item._id : item.item,
                                           Math.max(1, +e.target.value)
                                         )
                                       }
@@ -1077,7 +1076,11 @@ export default function GroupOrderPage() {
                                       variant="ghost"
                                       size="icon"
                                       className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                      onClick={() => removeItem(itemId)}
+                                      onClick={() =>
+                                        removeItem(
+                                          typeof item.item === 'object' ? item.item._id : item.item
+                                        )
+                                      }
                                       disabled={savingItems}
                                     >
                                       <svg
@@ -1297,13 +1300,12 @@ export default function GroupOrderPage() {
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Assigned Total</span>
                         <span
-                          className={`font-semibold ${
-                            Math.abs(
-                              amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
-                            ) < 0.01
+                          className={`font-semibold ${Math.abs(
+                            amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
+                          ) < 0.01
                               ? 'text-green-600 dark:text-green-400'
                               : 'text-red-600 dark:text-red-400'
-                          }`}
+                            }`}
                         >
                           ₹{amounts.reduce((sum, a) => sum + a.amount, 0).toFixed(2)}
                         </span>
@@ -1317,18 +1319,18 @@ export default function GroupOrderPage() {
                       {Math.abs(
                         amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
                       ) >= 0.01 && (
-                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                            ⚠️ Total mismatch: ₹
-                            {(
-                              amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
-                            ).toFixed(2)}
-                          </p>
-                          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                            The assigned amounts must equal the order total to proceed with payment.
-                          </p>
-                        </div>
-                      )}
+                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                              ⚠️ Total mismatch: ₹
+                              {(
+                                amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
+                              ).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                              The assigned amounts must equal the order total to proceed with payment.
+                            </p>
+                          </div>
+                        )}
                     </div>
                   </div>
                 )}
@@ -1349,8 +1351,8 @@ export default function GroupOrderPage() {
                   splitType === 'self'
                     ? calculateUserTotal(user?.id || '')
                     : splitType === 'equal'
-                    ? calculateTotal() / groupOrder.members.length
-                    : amounts.find((a) => a.user === user?.id)?.amount || 0;
+                      ? calculateTotal() / groupOrder.members.length
+                      : amounts.find((a) => a.user === user?.id)?.amount || 0;
 
                 return (
                   <>
@@ -1363,11 +1365,10 @@ export default function GroupOrderPage() {
                         paymentAmount === 0
                       }
                       onClick={splitType === 'self' ? payForSelf : updateOrder}
-                      className={`w-full py-4 sm:py-5 text-sm sm:text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${
-                        isCustomSplitValid && paymentAmount > 0
+                      className={`w-full py-4 sm:py-5 text-sm sm:text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${isCustomSplitValid && paymentAmount > 0
                           ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white'
                           : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed'
-                      }`}
+                        }`}
                       size="lg"
                     >
                       {paymentProcessing ? (
@@ -1399,10 +1400,9 @@ export default function GroupOrderPage() {
                       ) : paymentAmount === 0 ? (
                         'Add Items to Pay'
                       ) : (
-                        `Pay ₹${paymentAmount.toFixed(2)} (${
-                          splitType === 'self'
-                            ? 'Your Items'
-                            : splitType === 'equal'
+                        `Pay ₹${paymentAmount.toFixed(2)} (${splitType === 'self'
+                          ? 'Your Items'
+                          : splitType === 'equal'
                             ? 'Equal Split'
                             : 'Custom Split'
                         })`
@@ -1412,10 +1412,10 @@ export default function GroupOrderPage() {
                       {!isCustomSplitValid
                         ? 'Custom split amounts must equal the order total'
                         : splitType === 'self'
-                        ? 'Pay only for the items you added'
-                        : splitType === 'equal'
-                        ? 'Pay an equal share of the total order'
-                        : 'Pay your assigned share of the total order'}
+                          ? 'Pay only for the items you added'
+                          : splitType === 'equal'
+                            ? 'Pay an equal share of the total order'
+                            : 'Pay your assigned share of the total order'}
                     </p>
                   </>
                 );
