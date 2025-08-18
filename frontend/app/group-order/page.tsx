@@ -406,6 +406,8 @@ export default function GroupOrderPage() {
         body: JSON.stringify(updatePayload),
       });
 
+      console.log(res);
+
       if (!res.ok) {
         const errResp = await res.json();
         throw new Error(errResp.message || 'Failed to update group order');
@@ -523,7 +525,8 @@ export default function GroupOrderPage() {
       title: 'Item added',
       description: 'Item successfully added to the order.',
     });
-
+    
+    console.log("Updated Items: ", updatedItems);
     await persistItemsToBackend(updatedItems);
   }, [selectedMenuItemId, newItemQuantity, menuItems, items, user, toast, persistItemsToBackend]);
 
