@@ -216,7 +216,8 @@ export default function GroupOrderPage() {
   const { toast } = useToast();
 
   const [groupOrder, setGroupOrder] = useState<GroupOrder | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   const [items, setItems] = useState<Item[]>([]);
   const [splitType, setSplitType] = useState<'equal' | 'custom' | 'self'>('equal');
   const [amounts, setAmounts] = useState<PaymentAmount[]>([]);
@@ -316,42 +317,58 @@ export default function GroupOrderPage() {
     };
   }, [groupLink, token, toast]);
 
-  // Fallback polling if Socket.IO fails
-  useEffect(() => {
-    if (!groupLink || !token) return;
-    const interval = setInterval(fetchGroupOrder, 30000); // Poll every 30s
-    return () => clearInterval(interval);
-  }, [groupLink, token]);
-
-  // Fetch group order
+  // Fetch group order with retry logic
   async function fetchGroupOrder() {
     setLoading(true);
-    try {
+    const maxRetries = 3;
+    let currentRetry = retryCount;
 
-      const res = await fetch(
-        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/${groupLink}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+    const tryFetch = async (attempt: number): Promise<boolean> => {
+      try {
+        const res = await fetch(
+          `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/${groupLink}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (!res.ok) {
+          throw new Error(`Failed to load group order: ${res.statusText}`);
         }
-      );
-      console.log(res);
-      if (!res.ok) throw new Error('Failed to load group order');
-      const data = await res.json();
+        const data = await res.json();
+        setGroupOrder(data.groupOrder);
+        setItems(data.groupOrder.items || []);
+        setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
+        setAmounts(data.groupOrder.paymentDetails.amounts || []);
+        setRetryCount(0); // Reset retry count on success
+        return true;
+      } catch (err) {
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          setRetryCount(attempt + 1);
+          return tryFetch(attempt + 1);
+        }
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: (err as Error).message || 'Failed to load group order',
+        });
+        return false;
+      }
+    };
 
-      setGroupOrder(data.groupOrder);
-      setItems(data.groupOrder.items || []);
-      setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
-      setAmounts(data.groupOrder.paymentDetails.amounts || []);
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: (err as Error).message || 'Failed to load group order',
-      });
-    } finally {
-      setLoading(false);
-    }
+    const success = await tryFetch(currentRetry);
+    setLoading(false);
+    return success;
   }
+
+  // Initial fetch and polling
+  useEffect(() => {
+    if (!groupLink || !token) return;
+    fetchGroupOrder(); // Initial fetch
+    const interval = setInterval(fetchGroupOrder, 15000); // Poll every 15s
+    return () => clearInterval(interval);
+  }, [groupLink, token]);
 
   // Fetch menu items
   useEffect(() => {
@@ -418,53 +435,6 @@ export default function GroupOrderPage() {
       });
     } finally {
       setSavingItems(false);
-    }
-  }
-
-  // Persist payment options to backend
-  async function persistPaymentOptions() {
-    if (!groupOrder || !token) return;
-    try {
-      const updatePayload = {
-        groupOrderId: groupOrder._id,
-        splitType,
-        amounts:
-          splitType === 'custom'
-            ? amounts
-            : groupOrder.members.map((m) => ({
-                user: m._id,
-                amount: calculateTotal() / groupOrder.members.length,
-              })),
-      };
-
-      const res = await fetch(
-        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/update-payment-options`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatePayload),
-        }
-      );
-
-      if (!res.ok) {
-        const errResp = await res.json();
-        throw new Error(errResp.message || 'Failed to update payment options');
-      }
-
-      await fetchGroupOrder();
-      toast({
-        title: 'Payment options updated',
-        description: 'Payment settings have been saved.',
-      });
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to update payment options',
-        description: (e as Error).message,
-      });
     }
   }
 
@@ -597,7 +567,9 @@ export default function GroupOrderPage() {
   // Update custom split amounts
   function updateAmountForUser(userId: string, newAmount: number) {
     setAmounts((prev) => {
-      const existing = prev.find((a) => a.user === userId);
+      const existing = prev.find((a) => a.user
+
+=== userId);
       if (existing) {
         return prev.map((a) =>
           a.user === userId ? { ...a, amount: newAmount } : a
@@ -607,43 +579,6 @@ export default function GroupOrderPage() {
       }
     });
   }
-
-  // Persist payment options when splitType or amounts change
-  useEffect(() => {
-    if (groupOrder && (splitType === 'equal' || splitType === 'custom')) {
-      persistPaymentOptions();
-    }
-  }, [splitType, amounts, groupOrder]);
-
-  // Initialize amounts for custom split
-  useEffect(() => {
-    if (splitType === 'custom' && groupOrder) {
-      const currentAmounts =
-        amounts.length > 0
-          ? amounts
-          : groupOrder.members.map((member) => ({
-              user: member._id,
-              amount: calculateTotal() / groupOrder.members.length,
-            }));
-
-      const hasAllMembers = groupOrder.members.every((member) =>
-        currentAmounts.find((a) => a.user === member._id)
-      );
-
-      if (!hasAllMembers) {
-        const completeAmounts = groupOrder.members.map((member) => {
-          const existing = currentAmounts.find((a) => a.user === member._id);
-          return (
-            existing || {
-              user: member._id,
-              amount: calculateTotal() / groupOrder.members.length,
-            }
-          );
-        });
-        setAmounts(completeAmounts);
-      }
-    }
-  }, [splitType, groupOrder, amounts, calculateTotal]);
 
   // Pay for self
   async function payForSelf() {
@@ -703,7 +638,7 @@ export default function GroupOrderPage() {
     }
   }
 
-  // Update group order (for split payments)
+  // Update group order (for split payments and payment options)
   async function updateOrder() {
     if (!groupOrder || !token) return;
     setPaymentProcessing(true);
@@ -756,7 +691,7 @@ export default function GroupOrderPage() {
       }
 
       for (const txn of data.data.transactions) {
-        if (txn.userId !== user?.id) continue;
+        if (txn.user !== user?.id) continue;
         await openRazorpayCheckout(txn);
       }
 
@@ -781,7 +716,7 @@ export default function GroupOrderPage() {
     razorpayOrderId: string;
     amount: number;
     orderId: string;
-    userId: string;
+    user: string;
   }) =>
     new Promise<void>((resolve, reject) => {
       if (!window.Razorpay) {
@@ -886,7 +821,7 @@ export default function GroupOrderPage() {
         <div className="animate-pulse text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30"></div>
           <p className="text-gray-600 dark:text-gray-400">
-            Loading group order details...
+            Loading group order details... (Attempt {retryCount + 1}/4)
           </p>
         </div>
       </div>
@@ -896,9 +831,28 @@ export default function GroupOrderPage() {
   if (!groupOrder) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="animate-pulse text-center">
-          <h2>Group Order Not Found</h2>
-          <Button onClick={() => router.push('/')}>Back to Home</Button>
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            Group Order Not Found
+          </h2>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            The group order may not exist or is temporarily unavailable.
+          </p>
+          <Button
+            onClick={() => {
+              fetchGroupOrder();
+            }}
+            className="mt-4 bg-red-600 hover:bg-red-700 text-white"
+          >
+            Retry
+          </Button>
+          <Button
+            onClick={() => router.push('/')}
+            variant="outline"
+            className="mt-2"
+          >
+            Back to Home
+          </Button>
         </div>
       </div>
     );
