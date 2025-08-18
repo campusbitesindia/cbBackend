@@ -327,12 +327,14 @@ export default function GroupOrderPage() {
   async function fetchGroupOrder() {
     setLoading(true);
     try {
+
       const res = await fetch(
         `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/${groupLink}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+      console.log(res);
       if (!res.ok) throw new Error('Failed to load group order');
       const data = await res.json();
 
