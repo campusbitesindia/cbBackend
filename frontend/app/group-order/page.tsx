@@ -528,18 +528,20 @@ export default function GroupOrderPage() {
   }, [selectedMenuItemId, newItemQuantity, menuItems, items, user, toast, persistItemsToBackend]);
 
   // Calculate total for a specific user
-  function calculateUserTotal(userId: string) {
-  return items.reduce(
-    (acc, i) =>
-      i.user.toString() === userId
-        ? acc +
-          (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) *
-          i.quantity
-        : acc,
-    0
-  );
-}
+function calculateUserTotal(userId: string) {
+  if (!userId || !items || !Array.isArray(items)) return 0;
 
+  return items.reduce((acc, i) => {
+    // Skip items with undefined user
+    if (!i.user) {
+      console.warn('Item with undefined user:', i);
+      return acc;
+    }
+    return i.user.toString() === userId.toString()
+      ? acc + (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity
+      : acc;
+  }, 0);
+}
   // Calculate total for all items
   const calculateTotal = useCallback(() => {
     return items.reduce(
