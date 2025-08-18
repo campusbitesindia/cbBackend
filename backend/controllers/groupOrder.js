@@ -419,3 +419,29 @@ exports.paySelf = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+exports.getAllGroupOrders = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const groupOrders = await GroupOrder.find({
+      $or: [
+        { creator: userId },
+        { members: userId },
+      ],
+    })
+      .populate('creator', 'name email')
+      .populate('members', 'name email')
+      .populate('items.item', 'name price')
+      .populate('paymentDetails.amounts.user', 'name email')
+      .populate('paymentDetails.transactions.user', 'name email')
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      groupOrders,
+    });
+  } catch (err) {
+    console.error('Get All Group Orders Error:', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
