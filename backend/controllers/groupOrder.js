@@ -23,12 +23,11 @@ exports.createGroupOrder = async (req, res) => {
     const groupLink = `group-order-${crypto.randomBytes(8).toString('hex')}`;
     const qrCodeUrl = await QRCode.toDataURL(`https://campus-bites-c7pe.vercel.app/join-group?link=${groupLink}`);
 
-    // Generate 6-8 digit order number
     const lastGroupOrder = await GroupOrder.findOne().sort({ createdAt: -1 });
     let orderNumber = 100000;
     if (lastGroupOrder && lastGroupOrder.orderNumber) {
       orderNumber = Math.max(100000, lastGroupOrder.orderNumber + 1);
-      while (orderNumber > 99999999) orderNumber = 100000; // Reset if exceeds 8 digits
+      while (orderNumber > 99999999) orderNumber = 100000;
     }
 
     const groupOrder = await GroupOrder.create({
@@ -61,7 +60,6 @@ exports.updateGroupOrder = async (req, res) => {
     if (!groupOrder.members.includes(userId)) return res.status(403).json({ message: "Unauthorized" });
     if (!groupOrder.canteen && !canteen) return res.status(400).json({ message: "Canteen ID is required" });
 
-    // Update canteen if provided
     if (canteen) groupOrder.canteen = canteen;
 
     let totalAmount = 0;
@@ -74,7 +72,8 @@ exports.updateGroupOrder = async (req, res) => {
           item: item.item,
           quantity: item.quantity,
           nameAtPurchase: dbItem.name,
-          priceAtPurchase: dbItem.price
+          priceAtPurchase: dbItem.price,
+          user: item.user || userId // Ensure user is assigned
         });
       }
     }
@@ -90,8 +89,9 @@ exports.updateGroupOrder = async (req, res) => {
     groupOrder.paymentDetails.transactions = groupOrder.paymentDetails.transactions || [];
     groupOrder.paymentDetails.paymentMethod = paymentMethod || 'upi';
 
-    // Create individual orders and transactions for each member
     const transactions = [];
+    let currentUserTransaction = null;
+
     for (const amountEntry of groupOrder.paymentDetails.amounts) {
       const user = await User.findById(amountEntry.user);
       if (!user) continue;
@@ -102,7 +102,7 @@ exports.updateGroupOrder = async (req, res) => {
         OrderNumber: orderNumber,
         student: amountEntry.user,
         canteen: groupOrder.canteen,
-        items: itemDetails,
+        items: itemDetails.filter(item => item.user.toString() === amountEntry.user.toString()),
         total: amountEntry.amount,
         status: "pending",
         pickupTime: pickupTime || new Date().toISOString(),
@@ -134,55 +134,84 @@ exports.updateGroupOrder = async (req, res) => {
           amount: amountEntry.amount,
           orderId: memberOrder._id
         });
+
+        if (amountEntry.user.toString() === userId.toString()) {
+          currentUserTransaction = {
+            userId: amountEntry.user,
+            transactionId: transaction._id,
+            amount: amountEntry.amount,
+            orderId: memberOrder._id
+          };
+        }
       } else {
+        // Check for existing valid transaction
         const existingTransaction = await Transaction.findOne({
           orderId: memberOrder._id,
-          status: { $in: ["created", "attempted", "paid"] }
+          status: { $in: ["created", "attempted"] } // Allow retry for 'attempted'
         });
-        if (existingTransaction) continue;
 
-        const receiptBase = `${groupOrderId}_${amountEntry.user}`;
-        const receiptHash = crypto.createHash('md5').update(receiptBase).digest('hex').slice(0, 8);
-        const receipt = `grp_${groupOrderId.slice(-4)}_${receiptHash}`;
+        if (!existingTransaction) {
+          const receiptBase = `${groupOrderId}_${amountEntry.user}`;
+          const receiptHash = crypto.createHash('md5').update(receiptBase).digest('hex').slice(0, 8);
+          const receipt = `grp_${groupOrderId.slice(-4)}_${receiptHash}`;
 
-        const razorpayOrder = await razorpay.orders.create({
-          amount: Math.round(amountEntry.amount * 100),
-          currency: "INR",
-          receipt: receipt,
-          notes: {
-            orderId: memberOrder._id.toString(),
-            userId: amountEntry.user.toString(),
-            groupOrderId: groupOrderId,
-            canteenId: groupOrder.canteen.toString()
+          const razorpayOrder = await razorpay.orders.create({
+            amount: Math.round(amountEntry.amount * 100),
+            currency: "INR",
+            receipt: receipt,
+            notes: {
+              orderId: memberOrder._id.toString(),
+              userId: amountEntry.user.toString(),
+              groupOrderId: groupOrderId,
+              canteenId: groupOrder.canteen.toString()
+            }
+          });
+
+          const transaction = await Transaction.create({
+            orderId: memberOrder._id,
+            userId: amountEntry.user,
+            razorpayOrderId: razorpayOrder.id,
+            amount: amountEntry.amount,
+            currency: "INR",
+            status: "created",
+            paymentMethod: "upi"
+          });
+
+          memberOrder.status = "payment_pending";
+          await memberOrder.save();
+
+          groupOrder.paymentDetails.transactions.push({
+            user: amountEntry.user,
+            transactionId: transaction._id,
+            status: "created"
+          });
+
+          transactions.push({
+            userId: amountEntry.user,
+            transactionId: transaction._id,
+            razorpayOrderId: razorpayOrder.id,
+            amount: amountEntry.amount,
+            orderId: memberOrder._id
+          });
+
+          if (amountEntry.user.toString() === userId.toString()) {
+            currentUserTransaction = {
+              userId: amountEntry.user,
+              transactionId: transaction._id,
+              razorpayOrderId: razorpayOrder.id,
+              amount: amountEntry.amount,
+              orderId: memberOrder._id
+            };
           }
-        });
-
-        const transaction = await Transaction.create({
-          orderId: memberOrder._id,
-          userId: amountEntry.user,
-          razorpayOrderId: razorpayOrder.id,
-          amount: amountEntry.amount,
-          currency: "INR",
-          status: "created",
-          paymentMethod: "upi"
-        });
-
-        memberOrder.status = "payment_pending";
-        await memberOrder.save();
-
-        groupOrder.paymentDetails.transactions.push({
-          user: amountEntry.user,
-          transactionId: transaction._id,
-          status: "created"
-        });
-
-        transactions.push({
-          userId: amountEntry.user,
-          transactionId: transaction._id,
-          razorpayOrderId: razorpayOrder.id,
-          amount: amountEntry.amount,
-          orderId: memberOrder._id
-        });
+        } else if (amountEntry.user.toString() === userId.toString()) {
+          currentUserTransaction = {
+            userId: amountEntry.user,
+            transactionId: existingTransaction._id,
+            razorpayOrderId: existingTransaction.razorpayOrderId,
+            amount: amountEntry.amount,
+            orderId: memberOrder._id
+          };
+        }
       }
     }
 
@@ -191,10 +220,24 @@ exports.updateGroupOrder = async (req, res) => {
     }
     await groupOrder.save();
 
+    // Populate group order for response
+    const populatedGroupOrder = await GroupOrder.findById(groupOrderId)
+      .populate("creator", "name email")
+      .populate("members", "name email")
+      .populate("items.item", "name price")
+      .populate("paymentDetails.amounts.user", "name email")
+      .populate("paymentDetails.transactions.user", "name email")
+      .lean();
+
+    global.broadcastGroupOrderUpdate(groupOrder.groupLink, populatedGroupOrder);
+
     return res.status(200).json({
       success: true,
       message: "Group order updated and transactions initiated successfully",
-      data: { groupOrder, transactions }
+      data: {
+        groupOrder: populatedGroupOrder,
+        transaction: currentUserTransaction // Return only the current user's transaction
+      }
     });
   } catch (err) {
     console.error("Update Group Order Error:", err);
@@ -202,6 +245,7 @@ exports.updateGroupOrder = async (req, res) => {
   }
 };
 
+// Rest of the controller remains unchanged
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { groupOrderId, status } = req.body;
@@ -210,24 +254,20 @@ exports.updateOrderStatus = async (req, res) => {
     const groupOrder = await GroupOrder.findById(groupOrderId);
     if (!groupOrder) return res.status(404).json({ message: "Group order not found" });
 
-    // Check if user is a vendor for COD status updates
     const user = await User.findById(userId);
     if (groupOrder.paymentDetails.paymentMethod === 'cod' && !user.isVendor) {
       return res.status(403).json({ message: "Only vendors can update COD order status" });
     }
 
-    // Update status
     if (["pending", "payment_pending", "placed", "preparing", "ready", "completed", "cancelled"].includes(status)) {
       groupOrder.status = status;
 
-      // Update individual orders
       const orders = await Order.find({ groupOrderId });
       for (const order of orders) {
         order.status = status;
         await order.save();
       }
 
-      // Update transaction statuses
       if (status === "completed" || status === "cancelled") {
         for (const transaction of groupOrder.paymentDetails.transactions) {
           const tx = await Transaction.findById(transaction.transactionId);
@@ -346,7 +386,6 @@ exports.updateGroupOrderItems = async (req, res) => {
     groupOrder.totalAmount = newTotalAmount;
     await groupOrder.save();
 
-    // Populate before broadcasting
     const populatedGroupOrder = await GroupOrder.findById(groupOrderId)
       .populate("creator", "name email")
       .populate("members", "name email")
@@ -383,14 +422,12 @@ exports.paySelf = async (req, res) => {
       return res.status(403).json({ message: "User is not a member of this group" });
     }
 
-    // Verify amount
     const userItems = groupOrder.items.filter(item => item.user?.toString() === userId);
     const userTotal = userItems.reduce((sum, item) => sum + (item.priceAtPurchase * item.quantity), 0);
     if (Math.abs(userTotal - amount) > 0.01 || amount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
 
-    // Create an individual order for the user's items
     const orderNumber = `ORD-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
     const userOrder = await Order.create({
       OrderNumber: orderNumber,
@@ -403,7 +440,6 @@ exports.paySelf = async (req, res) => {
       groupOrderId: groupOrder._id
     });
 
-    // Create Razorpay order
     const receipt = `self_${groupOrderId.slice(-4)}_${userId.slice(-4)}`;
     const razorpayOrder = await razorpay.orders.create({
       amount: Math.round(amount * 100),
@@ -417,9 +453,8 @@ exports.paySelf = async (req, res) => {
       }
     });
 
-    // Create transaction with orderId
     const transaction = await Transaction.create({
-      orderId: userOrder._id, // Set orderId to the individual Order's _id
+      orderId: userOrder._id,
       userId,
       razorpayOrderId: razorpayOrder.id,
       amount,
@@ -428,7 +463,6 @@ exports.paySelf = async (req, res) => {
       paymentMethod: "upi"
     });
 
-    // Update groupOrder
     groupOrder.paymentDetails.splitType = 'self';
     groupOrder.paymentDetails.amounts = groupOrder.paymentDetails.amounts.filter(a => a.user.toString() !== userId);
     groupOrder.paymentDetails.amounts.push({ user: userId, amount });
@@ -440,7 +474,6 @@ exports.paySelf = async (req, res) => {
     groupOrder.status = "payment_pending";
     await groupOrder.save();
 
-    // Populate group order for broadcasting
     const populatedGroupOrder = await GroupOrder.findById(groupOrderId)
       .populate("creator", "name email")
       .populate("members", "name email")
@@ -458,7 +491,8 @@ exports.paySelf = async (req, res) => {
         transactionId: transaction._id,
         razorpayOrderId: razorpayOrder.id,
         amount,
-        orderId: userOrder._id
+        orderId: userOrder._id,
+        user: userId
       }
     });
   } catch (err) {
