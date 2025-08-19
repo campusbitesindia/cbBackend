@@ -290,11 +290,11 @@ export default function GroupOrderPage() {
       );
       if (!res.ok) {
         const errResp = await res.json();
-        console.error('Failed to load group order:', errResp);
-        throw new Error(errResp.message || `Failed to load group order: ${res.statusText}`);
+        console.error('Failed to load group order:', { status: res.status, errResp });
+        throw new Error(errResp.message || `Failed to load group order: ${res.status}`);
       }
       const data = await res.json();
-      console.log('Fetched group order:', data.groupOrder);
+      console.log('Fetched group order:', JSON.stringify(data.groupOrder, null, 2));
       if (!data.groupOrder.members.some((m: Member) => m._id === user.id)) {
         console.warn('Current user not in group members:', { userId: user.id, members: data.groupOrder.members });
         toast({
@@ -302,6 +302,8 @@ export default function GroupOrderPage() {
           title: 'Not a Member',
           description: 'You are not a member of this group order. Please join to continue.',
         });
+      } else {
+        console.log('User confirmed as member:', { userId: user.id });
       }
       setGroupOrder(data.groupOrder);
       setItems(data.groupOrder.items || []);
@@ -342,16 +344,17 @@ export default function GroupOrderPage() {
       socket.emit('joinGroupOrder', groupLink);
     });
 
-    socket.on('ORDER_UPDATED', (data) => {
+    socket.on('ORDER_UPDATED', async (data) => {
       console.log('Received ORDER_UPDATED:', JSON.stringify(data, null, 2));
       if (!data.groupOrder.members.some((m: { _id: string | undefined }) => m._id === user?.id)) {
         console.warn('Current user not in updated group members:', { userId: user?.id, members: data.groupOrder.members });
         toast({
           variant: 'destructive',
           title: 'Membership Update Error',
-          description: 'You are no longer a member of this group order. Please rejoin.',
+          description: 'You are no longer a member of this group order. Attempting to rejoin...',
         });
-        fetchGroupOrder();
+        await handleJoinGroup();
+        await fetchGroupOrder();
         return;
       }
       setGroupOrder(data.groupOrder);
@@ -408,7 +411,7 @@ export default function GroupOrderPage() {
         );
         if (!res.ok) throw new Error('Failed to fetch canteen menu');
         const data = await res.json();
-        console.log('Fetched menu items:', data.data);
+        console.log('Fetched menu items:', JSON.stringify(data.data, null, 2));
         setMenuItems(data?.data || []);
         if (data.data.length > 0 && !selectedMenuItemId) {
           setSelectedMenuItemId(data.data[0]._id);
@@ -436,11 +439,11 @@ export default function GroupOrderPage() {
           items: updatedItems.map((item) => ({
             item: typeof item.item === 'object' ? item.item._id : item.item,
             quantity: item.quantity,
-            user: item.user || user.id,
+            user: item.user || user.id, // Ensure user is set
           })),
         };
 
-        console.log('Persisting items to backend:', updatePayload);
+        console.log('Persisting items to backend:', JSON.stringify(updatePayload, null, 2));
         const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/groupOrder/items`, {
           method: 'POST',
           headers: {
@@ -452,7 +455,7 @@ export default function GroupOrderPage() {
 
         if (!res.ok) {
           const errResp = await res.json();
-          console.error('Failed to persist items:', errResp);
+          console.error('Failed to persist items:', { status: res.status, errResp });
           throw new Error(errResp.message || 'Failed to update group order');
         }
 
@@ -564,14 +567,14 @@ export default function GroupOrderPage() {
           quantity: newItemQuantity,
           nameAtPurchase: selectedMenuItem.name,
           priceAtPurchase: selectedMenuItem.price,
-          user: user?.id || '',
+          user: user?.id || '', // Ensure user ID is set
         });
       }
 
       setItems(updatedItems);
       setNewItemQuantity(1);
 
-      console.log('Added item, updated items:', updatedItems);
+      console.log('Added item, updated items:', JSON.stringify(updatedItems, null, 2));
       toast({
         title: 'Item added',
         description: 'Item successfully added to the order.',
@@ -591,8 +594,8 @@ export default function GroupOrderPage() {
 
     return items.reduce((acc, i) => {
       if (!i.user) {
-        console.warn('Item with undefined user:', i);
-        return acc;
+        console.warn('Item with undefined user, assigning to current user:', { item: i, userId });
+        i.user = userId; // Assign current user to prevent undefined issues
       }
       return i.user.toString() === userId.toString()
         ? acc + (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity
@@ -627,22 +630,69 @@ export default function GroupOrderPage() {
     []
   );
 
+  // Join group
+  const handleJoinGroup = useCallback(
+    async () => {
+      try {
+        if (!token) {
+          console.error('No token available for joining group');
+          throw new Error('Not authenticated');
+        }
+        if (groupOrder && groupOrder.members.find((m) => m._id === user?.id)) {
+          console.log('User already a member:', user?.id);
+          toast({ title: 'Already a member' });
+          return;
+        }
+        console.log('Joining group with link:', groupLink);
+        const res = await fetch('https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ link: groupLink }),
+        });
+        if (!res.ok) {
+          const errResp = await res.json();
+          console.error('Failed to join group:', { status: res.status, errResp });
+          throw new Error(errResp.message || 'Failed to join group');
+        }
+        console.log('Joined group successfully');
+        toast({ title: 'Joined group successfully' });
+        await fetchGroupOrder();
+      } catch (e) {
+        console.error('handleJoinGroup error:', e);
+        toast({
+          variant: 'destructive',
+          title: 'Join failed',
+          description: (e as Error).message,
+        });
+      }
+    },
+    [groupOrder, token, user, groupLink, toast, fetchGroupOrder]
+  );
+
   // Pay for self
   const payForSelf = useCallback(
     async () => {
       if (!groupOrder || !token || !user) {
         console.error('Missing required data for payForSelf:', { groupOrder, token, user });
+        toast({
+          variant: 'destructive',
+          title: 'Failed',
+          description: 'Missing group order or user data.',
+        });
         return;
       }
       setPaymentProcessing(true);
 
       try {
         const userTotal = calculateUserTotal(user.id);
-        if (userTotal === 0) {
-          console.warn('No items to pay for user:', user.id);
+        if (userTotal <= 0) {
+          console.warn('No items to pay for user:', { userId: user.id, userTotal });
           toast({
             variant: 'destructive',
-            title: 'No items',
+            title: 'No Payment Required',
             description: 'You have not added any items to pay for.',
           });
           return;
@@ -654,7 +704,7 @@ export default function GroupOrderPage() {
           amount: userTotal,
         };
 
-        console.log('Sending payForSelf payload:', updatePayload);
+        console.log('Sending payForSelf payload:', JSON.stringify(updatePayload, null, 2));
         const res = await fetch(
           `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/pay-self`,
           {
@@ -669,12 +719,12 @@ export default function GroupOrderPage() {
 
         if (!res.ok) {
           const errResp = await res.json();
-          console.error('payForSelf failed:', errResp);
+          console.error('Pay for self failed:', { status: res.status, errResp });
           throw new Error(errResp.message || 'Failed to initiate payment');
         }
 
         const data = await res.json();
-        console.log('payForSelf response:', data);
+        console.log('Pay for self response:', JSON.stringify(data, null, 2));
         await openRazorpayCheckout(data.transaction);
         await fetchGroupOrder();
 
@@ -687,7 +737,7 @@ export default function GroupOrderPage() {
         toast({
           variant: 'destructive',
           title: 'Failed',
-          description: (e as Error).message,
+          description: (e as Error).message || 'Failed to process payment.',
         });
       } finally {
         setPaymentProcessing(false);
@@ -714,7 +764,10 @@ export default function GroupOrderPage() {
         const totalOrderAmount = calculateTotal();
         const updatePayload = {
           groupOrderId: groupOrder._id,
-          items,
+          items: items.map((item) => ({
+            ...item,
+            user: item.user || user.id, // Ensure all items have a user
+          })),
           splitType,
           amounts:
             splitType === 'custom' || splitType === 'equal'
@@ -729,7 +782,7 @@ export default function GroupOrderPage() {
           canteen: groupOrder.canteen,
         };
 
-        console.log('Sending update payload for splitType:', splitType, updatePayload);
+        console.log('Sending update payload for splitType:', splitType, JSON.stringify(updatePayload, null, 2));
 
         // Validate custom split amounts
         if (splitType === 'custom') {
@@ -738,6 +791,7 @@ export default function GroupOrderPage() {
             console.error('Custom split amounts do not match order total:', {
               assignedTotal,
               totalOrderAmount,
+              amounts,
             });
             toast({
               variant: 'destructive',
@@ -748,7 +802,7 @@ export default function GroupOrderPage() {
           }
           const userAmount = amounts.find((a) => a.user === user.id)?.amount || 0;
           if (userAmount <= 0) {
-            console.error('No valid amount assigned for current user:', user.id);
+            console.error('No valid amount assigned for current user:', { userId: user.id, amounts });
             toast({
               variant: 'destructive',
               title: 'Invalid Amount',
@@ -772,69 +826,78 @@ export default function GroupOrderPage() {
 
         if (!res.ok) {
           const errResp = await res.json();
-          console.error('Update order failed:', errResp);
-          throw new Error(errResp.message || 'Failed to update group order');
+          console.error('Update order failed:', { status: res.status, errResp });
+          throw new Error(errResp.message || `Failed to update group order: ${res.status}`);
         }
 
         const data = await res.json();
-        console.log('Received update response:', data);
+        console.log('Received update response:', JSON.stringify(data, null, 2));
 
-        // Validate groupOrder and members
-        if (!data.data.groupOrder || !data.data.groupOrder.members.some((m: Member) => m._id === user.id)) {
+        // Validate response structure
+        if (!data.data || !data.data.groupOrder) {
+          console.error('Invalid response structure:', data);
+          throw new Error('Invalid response from server: missing groupOrder');
+        }
+
+        // Check membership and rejoin if necessary
+        if (!data.data.groupOrder.members.some((m: Member) => m._id === user.id)) {
           console.error('Current user not in updated group members:', {
             userId: user.id,
-            members: data.data.groupOrder?.members,
+            members: data.data.groupOrder.members,
           });
           toast({
             variant: 'destructive',
             title: 'Membership Error',
-            description: 'You are no longer a member of this group order. Please rejoin.',
+            description: 'You were removed from the group. Attempting to rejoin...',
           });
+          await handleJoinGroup();
           await fetchGroupOrder();
           return;
         }
 
+        // Update group order state
         setGroupOrder(data.data.groupOrder);
 
-        if (!data.data.transactions || data.data.transactions.length === 0) {
-          console.warn('No transactions returned from updateOrder for splitType:', splitType);
+        // Validate transactions
+        if (!data.data.transactions || !Array.isArray(data.data.transactions)) {
+          console.error('No valid transactions returned:', { transactions: data.data.transactions });
           toast({
-            variant: 'default',
-            title: 'Update successful',
-            description: 'Group order updated but no new transactions created',
+            variant: 'destructive',
+            title: 'No Transactions',
+            description: 'No payment transactions were created. Please try again.',
           });
           return;
         }
 
         const userTransactions = data.data.transactions.filter((txn: any) => txn.user === user.id);
-        console.log('User transactions:', userTransactions);
+        console.log('User transactions:', JSON.stringify(userTransactions, null, 2));
 
         if (userTransactions.length === 0) {
-          console.warn('No transactions found for user:', user.id);
+          console.warn('No transactions found for user:', { userId: user.id, transactions: data.data.transactions });
           toast({
             variant: 'destructive',
-            title: 'No payment required',
+            title: 'No Payment Required',
             description: 'No transactions were created for your account. Please check your split amount.',
           });
           return;
         }
 
         for (const txn of userTransactions) {
-          if (!txn.razorpayOrderId) {
-            console.error('Invalid transaction, missing razorpayOrderId:', txn);
+          if (!txn.razorpayOrderId || typeof txn.razorpayOrderId !== 'string') {
+            console.error('Invalid transaction, missing or invalid razorpayOrderId:', JSON.stringify(txn, null, 2));
             toast({
               variant: 'destructive',
-              title: 'Invalid transaction',
-              description: 'Transaction data is incomplete.',
+              title: 'Invalid Transaction',
+              description: 'Transaction data is incomplete. Please try again.',
             });
             continue;
           }
-          console.log('Initiating Razorpay checkout for transaction:', txn);
+          console.log('Initiating Razorpay checkout for transaction:', JSON.stringify(txn, null, 2));
           await openRazorpayCheckout(txn);
         }
 
         toast({
-          title: 'Payment initiated',
+          title: 'Payment Initiated',
           description: 'Please complete your payment(s) to confirm the order.',
         });
       } catch (e) {
@@ -842,13 +905,13 @@ export default function GroupOrderPage() {
         toast({
           variant: 'destructive',
           title: 'Failed',
-          description: (e as Error).message,
+          description: (e as Error).message || 'Failed to process payment.',
         });
       } finally {
         setPaymentProcessing(false);
       }
     },
-    [groupOrder, token, user, items, splitType, amounts, calculateTotal, calculateUserTotal, toast]
+    [groupOrder, token, user, items, splitType, amounts, calculateTotal, calculateUserTotal, toast, fetchGroupOrder, handleJoinGroup]
   );
 
   // Razorpay checkout
@@ -871,14 +934,14 @@ export default function GroupOrderPage() {
           return reject(new Error('Razorpay SDK not loaded'));
         }
 
-        console.log('Opening Razorpay checkout with transaction:', transaction);
+        console.log('Opening Razorpay checkout with transaction:', JSON.stringify(transaction, null, 2));
 
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_bnxn34fZ9ODg4f',
           amount: Math.round(transaction.amount * 100),
           currency: 'INR',
           name: 'Campus Bites',
-          description: 'Group Order Payment',
+          description: `Group Order Payment ${groupOrder?._id}`,
           order_id: transaction.razorpayOrderId,
           handler: async function (response: any) {
             try {
@@ -908,7 +971,7 @@ export default function GroupOrderPage() {
 
               if (!res.ok) {
                 const errResp = await res.json();
-                console.error('Payment verification failed:', errResp);
+                console.error('Payment verification failed:', { status: res.status, errResp });
                 throw new Error(errResp.message || 'Payment verification failed');
               }
 
@@ -917,6 +980,7 @@ export default function GroupOrderPage() {
                 description: 'Thank you for completing the payment!',
               });
 
+              await fetchGroupOrder();
               resolve();
             } catch (err) {
               console.error('Payment verification error:', err);
@@ -956,49 +1020,7 @@ export default function GroupOrderPage() {
           reject(err);
         }
       }),
-    [toast, token, user]
-  );
-
-  // Join group
-  const handleJoinGroup = useCallback(
-    async () => {
-      try {
-        if (!token) {
-          console.error('No token available for joining group');
-          throw new Error('Not authenticated');
-        }
-        if (groupOrder && groupOrder.members.find((m) => m._id === user?.id)) {
-          console.log('User already a member:', user?.id);
-          toast({ title: 'Already a member' });
-          return;
-        }
-        console.log('Joining group with link:', groupLink);
-        const res = await fetch('https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ link: groupLink }),
-        });
-        if (!res.ok) {
-          const errResp = await res.json();
-          console.error('Failed to join group:', errResp);
-          throw new Error(errResp.message || 'Failed to join group');
-        }
-        console.log('Joined group successfully');
-        toast({ title: 'Joined group successfully' });
-        await fetchGroupOrder();
-      } catch (e) {
-        console.error('handleJoinGroup error:', e);
-        toast({
-          variant: 'destructive',
-          title: 'Join failed',
-          description: (e as Error).message,
-        });
-      }
-    },
-    [groupOrder, token, user, groupLink, toast, fetchGroupOrder]
+    [toast, token, user, groupOrder, fetchGroupOrder]
   );
 
   if (loading) {
@@ -1378,7 +1400,7 @@ export default function GroupOrderPage() {
                             amount: equalAmount,
                           }));
                           setAmounts(equalAmounts);
-                          console.log('Set equal split amounts:', equalAmounts);
+                          console.log('Set equal split amounts:', JSON.stringify(equalAmounts, null, 2));
                         }}
                         disabled={savingItems}
                         className="ml-4 text-xs"
@@ -1537,6 +1559,7 @@ export default function GroupOrderPage() {
                 return (
                   <>
                     <Button
+                      type="button" // Prevent form submission
                       disabled={
                         paymentProcessing ||
                         savingItems ||
@@ -1545,8 +1568,14 @@ export default function GroupOrderPage() {
                         paymentAmount <= 0
                       }
                       onClick={(e) => {
-                        e.preventDefault(); // Prevent any form submission
-                        console.log('Payment button clicked, splitType:', splitType);
+                        e.preventDefault(); // Extra precaution
+                        console.log('Payment button clicked, splitType:', splitType, {
+                          isCustomSplitValid,
+                          paymentAmount,
+                          itemsLength: items.length,
+                          paymentProcessing,
+                          savingItems,
+                        });
                         splitType === 'self' ? payForSelf() : updateOrder();
                       }}
                       className={`w-full py-4 sm:py-5 text-sm sm:text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${
