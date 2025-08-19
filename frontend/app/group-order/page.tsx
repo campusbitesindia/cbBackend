@@ -297,7 +297,7 @@ export default function GroupOrderPage() {
       }
       setGroupOrder(data.groupOrder);
       setItems(data.groupOrder.items || []);
-      setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
+      setSplitType(data.groupOrder.paymentDetails.splitType || 'self');
       setAmounts(data.groupOrder.paymentDetails.amounts || []);
     } catch (err) {
       toast({
@@ -344,7 +344,7 @@ export default function GroupOrderPage() {
       }
       setGroupOrder(data.groupOrder);
       setItems(data.groupOrder.items || []);
-      setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
+      setSplitType(data.groupOrder.paymentDetails.splitType || 'self');
       setAmounts(data.groupOrder.paymentDetails.amounts || []);
       toast({
         title: 'Order Updated',
