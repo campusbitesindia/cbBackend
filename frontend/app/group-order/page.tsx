@@ -77,9 +77,9 @@ const TransactionRowDesktop = ({
   amount: number;
 }) => {
   const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    green: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   };
 
   const statusText =
@@ -144,9 +144,9 @@ const TransactionRowMobile = ({
   amount: number;
 }) => {
   const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    yellow: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    green: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   };
 
   const statusText =

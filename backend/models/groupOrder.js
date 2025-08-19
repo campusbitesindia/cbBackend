@@ -12,12 +12,13 @@ const groupOrderSchema = new mongoose.Schema({
       item: { type: mongoose.Schema.Types.ObjectId, ref: "Item" },
       quantity: { type: Number, default: 1 },
       nameAtPurchase: { type: String },
-      priceAtPurchase: { type: Number }
+      priceAtPurchase: { type: Number },
+      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }  // Added this field
     }
   ],
   totalAmount: { type: Number, default: 0 },
   paymentDetails: {
-    splitType: { type: String, enum: ["equal", "custom"], default: "equal" },
+    splitType: { type: String, enum: ["equal", "custom", "self"], default: "equal" },  // Added "self" to enum
     amounts: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
