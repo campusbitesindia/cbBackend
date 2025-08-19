@@ -221,13 +221,12 @@ export default function GroupOrderPage() {
   const [groupOrder, setGroupOrder] = useState<GroupOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
+  // Default splitType 'self'
   const [splitType, setSplitType] = useState<'equal' | 'custom' | 'self'>('self');
   const [amounts, setAmounts] = useState<PaymentAmount[]>([]);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [savingItems, setSavingItems] = useState(false);
-  const [menuItems, setMenuItems] = useState<
-    { _id: string; name: string; price: number }[]
-  >([]);
+  const [menuItems, setMenuItems] = useState<{ _id: string; name: string; price: number }[]>([]);
   const [selectedMenuItemId, setSelectedMenuItemId] = useState<string | null>(null);
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
 
@@ -239,6 +238,12 @@ export default function GroupOrderPage() {
 
   const updateTimeout = useRef<NodeJS.Timeout | null>(null);
   const socketRef = useRef<ReturnType<typeof io> | null>(null);
+
+  // Helper: sanitize splitType from backend or socket to only allow these values or fallback to 'self'
+  const VALID_SPLIT_TYPES = ['self', 'equal', 'custom'] as const;
+  function sanitizeSplitType(type: any): 'equal' | 'custom' | 'self' {
+    return VALID_SPLIT_TYPES.includes(type) ? type : 'self';
+  }
 
   // Load Razorpay SDK
   useEffect(() => {
@@ -297,7 +302,8 @@ export default function GroupOrderPage() {
       }
       setGroupOrder(data.groupOrder);
       setItems(data.groupOrder.items || []);
-      setSplitType(data.groupOrder.paymentDetails.splitType || 'self');
+      // Use sanitized splitType
+      setSplitType(sanitizeSplitType(data.groupOrder.paymentDetails.splitType));
       setAmounts(data.groupOrder.paymentDetails.amounts || []);
     } catch (err) {
       toast({
@@ -344,7 +350,7 @@ export default function GroupOrderPage() {
       }
       setGroupOrder(data.groupOrder);
       setItems(data.groupOrder.items || []);
-      setSplitType(data.groupOrder.paymentDetails.splitType || 'self');
+      setSplitType(sanitizeSplitType(data.groupOrder.paymentDetails.splitType));
       setAmounts(data.groupOrder.paymentDetails.amounts || []);
       toast({
         title: 'Order Updated',
@@ -475,7 +481,7 @@ export default function GroupOrderPage() {
     [items, persistItemsToBackend, toast]
   );
 
-  // Update item quantity
+  // Update item quantity debounced
   const updateItemQuantityDebounced = useCallback(
     (itemId: string, quantity: number) => {
       if (updateTimeout.current) clearTimeout(updateTimeout.current);
@@ -562,7 +568,7 @@ export default function GroupOrderPage() {
     if (!userId || !items || !Array.isArray(items)) return 0;
 
     return items.reduce((acc, i) => {
-      if (!i.user) i.user = userId; // Assign current user to prevent undefined issues
+      if (!i.user) i.user = userId;
       return i.user.toString() === userId.toString()
         ? acc + (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity
         : acc;
@@ -571,13 +577,11 @@ export default function GroupOrderPage() {
 
   // Calculate total for all items
   const calculateTotal = useCallback(() => {
-    const total = items.reduce(
+    return items.reduce(
       (acc, i) =>
-        acc +
-        (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity,
+        acc + (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity,
       0
     );
-    return total;
   }, [items]);
 
   // Update custom split amounts
@@ -585,10 +589,9 @@ export default function GroupOrderPage() {
     (userId: string, newAmount: number) => {
       setAmounts((prev) => {
         const existing = prev.find((a) => a.user === userId);
-        const updatedAmounts = existing
+        return existing
           ? prev.map((a) => (a.user === userId ? { ...a, amount: newAmount } : a))
           : [...prev, { user: userId, amount: newAmount }];
-        return updatedAmounts;
       });
     },
     []
@@ -649,6 +652,7 @@ export default function GroupOrderPage() {
             title: 'No Payment Required',
             description: 'You have not added any items to pay for.',
           });
+          setPaymentProcessing(false);
           return;
         }
 
@@ -696,7 +700,7 @@ export default function GroupOrderPage() {
     [groupOrder, token, user, calculateUserTotal, toast, fetchGroupOrder]
   );
 
-  // Update group order
+  // Update group order with payment split (equal/custom/self)
   const updateOrder = useCallback(
     async () => {
       if (!groupOrder || !token || !user) {
@@ -739,6 +743,7 @@ export default function GroupOrderPage() {
               title: 'Invalid Split',
               description: 'Custom split amounts must equal the order total.',
             });
+            setPaymentProcessing(false);
             return;
           }
           const userAmount = amounts.find((a) => a.user === user.id)?.amount || 0;
@@ -748,6 +753,7 @@ export default function GroupOrderPage() {
               title: 'Invalid Amount',
               description: 'You must assign a non-zero amount for your payment.',
             });
+            setPaymentProcessing(false);
             return;
           }
         }
@@ -782,6 +788,7 @@ export default function GroupOrderPage() {
           });
           await handleJoinGroup();
           await fetchGroupOrder();
+          setPaymentProcessing(false);
           return;
         }
 
@@ -793,6 +800,7 @@ export default function GroupOrderPage() {
             title: 'No Transactions',
             description: 'No payment transactions were created. Please try again.',
           });
+          setPaymentProcessing(false);
           return;
         }
 
@@ -803,6 +811,7 @@ export default function GroupOrderPage() {
             title: 'No Payment Required',
             description: 'No transactions were created for your account. Please check your split amount.',
           });
+          setPaymentProcessing(false);
           return;
         }
 
@@ -835,7 +844,7 @@ export default function GroupOrderPage() {
     [groupOrder, token, user, items, splitType, amounts, calculateTotal, calculateUserTotal, toast, fetchGroupOrder, handleJoinGroup]
   );
 
-  // Razorpay checkout
+  // Razorpay checkout integration
   const openRazorpayCheckout = useCallback(
     (transaction: {
       transactionId: string;
@@ -945,16 +954,11 @@ export default function GroupOrderPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Group Order Not Found
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Group Order Not Found</h2>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             The group order may not exist or is temporarily unavailable.
           </p>
-          <Button
-            onClick={fetchGroupOrder}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white"
-          >
+          <Button onClick={fetchGroupOrder} className="mt-4 bg-red-600 hover:bg-red-700 text-white">
             Retry
           </Button>
           <Button
@@ -1313,10 +1317,11 @@ export default function GroupOrderPage() {
                       </Button>
                     </div>
                     {groupOrder.members.map((member) => {
-                      const userAmount = amounts.find((a) => a.user === member._id) || {
-                        user: member._id,
-                        amount: 0,
-                      };
+                      const userAmount =
+                        amounts.find((a) => a.user === member._id) || {
+                          user: member._id,
+                          amount: 0,
+                        };
                       const total = calculateTotal();
                       const percentage = total > 0 ? (userAmount.amount / total) * 100 : 0;
 
@@ -1342,12 +1347,7 @@ export default function GroupOrderPage() {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M20 12H4"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                               </svg>
                             </Button>
                             <div className="relative flex-1">
@@ -1382,19 +1382,12 @@ export default function GroupOrderPage() {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                               </svg>
                             </Button>
                           </div>
                           <div className="flex items-center justify-end">
-                            <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {percentage.toFixed(0)}%
-                            </span>
+                            <span className="text-sm text-gray-500 dark:text-gray-400">{percentage.toFixed(0)}%</span>
                           </div>
                         </div>
                       );
@@ -1414,12 +1407,9 @@ export default function GroupOrderPage() {
                       </div>
                       <div className="flex justify-between items-center mt-1">
                         <span className="font-medium">Order Total</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          ₹{calculateTotal().toFixed(2)}
-                        </span>
+                        <span className="font-semibold text-gray-900 dark:text-white">₹{calculateTotal().toFixed(2)}</span>
                       </div>
-                      {Math.abs(amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()) >=
-                        0.01 && (
+                      {Math.abs(amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()) >= 0.01 && (
                         <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                           <p className="text-sm text-red-600 dark:text-red-400 font-medium">
                             ⚠️ Total mismatch: ₹
@@ -1456,11 +1446,7 @@ export default function GroupOrderPage() {
                     <Button
                       type="button"
                       disabled={
-                        paymentProcessing ||
-                        savingItems ||
-                        items.length === 0 ||
-                        !isCustomSplitValid ||
-                        paymentAmount <= 0
+                        paymentProcessing || savingItems || items.length === 0 || !isCustomSplitValid || paymentAmount <= 0
                       }
                       onClick={(e) => {
                         e.preventDefault();
