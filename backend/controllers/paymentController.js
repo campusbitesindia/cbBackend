@@ -523,7 +523,7 @@ const getRefundStatus = async (req, res) => {
     }
 }
 
-exports.verifyGroupOrderPayment = async (req, res) => {
+const verifyGroupOrderPayment = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
