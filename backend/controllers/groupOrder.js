@@ -316,12 +316,10 @@ exports.getGroupOrderByLink = async (req, res) => {
 exports.updateGroupOrderItems = async (req, res) => {
   try {
     const { groupOrderId, items } = req.body;
-    if (!groupOrderId || !items || !Array.isArray(items)) {
-      return res.status(400).json({ message: "Group Order ID and items array are required." });
-    }
+    if (!groupOrderId || !items) return res.status(400).json({ message: "Group Order ID and items are required." });
 
     const groupOrder = await GroupOrder.findById(groupOrderId);
-    if (!groupOrder) return res.status(404).json({ message: "Group order not found." });
+    if (!groupOrder) return res.status(404).json({ message: "Group Order not found." });
 
     const updatedItemsForDb = [];
     let newTotalAmount = 0;
@@ -331,20 +329,18 @@ exports.updateGroupOrderItems = async (req, res) => {
       const menuItem = await Item.findById(itemId);
       if (!menuItem) return res.status(404).json({ message: `Menu item with ID ${itemId} not found.` });
 
-      // Validate user is a member, default to authenticated user if not provided
-      const userId = itemData.user && groupOrder.members.includes(itemData.user) ? itemData.user : req.user._id;
-      if (!groupOrder.members.includes(userId)) {
-        return res.status(403).json({ message: `User ${userId} is not a member of this group.` });
+      if (!groupOrder.members.includes(itemData.user)) {
+        return res.status(403).json({ message: `User ${itemData.user} is not a member of this group.` });
       }
 
       updatedItemsForDb.push({
         item: menuItem._id,
-        quantity: itemData.quantity || 1,
+        quantity: itemData.quantity,
         nameAtPurchase: menuItem.name,
         priceAtPurchase: menuItem.price,
-        user: userId, // Now saved in schema
+        user: itemData.user, // Ensure this is included
       });
-      newTotalAmount += menuItem.price * (itemData.quantity || 1);
+      newTotalAmount += menuItem.price * itemData.quantity;
     }
 
     groupOrder.items = updatedItemsForDb;
@@ -355,8 +351,7 @@ exports.updateGroupOrderItems = async (req, res) => {
     const populatedGroupOrder = await GroupOrder.findById(groupOrderId)
       .populate("creator", "name email")
       .populate("members", "name email")
-      .populate("items.item", "name price")
-      .populate("items.user", "name email") // Add population for user
+      .populate("items.item", "name price") // Ensure items.item is populated
       .populate("paymentDetails.amounts.user", "name email")
       .populate("paymentDetails.transactions.user", "name email")
       .lean();
