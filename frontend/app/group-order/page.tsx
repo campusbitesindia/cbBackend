@@ -221,7 +221,7 @@ export default function GroupOrderPage() {
   const [groupOrder, setGroupOrder] = useState<GroupOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Item[]>([]);
-  const [splitType, setSplitType] = useState<'equal' | 'custom' | 'self'>('equal');
+  const [splitType, setSplitType] = useState<'equal' | 'custom' | 'self'>('self');
   const [amounts, setAmounts] = useState<PaymentAmount[]>([]);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [savingItems, setSavingItems] = useState(false);
