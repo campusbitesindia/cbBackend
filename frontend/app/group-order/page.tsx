@@ -120,9 +120,10 @@ const TransactionRowDesktop = ({
       </td>
       <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">
         <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] ||
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            statusColors[txn.status as keyof typeof statusColors] ||
             'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-            }`}
+          }`}
         >
           {loadingSpinner}
           {statusText}
@@ -190,9 +191,10 @@ const TransactionRowMobile = ({
       <div className="flex flex-col items-end space-y-1">
         <div className="font-semibold">₹{amount.toFixed(2)}</div>
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] ||
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+            statusColors[txn.status as keyof typeof statusColors] ||
             'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-            }`}
+          }`}
         >
           {loadingSpinner}
           {statusText}
@@ -299,7 +301,6 @@ export default function GroupOrderPage() {
     fetchGroupOrder();
   }, [fetchGroupOrder]);
 
-
   useEffect(() => {
     if (!groupLink || !token) return;
 
@@ -317,17 +318,23 @@ export default function GroupOrderPage() {
     });
 
     socket.on('ORDER_UPDATED', (data) => {
-      console.log('Received ORDER_UPDATED:', data);
+      console.log('Received ORDER_UPDATED:', JSON.stringify(data, null, 2));
       setGroupOrder(data.groupOrder);
       setItems(data.groupOrder.items || []);
       setSplitType(data.groupOrder.paymentDetails.splitType || 'equal');
       setAmounts(data.groupOrder.paymentDetails.amounts || []);
       toast({
         title: 'Order Updated',
-        description: 'Group order has been updated by a member.',
+        description:
+          data.groupOrder.status === 'completed'
+            ? 'Group order is now completed! All payments have been received.'
+            : 'Group order has been updated by a member.',
       });
+      if (data.groupOrder.status === 'completed') {
+        setTimeout(() => router.push('/thank-you'), 2000);
+      }
       // Fallback: If membership check fails after update, refetch
-      if (!data.groupOrder.members.some((m: { _id: string | undefined; }) => m._id === user?.id)) {
+      if (!data.groupOrder.members.some((m: { _id: string | undefined }) => m._id === user?.id)) {
         fetchGroupOrder();
       }
     });
@@ -352,8 +359,7 @@ export default function GroupOrderPage() {
     return () => {
       socket.disconnect();
     };
-  }, [groupLink, token, toast, user, fetchGroupOrder]);
-
+  }, [groupLink, token, toast, user, fetchGroupOrder, router]);
 
   // Fetch menu items
   useEffect(() => {
@@ -384,69 +390,72 @@ export default function GroupOrderPage() {
   }, [groupOrder?.canteen, token, toast, selectedMenuItemId]);
 
   // Persist items to backend
-  const persistItemsToBackend = useCallback(async (updatedItems: Item[]) => {
-    if (!groupOrder || !token || !user) return;
-    setSavingItems(true);
-    try {
-      const updatePayload = {
-        groupOrderId: groupOrder._id,
-        items: updatedItems.map((item) => ({
-          item: typeof item.item === 'object' ? item.item._id : item.item,
-          quantity: item.quantity,
-          user: item.user || user.id,
-        })),
-      };
+  const persistItemsToBackend = useCallback(
+    async (updatedItems: Item[]) => {
+      if (!groupOrder || !token || !user) return;
+      setSavingItems(true);
+      try {
+        const updatePayload = {
+          groupOrderId: groupOrder._id,
+          items: updatedItems.map((item) => ({
+            item: typeof item.item === 'object' ? item.item._id : item.item,
+            quantity: item.quantity,
+            user: item.user || user.id,
+          })),
+        };
 
-      const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/groupOrder/items`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatePayload),
-      });
+        const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/groupOrder/items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatePayload),
+        });
 
-      console.log(res);
+        if (!res.ok) {
+          const errResp = await res.json();
+          throw new Error(errResp.message || 'Failed to update group order');
+        }
 
-      if (!res.ok) {
-        const errResp = await res.json();
-        throw new Error(errResp.message || 'Failed to update group order');
+        await fetchGroupOrder();
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to save items',
+          description: (e as Error).message,
+        });
+      } finally {
+        setSavingItems(false);
       }
-
-      // Fetch updated order to ensure consistency
-      await fetchGroupOrder();
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to save items',
-        description: (e as Error).message,
-      });
-    } finally {
-      setSavingItems(false);
-    }
-  }, [groupOrder, token, user, toast, fetchGroupOrder]);
+    },
+    [groupOrder, token, user, toast, fetchGroupOrder]
+  );
 
   // Remove item
-  const removeItem = useCallback(async (itemId: string) => {
-    try {
-      const updatedItems = items.filter(
-        (i) => (typeof i.item === 'object' ? i.item._id : i.item) !== itemId
-      );
-      setItems(updatedItems);
-      await persistItemsToBackend(updatedItems);
+  const removeItem = useCallback(
+    async (itemId: string) => {
+      try {
+        const updatedItems = items.filter(
+          (i) => (typeof i.item === 'object' ? i.item._id : i.item) !== itemId
+        );
+        setItems(updatedItems);
+        await persistItemsToBackend(updatedItems);
 
-      toast({
-        title: 'Item removed',
-        description: 'Item has been removed from the order.',
-      });
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error removing item',
-        description: (error as Error).message || 'Failed to remove item',
-      });
-    }
-  }, [items, persistItemsToBackend, toast]);
+        toast({
+          title: 'Item removed',
+          description: 'Item has been removed from the order.',
+        });
+      } catch (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Error removing item',
+          description: (error as Error).message || 'Failed to remove item',
+        });
+      }
+    },
+    [items, persistItemsToBackend, toast]
+  );
 
   // Update item quantity
   const updateItemQuantityDebounced = useCallback(
@@ -473,85 +482,85 @@ export default function GroupOrderPage() {
   );
 
   // Add item
-  const addItem = useCallback(async () => {
-    if (!selectedMenuItemId || newItemQuantity < 1) {
+  const addItem = useCallback(
+    async () => {
+      if (!selectedMenuItemId || newItemQuantity < 1) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid input',
+          description: 'Please select an item and enter quantity >= 1.',
+        });
+        return;
+      }
+
+      const selectedMenuItem = menuItems.find((mi) => mi._id === selectedMenuItemId);
+
+      if (!selectedMenuItem) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Selected item not found in menu.',
+        });
+        return;
+      }
+
+      const updatedItems = [...items];
+      const existingIndex = updatedItems.findIndex(
+        (i) =>
+          (typeof i.item === 'object' ? i.item._id : i.item) === selectedMenuItemId &&
+          i.user === user?.id
+      );
+
+      if (existingIndex !== -1) {
+        updatedItems[existingIndex].quantity += newItemQuantity;
+        updatedItems[existingIndex].nameAtPurchase = selectedMenuItem.name;
+        updatedItems[existingIndex].priceAtPurchase = selectedMenuItem.price;
+        updatedItems[existingIndex].item = selectedMenuItem;
+      } else {
+        updatedItems.push({
+          item: selectedMenuItem,
+          quantity: newItemQuantity,
+          nameAtPurchase: selectedMenuItem.name,
+          priceAtPurchase: selectedMenuItem.price,
+          user: user?.id || '',
+        });
+      }
+
+      setItems(updatedItems);
+      setNewItemQuantity(1);
+
       toast({
-        variant: 'destructive',
-        title: 'Invalid input',
-        description: 'Please select an item and enter quantity >= 1.',
+        title: 'Item added',
+        description: 'Item successfully added to the order.',
       });
-      return;
-    }
 
-    const selectedMenuItem = menuItems.find(
-      (mi) => mi._id === selectedMenuItemId
-    );
-
-    if (!selectedMenuItem) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Selected item not found in menu.',
-      });
-      return;
-    }
-
-    const updatedItems = [...items];
-    const existingIndex = updatedItems.findIndex(
-      (i) =>
-        (typeof i.item === 'object' ? i.item._id : i.item) === selectedMenuItemId &&
-        i.user === user?.id
-    );
-
-    if (existingIndex !== -1) {
-      updatedItems[existingIndex].quantity += newItemQuantity;
-      updatedItems[existingIndex].nameAtPurchase = selectedMenuItem.name;
-      updatedItems[existingIndex].priceAtPurchase = selectedMenuItem.price;
-      updatedItems[existingIndex].item = selectedMenuItem;
-    } else {
-      updatedItems.push({
-        item: selectedMenuItem,
-        quantity: newItemQuantity,
-        nameAtPurchase: selectedMenuItem.name,
-        priceAtPurchase: selectedMenuItem.price,
-        user: user?.id || '',
-      });
-    }
-
-    setItems(updatedItems);
-    setNewItemQuantity(1);
-
-    toast({
-      title: 'Item added',
-      description: 'Item successfully added to the order.',
-    });
-    
-    console.log("Updated Items: ", updatedItems);
-    await persistItemsToBackend(updatedItems);
-  }, [selectedMenuItemId, newItemQuantity, menuItems, items, user, toast, persistItemsToBackend]);
+      console.log('Updated Items: ', updatedItems);
+      await persistItemsToBackend(updatedItems);
+    },
+    [selectedMenuItemId, newItemQuantity, menuItems, items, user, toast, persistItemsToBackend]
+  );
 
   // Calculate total for a specific user
-function calculateUserTotal(userId: string) {
-  if (!userId || !items || !Array.isArray(items)) return 0;
+  function calculateUserTotal(userId: string) {
+    if (!userId || !items || !Array.isArray(items)) return 0;
 
-  return items.reduce((acc, i) => {
-    // Skip items with undefined user
-    if (!i.user) {
-      console.warn('Item with undefined user:', i);
-      return acc;
-    }
-    return i.user.toString() === userId.toString()
-      ? acc + (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity
-      : acc;
-  }, 0);
-}
+    return items.reduce((acc, i) => {
+      if (!i.user) {
+        console.warn('Item with undefined user:', i);
+        return acc;
+      }
+      return i.user.toString() === userId.toString()
+        ? acc + (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity
+        : acc;
+    }, 0);
+  }
+
   // Calculate total for all items
   const calculateTotal = useCallback(() => {
     return items.reduce(
       (acc, i) =>
         acc +
-        (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) *
-        i.quantity,
+        (i.priceAtPurchase ?? (typeof i.item === 'object' ? i.item.price : 0)) * i.quantity,
       0
     );
   }, [items]);
@@ -562,9 +571,7 @@ function calculateUserTotal(userId: string) {
       setAmounts((prev) => {
         const existing = prev.find((a) => a.user === userId);
         if (existing) {
-          return prev.map((a) =>
-            a.user === userId ? { ...a, amount: newAmount } : a
-          );
+          return prev.map((a) => (a.user === userId ? { ...a, amount: newAmount } : a));
         } else {
           return [...prev, { user: userId, amount: newAmount }];
         }
@@ -574,134 +581,140 @@ function calculateUserTotal(userId: string) {
   );
 
   // Pay for self
-  const payForSelf = useCallback(async () => {
-    if (!groupOrder || !token || !user) return;
-    setPaymentProcessing(true);
+  const payForSelf = useCallback(
+    async () => {
+      if (!groupOrder || !token || !user) return;
+      setPaymentProcessing(true);
 
-    try {
-      const userTotal = calculateUserTotal(user.id);
-      if (userTotal === 0) {
+      try {
+        const userTotal = calculateUserTotal(user.id);
+        if (userTotal === 0) {
+          toast({
+            variant: 'destructive',
+            title: 'No items',
+            description: 'You have not added any items to pay for.',
+          });
+          return;
+        }
+
+        const updatePayload = {
+          groupOrderId: groupOrder._id,
+          userId: user.id,
+          amount: userTotal,
+        };
+
+        const res = await fetch(
+          `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/pay-self`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(updatePayload),
+          }
+        );
+
+        if (!res.ok) {
+          const errResp = await res.json();
+          throw new Error(errResp.message || 'Failed to initiate payment');
+        }
+
+        const data = await res.json();
+        await openRazorpayCheckout(data.transaction);
+        await fetchGroupOrder();
+
+        toast({
+          title: 'Payment initiated',
+          description: 'Please complete your payment to confirm your items.',
+        });
+      } catch (e) {
         toast({
           variant: 'destructive',
-          title: 'No items',
-          description: 'You have not added any items to pay for.',
+          title: 'Failed',
+          description: (e as Error).message,
         });
-        return;
+      } finally {
+        setPaymentProcessing(false);
       }
-
-      const updatePayload = {
-        groupOrderId: groupOrder._id,
-        userId: user.id,
-        amount: userTotal,
-      };
-
-      const res = await fetch(
-        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/pay-self`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatePayload),
-        }
-      );
-
-      if (!res.ok) {
-        const errResp = await res.json();
-        throw new Error(errResp.message || 'Failed to initiate payment');
-      }
-
-      const data = await res.json();
-      await openRazorpayCheckout(data.transaction);
-      await fetchGroupOrder();
-
-      toast({
-        title: 'Payment initiated',
-        description: 'Please complete your payment to confirm your items.',
-      });
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed',
-        description: (e as Error).message,
-      });
-    } finally {
-      setPaymentProcessing(false);
-    }
-  }, [groupOrder, token, user, calculateUserTotal, toast, fetchGroupOrder]);
+    },
+    [groupOrder, token, user, calculateUserTotal, toast, fetchGroupOrder]
+  );
 
   // Update group order
-  const updateOrder = useCallback(async () => {
-    if (!groupOrder || !token || !user) return;
-    setPaymentProcessing(true);
+  const updateOrder = useCallback(
+    async () => {
+      if (!groupOrder || !token || !user) return;
+      setPaymentProcessing(true);
 
-    try {
-      const updatePayload = {
-        groupOrderId: groupOrder._id,
-        items,
-        splitType,
-        amounts:
-          splitType === 'custom' || splitType === 'equal'
-            ? amounts.length > 0
-              ? amounts
-              : groupOrder.members.map((m) => ({
-                user: m._id,
-                amount: calculateTotal() / groupOrder.members.length,
-              }))
-            : [{ user: user.id, amount: calculateUserTotal(user.id) }],
-        pickupTime: new Date().toISOString(),
-        canteen: groupOrder.canteen,
-      };
+      try {
+        const updatePayload = {
+          groupOrderId: groupOrder._id,
+          items,
+          splitType,
+          amounts:
+            splitType === 'custom' || splitType === 'equal'
+              ? amounts.length > 0
+                ? amounts
+                : groupOrder.members.map((m) => ({
+                    user: m._id,
+                    amount: calculateTotal() / groupOrder.members.length,
+                  }))
+              : [{ user: user.id, amount: calculateUserTotal(user.id) }],
+          pickupTime: new Date().toISOString(),
+          canteen: groupOrder.canteen,
+        };
 
-      const res = await fetch(
-        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/add-items-payment`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatePayload),
+        const res = await fetch(
+          `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/add-items-payment`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(updatePayload),
+          }
+        );
+
+        if (!res.ok) {
+          const errResp = await res.json();
+          throw new Error(errResp.message || 'Failed to update group order');
         }
-      );
+        const data = await res.json();
 
-      if (!res.ok) {
-        const errResp = await res.json();
-        throw new Error(errResp.message || 'Failed to update group order');
-      }
-      const data = await res.json();
+        setGroupOrder(data.data.groupOrder);
 
-      setGroupOrder(data.data.groupOrder);
+        if (data.data.transactions.length === 0) {
+          toast({
+            variant: 'default',
+            title: 'Update successful',
+            description: 'Group order updated but no new transactions created',
+          });
+          return;
+        }
 
-      if (data.data.transactions.length === 0) {
+        for (const txn of data.data.transactions) {
+          if (txn.user !== user.id) continue;
+          await openRazorpayCheckout(txn);
+        }
+
         toast({
-          variant: 'default',
-          title: 'Update successful',
-          description: 'Group order updated but no new transactions created',
+          title: 'Payment initiated',
+          description: 'Please complete your payment(s) to confirm the order.',
         });
-        return;
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Failed',
+          description: (e as Error).message,
+        });
+      } finally {
+        setPaymentProcessing(false);
       }
-
-      for (const txn of data.data.transactions) {
-        if (txn.user !== user.id) continue;
-        await openRazorpayCheckout(txn);
-      }
-
-      toast({
-        title: 'Payment initiated',
-        description: 'Please complete your payment(s) to confirm the order.',
-      });
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed',
-        description: (e as Error).message,
-      });
-    } finally {
-      setPaymentProcessing(false);
-    }
-  }, [groupOrder, token, user, items, splitType, amounts, calculateTotal, calculateUserTotal, toast]);
+    },
+    [groupOrder, token, user, items, splitType, amounts, calculateTotal, calculateUserTotal, toast]
+  );
 
   // Razorpay checkout
   const openRazorpayCheckout = useCallback(
@@ -731,22 +744,26 @@ function calculateUserTotal(userId: string) {
           order_id: transaction.razorpayOrderId,
           handler: async function (response: any) {
             try {
-              const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/payments/verify`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  transactionId: transaction.transactionId,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpaySignature: response.razorpay_signature,
-                }),
-              });
+              const res = await fetch(
+                `https://campusbites-mxpe.onrender.com/api/v1/payments/verify-group-payment`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    transactionId: transaction.transactionId,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_signature: response.razorpay_signature,
+                  }),
+                }
+              );
 
               if (!res.ok) {
-                throw new Error('Payment verification failed');
+                const errResp = await res.json();
+                throw new Error(errResp.message || 'Payment verification failed');
               }
 
               toast({
@@ -754,7 +771,6 @@ function calculateUserTotal(userId: string) {
                 description: 'Thank you for completing the payment!',
               });
 
-              router.push('/thank-you');
               resolve();
             } catch (err) {
               toast({
@@ -781,48 +797,49 @@ function calculateUserTotal(userId: string) {
 
         new window.Razorpay(options).open();
       }),
-    [toast, token, user, router]
+    [toast, token, user]
   );
 
   // Join group
-  const handleJoinGroup = useCallback(async () => {
-    try {
-      if (!token) throw new Error('Not authenticated');
-      if (groupOrder && groupOrder.members.find((m) => m._id === user?.id)) {
-        toast({ title: 'Already a member' });
-        return;
+  const handleJoinGroup = useCallback(
+    async () => {
+      try {
+        if (!token) throw new Error('Not authenticated');
+        if (groupOrder && groupOrder.members.find((m) => m._id === user?.id)) {
+          toast({ title: 'Already a member' });
+          return;
+        }
+        const res = await fetch('https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ link: groupLink }),
+        });
+        if (!res.ok) {
+          const errResp = await res.json();
+          throw new Error(errResp.message || 'Failed to join group');
+        }
+        toast({ title: 'Joined group successfully' });
+        await fetchGroupOrder();
+      } catch (e) {
+        toast({
+          variant: 'destructive',
+          title: 'Join failed',
+          description: (e as Error).message,
+        });
       }
-      const res = await fetch('https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ link: groupLink }),
-      });
-      if (!res.ok) {
-        const errResp = await res.json();
-        throw new Error(errResp.message || 'Failed to join group');
-      }
-      toast({ title: 'Joined group successfully' });
-      await fetchGroupOrder();
-    } catch (e) {
-      toast({
-        variant: 'destructive',
-        title: 'Join failed',
-        description: (e as Error).message,
-      });
-    }
-  }, [groupOrder, token, user, groupLink, toast, fetchGroupOrder]);
+    },
+    [groupOrder, token, user, groupLink, toast, fetchGroupOrder]
+  );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="animate-pulse text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Loading group order details...
-          </p>
+          <p className="text-gray-600 dark:text-gray-400">Loading group order details...</p>
         </div>
       </div>
     );
@@ -886,17 +903,11 @@ function calculateUserTotal(userId: string) {
           </div>
           <div className="grid grid-cols-2 gap-4 mt-4 sm:mt-0 w-full sm:w-auto">
             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Canteen
-              </h2>
-              <p className="text-sm font-medium break-words">
-                {groupOrder.canteen}
-              </p>
+              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Canteen</h2>
+              <p className="text-sm font-medium break-words">{groupOrder.canteen}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Status
-              </h2>
+              <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</h2>
               <p className="text-sm font-medium">{groupOrder.status}</p>
             </div>
           </div>
@@ -909,8 +920,8 @@ function calculateUserTotal(userId: string) {
             Join this Group Order
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            You've been invited to join this group order. Click the button below
-            to participate and start adding items.
+            You've been invited to join this group order. Click the button below to participate and
+            start adding items.
           </p>
           <Button
             onClick={handleJoinGroup}
@@ -952,9 +963,7 @@ function calculateUserTotal(userId: string) {
                     min={1}
                     className="text-center w-full"
                     value={newItemQuantity}
-                    onChange={(e) =>
-                      setNewItemQuantity(Math.max(1, +e.target.value))
-                    }
+                    onChange={(e) => setNewItemQuantity(Math.max(1, +e.target.value))}
                     disabled={savingItems}
                     placeholder="Qty"
                   />
@@ -1042,9 +1051,11 @@ function calculateUserTotal(userId: string) {
                         </h4>
                         <div className="space-y-4">
                           {memberItems.map((item, idx) => {
-                            console.log('Rendering item:', item); // Debug log
-                            const displayName = item.nameAtPurchase || (typeof item.item === 'object' ? item.item.name : 'Unknown item');
-                            const displayPrice = item.priceAtPurchase ?? (typeof item.item === 'object' ? item.item.price : 0);
+                            console.log('Rendering item:', item);
+                            const displayName =
+                              item.nameAtPurchase || (typeof item.item === 'object' ? item.item.name : 'Unknown item');
+                            const displayPrice =
+                              item.priceAtPurchase ?? (typeof item.item === 'object' ? item.item.price : 0);
                             const totalPrice = displayPrice * item.quantity;
                             const isOwnItem = item.user === user?.id;
 
@@ -1058,8 +1069,7 @@ function calculateUserTotal(userId: string) {
                                     {displayName}
                                   </h4>
                                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                                    ₹{displayPrice.toFixed(2)} × {item.quantity} = ₹
-                                    {totalPrice.toFixed(2)}
+                                    ₹{displayPrice.toFixed(2)} × {item.quantity} = ₹{totalPrice.toFixed(2)}
                                   </p>
                                 </div>
                                 {isOwnItem && (
@@ -1082,9 +1092,7 @@ function calculateUserTotal(userId: string) {
                                       size="icon"
                                       className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                                       onClick={() =>
-                                        removeItem(
-                                          typeof item.item === 'object' ? item.item._id : item.item
-                                        )
+                                        removeItem(typeof item.item === 'object' ? item.item._id : item.item)
                                       }
                                       disabled={savingItems}
                                     >
@@ -1258,10 +1266,7 @@ function calculateUserTotal(userId: string) {
                                 value={userAmount.amount}
                                 onChange={(e) => {
                                   const value = parseFloat(e.target.value);
-                                  updateAmountForUser(
-                                    member._id,
-                                    isNaN(value) ? 0 : Math.max(0, value)
-                                  );
+                                  updateAmountForUser(member._id, isNaN(value) ? 0 : Math.max(0, value));
                                 }}
                                 disabled={savingItems}
                                 className="pl-8 text-center text-sm h-8"
@@ -1273,9 +1278,7 @@ function calculateUserTotal(userId: string) {
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 rounded-full flex-shrink-0"
-                              onClick={() =>
-                                updateAmountForUser(member._id, userAmount.amount + 10)
-                              }
+                              onClick={() => updateAmountForUser(member._id, userAmount.amount + 10)}
                               disabled={savingItems}
                             >
                               <svg
@@ -1305,12 +1308,11 @@ function calculateUserTotal(userId: string) {
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Assigned Total</span>
                         <span
-                          className={`font-semibold ${Math.abs(
-                            amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
-                          ) < 0.01
+                          className={`font-semibold ${
+                            Math.abs(amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()) < 0.01
                               ? 'text-green-600 dark:text-green-400'
                               : 'text-red-600 dark:text-red-400'
-                            }`}
+                          }`}
                         >
                           ₹{amounts.reduce((sum, a) => sum + a.amount, 0).toFixed(2)}
                         </span>
@@ -1321,21 +1323,18 @@ function calculateUserTotal(userId: string) {
                           ₹{calculateTotal().toFixed(2)}
                         </span>
                       </div>
-                      {Math.abs(
-                        amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
-                      ) >= 0.01 && (
-                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                              ⚠️ Total mismatch: ₹
-                              {(
-                                amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
-                              ).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                              The assigned amounts must equal the order total to proceed with payment.
-                            </p>
-                          </div>
-                        )}
+                      {Math.abs(amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()) >=
+                        0.01 && (
+                        <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                          <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                            ⚠️ Total mismatch: ₹
+                            {(amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                            The assigned amounts must equal the order total to proceed with payment.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1349,31 +1348,26 @@ function calculateUserTotal(userId: string) {
               {(() => {
                 const isCustomSplitValid =
                   splitType !== 'custom' ||
-                  Math.abs(
-                    amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()
-                  ) < 0.01;
+                  Math.abs(amounts.reduce((sum, a) => sum + a.amount, 0) - calculateTotal()) < 0.01;
                 const paymentAmount =
                   splitType === 'self'
                     ? calculateUserTotal(user?.id || '')
                     : splitType === 'equal'
-                      ? calculateTotal() / groupOrder.members.length
-                      : amounts.find((a) => a.user === user?.id)?.amount || 0;
+                    ? calculateTotal() / groupOrder.members.length
+                    : amounts.find((a) => a.user === user?.id)?.amount || 0;
 
                 return (
                   <>
                     <Button
                       disabled={
-                        paymentProcessing ||
-                        savingItems ||
-                        items.length === 0 ||
-                        !isCustomSplitValid ||
-                        paymentAmount === 0
+                        paymentProcessing || savingItems || items.length === 0 || !isCustomSplitValid || paymentAmount === 0
                       }
                       onClick={splitType === 'self' ? payForSelf : updateOrder}
-                      className={`w-full py-4 sm:py-5 text-sm sm:text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${isCustomSplitValid && paymentAmount > 0
+                      className={`w-full py-4 sm:py-5 text-sm sm:text-base font-semibold rounded-lg shadow-lg hover:shadow-xl transform transition-all duration-200 hover:-translate-y-0.5 ${
+                        isCustomSplitValid && paymentAmount > 0
                           ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white'
                           : 'bg-gray-400 dark:bg-gray-600 text-gray-200 cursor-not-allowed'
-                        }`}
+                      }`}
                       size="lg"
                     >
                       {paymentProcessing ? (
@@ -1405,11 +1399,8 @@ function calculateUserTotal(userId: string) {
                       ) : paymentAmount === 0 ? (
                         'Add Items to Pay'
                       ) : (
-                        `Pay ₹${paymentAmount.toFixed(2)} (${splitType === 'self'
-                          ? 'Your Items'
-                          : splitType === 'equal'
-                            ? 'Equal Split'
-                            : 'Custom Split'
+                        `Pay ₹${paymentAmount.toFixed(2)} (${
+                          splitType === 'self' ? 'Your Items' : splitType === 'equal' ? 'Equal Split' : 'Custom Split'
                         })`
                       )}
                     </Button>
@@ -1417,10 +1408,10 @@ function calculateUserTotal(userId: string) {
                       {!isCustomSplitValid
                         ? 'Custom split amounts must equal the order total'
                         : splitType === 'self'
-                          ? 'Pay only for the items you added'
-                          : splitType === 'equal'
-                            ? 'Pay an equal share of the total order'
-                            : 'Pay your assigned share of the total order'}
+                        ? 'Pay only for the items you added'
+                        : splitType === 'equal'
+                        ? 'Pay an equal share of the total order'
+                        : 'Pay your assigned share of the total order'}
                     </p>
                   </>
                 );
