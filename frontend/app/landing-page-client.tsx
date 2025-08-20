@@ -113,17 +113,19 @@ export default function LandingPageClient() {
               </motion.div>
 
               <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.8 }}
-                className='text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8'>
-                <span className='block text-gray-900 dark:text-white'>
-                  Ready for the
-                </span>
-                <span className='block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'>
-                  Feast Fest?
-                </span>
-              </motion.h1>
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: 0.2, duration: 0.8 }}
+  className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8 text-left"
+>
+  <span className="block text-gray-900 dark:text-white">
+    One Tap
+  </span>
+  <span className="block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
+    Endless Bites
+  </span>
+</motion.h1>
+
 
               <motion.p
                 initial={{ opacity: 0 }}

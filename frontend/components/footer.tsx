@@ -9,7 +9,7 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <h3 className="font-bold text-lg mb-4">CampusBites</h3>
-            <p className="text-gray-400 mb-4">Delicious food delivered to your doorstep on campus.</p>
+            <p className="text-gray-400 mb-4">From Canteen to you - minus the Queue</p>
             <div className="flex space-x-4">
               <Link href="https://www.linkedin.com/company/campusbites-in/" className="text-gray-400 hover:text-white">
                 <Linkedin className="h-5 w-5" />
@@ -52,12 +52,12 @@ function Footer() {
             <h3 className="font-bold mb-4">Information</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="#" className="text-gray-400 hover:text-white">
+                <Link href="/about-us" className="text-gray-400 hover:text-white">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-gray-400 hover:text-white">
+                <Link href="/FAQ" className="text-gray-400 hover:text-white">
                   FAQ
                 </Link>
               </li>

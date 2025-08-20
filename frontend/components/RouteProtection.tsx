@@ -32,6 +32,8 @@ export function RouteProtection({
     '/termsconditions',
     '/privacypolicy',
     '/resetPassword',
+    '/about-us',
+    '/FAQ',
   ];
 
   // Check if current route is public
