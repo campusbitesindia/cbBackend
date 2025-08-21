@@ -225,7 +225,7 @@ function CartPageContent() {
                 </h2>
                 <Button
                   variant='outline'
-                  className='border-red-500 text-red-500 hover:bg-red-50 flex items-center gap-2'
+                  className='border-red-500 text-red-500 hover:bg-red-50/10 flex items-center gap-2'
                   onClick={() => router.push('/menu')}
                   title='Add more items'>
                   <Plus className='h-5 w-5' />
