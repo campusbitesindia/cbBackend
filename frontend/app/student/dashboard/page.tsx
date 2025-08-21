@@ -530,18 +530,27 @@ function StudentDashboardContent() {
             <h2 className='text-2xl font-bold text-white mb-6'>
               All Restaurants
             </h2>
-            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-              {filteredRestaurants?.map((restaurant) => (
+                          <div className='  grid 
+                grid-cols-1       
+                sm:grid-cols-2     
+                md:grid-cols-3     
+                xl:grid-cols-4 
+                gap-3 sm:gap-6 
+                max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
+              {filteredRestaurants?.map((restaurant, index) => (
+                <div
+                key={restaurant._id}
+                className='w-full animate-fade-in-up'
+                style={{ animationDelay: `${index * 100}ms` }}>
                 <Card
                 key={restaurant._id}
-                className='bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/30 backdrop-blur-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden'>              
-                  <div className='relative'>
+                className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full flex flex-row sm:flex-col h-full'>              
+                  <div className='relative overflow-hidden rounded-l-2xl sm:rounded-t-2xl w-36 sm:w-full aspect-[4/3]'>
                     <Image
                       src={restaurant.image || '/placeholder.svg'}
                       alt={restaurant.name || 'Restaurant'}
-                      width={300}
-                      height={200}
-                      className='w-full h-32 sm:h-48 object-cover group-hover:scale-110 transition-transform duration-300'
+                      fill
+                      className='object-cover h-full w-full transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
                     />
                     {restaurant.discount && (
                       <Badge className='absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1'>
@@ -569,10 +578,12 @@ function StudentDashboardContent() {
                       </div>
                     )}
                   </div>
+                  <div className='flex-1 flex flex-col justify-between'>
+
                   <CardHeader className='pb-3'>
                     <div className='flex items-start justify-between'>
                       <div>
-                        <CardTitle className='text-lg text-black dark:text-white mb-1'>
+                        <CardTitle className='text-sm md:text-lg text-black dark:text-white mb-1'>
                           {restaurant.name}
                         </CardTitle>
                         <CardDescription className='text-gray-600 dark:text-gray-400'>
@@ -613,7 +624,9 @@ function StudentDashboardContent() {
     </Button>
                     </Link>
                   </CardContent>
+                  </div>
                 </Card>
+                </div>
               ))}
             </div>
           </div>
