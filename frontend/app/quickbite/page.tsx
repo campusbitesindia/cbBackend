@@ -111,14 +111,14 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = memo(
       };
     }, [item.canteen]);
     return (
-      <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full'>
+      <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full flex flex-row sm:flex-col  '>
         {/* Enhanced Image Section */}
-        <div className='relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-800'>
-          <div className='aspect-square relative overflow-hidden'>
+       
+          <div className='relative w-full h-48 overflow-hidden rounded-t-2xl'>
             <img
               src={item.image || '/placeholder.svg'}
               alt={item.name}
-              className='w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
+              className='md:w-full w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
             />
             <div className='absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent' />
             <div className='absolute inset-0 bg-gradient-to-br from-red-500/0 via-transparent to-orange-500/0 group-hover:from-red-500/10 group-hover:to-orange-500/10 transition-all duration-500' />
@@ -151,7 +151,7 @@ const QuickBiteItemCard: React.FC<QuickBiteItemProps> = memo(
               <span className='sm:hidden'>{item.isVeg ? '🥬' : '🍖'}</span>
             </span>
           </div>
-        </div>
+        
 
         {/* Enhanced Content Section */}
         <CardContent className='p-3 sm:p-4 space-y-2 sm:space-y-3'>
@@ -1171,7 +1171,13 @@ export default function QuickBitePage() {
                 </div>
 
                 {/* Enhanced Items Grid */}
-                <div className='grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
+                <div className='  grid 
+  grid-cols-1       
+  sm:grid-cols-2     
+  md:grid-cols-3     
+  xl:grid-cols-4 
+  gap-3 sm:gap-6 
+  max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
                   {filteredItems.map((item, index) => (
                     <div
                       key={item._id}
