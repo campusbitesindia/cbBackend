@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { RefundPolicyModal } from '@/components/RefundPolicyModal/RefundPolicyModal';
 
 declare global {
   interface Window {
@@ -66,39 +67,65 @@ interface GroupOrder {
 }
 
 // Transaction row component for desktop view
-const TransactionRowDesktop = ({ txn, member, isCurrentUser, amount }: { 
-  txn: any, 
-  member: any, 
-  isCurrentUser: boolean, 
-  amount: number 
+const TransactionRowDesktop = ({
+  txn,
+  member,
+  isCurrentUser,
+  amount,
+}: {
+  txn: any;
+  member: any;
+  isCurrentUser: boolean;
+  amount: number;
 }) => {
   const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    pending:
+      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    success:
+      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   };
-  
-  const statusText = txn.status === 'pending' 
-    ? 'Processing...' 
-    : txn.status.charAt(0).toUpperCase() + txn.status.slice(1);
-    
-  const loadingSpinner = txn.status === 'pending' ? (
-    <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-yellow-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-  ) : null;
-  
+
+  const statusText =
+    txn.status === 'pending'
+      ? 'Processing...'
+      : txn.status.charAt(0).toUpperCase() + txn.status.slice(1);
+
+  const loadingSpinner =
+    txn.status === 'pending' ? (
+      <svg
+        className='animate-spin -ml-1 mr-1 h-3 w-3 text-yellow-600 inline'
+        xmlns='http://www.w3.org/2000/svg'
+        fill='none'
+        viewBox='0 0 24 24'>
+        <circle
+          className='opacity-25'
+          cx='12'
+          cy='12'
+          r='10'
+          stroke='currentColor'
+          strokeWidth='4'></circle>
+        <path
+          className='opacity-75'
+          fill='currentColor'
+          d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
+      </svg>
+    ) : null;
+
   return (
     <tr>
-      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+      <td className='px-4 sm:px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white'>
         {isCurrentUser ? 'You' : member?.name}
       </td>
-      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400">
+      <td className='px-4 sm:px-6 py-3 whitespace-nowrap text-right text-sm text-gray-500 dark:text-gray-400'>
         ₹{amount.toFixed(2)}
       </td>
-      <td className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
+      <td className='px-4 sm:px-6 py-3 whitespace-nowrap text-right'>
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            statusColors[txn.status as keyof typeof statusColors] ||
+            'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+          }`}>
           {loadingSpinner}
           {statusText}
         </span>
@@ -108,48 +135,74 @@ const TransactionRowDesktop = ({ txn, member, isCurrentUser, amount }: {
 };
 
 // Transaction row component for mobile view
-const TransactionRowMobile = ({ txn, member, isCurrentUser, amount }: { 
-  txn: any, 
-  member: any, 
-  isCurrentUser: boolean, 
-  amount: number 
+const TransactionRowMobile = ({
+  txn,
+  member,
+  isCurrentUser,
+  amount,
+}: {
+  txn: any;
+  member: any;
+  isCurrentUser: boolean;
+  amount: number;
 }) => {
   const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-    success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    pending:
+      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+    success:
+      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   };
-  
-  const statusText = txn.status === 'pending' 
-    ? 'Processing...' 
-    : txn.status.charAt(0).toUpperCase() + txn.status.slice(1);
-    
-  const loadingSpinner = txn.status === 'pending' ? (
-    <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-yellow-600 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-  ) : null;
-  
+
+  const statusText =
+    txn.status === 'pending'
+      ? 'Processing...'
+      : txn.status.charAt(0).toUpperCase() + txn.status.slice(1);
+
+  const loadingSpinner =
+    txn.status === 'pending' ? (
+      <svg
+        className='animate-spin -ml-1 mr-1 h-3 w-3 text-yellow-600 inline'
+        xmlns='http://www.w3.org/2000/svg'
+        fill='none'
+        viewBox='0 0 24 24'>
+        <circle
+          className='opacity-25'
+          cx='12'
+          cy='12'
+          r='10'
+          stroke='currentColor'
+          strokeWidth='4'></circle>
+        <path
+          className='opacity-75'
+          fill='currentColor'
+          d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
+      </svg>
+    ) : null;
+
   return (
-    <div className="grid grid-cols-2 gap-2 text-sm">
-      <div className="space-y-1">
-        <div className="font-medium text-gray-900 dark:text-white">
+    <div className='grid grid-cols-2 gap-2 text-sm'>
+      <div className='space-y-1'>
+        <div className='font-medium text-gray-900 dark:text-white'>
           {isCurrentUser ? 'You' : member?.name || 'Unknown'}
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className='text-xs text-gray-500 dark:text-gray-400'>
           {new Date(txn.createdAt).toLocaleString()}
         </div>
       </div>
-      <div className="flex flex-col items-end space-y-1">
-        <div className="font-semibold">₹{amount.toFixed(2)}</div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[txn.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'}`}>
+      <div className='flex flex-col items-end space-y-1'>
+        <div className='font-semibold'>₹{amount.toFixed(2)}</div>
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+            statusColors[txn.status as keyof typeof statusColors] ||
+            'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+          }`}>
           {loadingSpinner}
           {statusText}
         </span>
       </div>
       {txn.transactionId && (
-        <div className="col-span-2 mt-2 text-xs text-gray-500 dark:text-gray-400 truncate">
+        <div className='col-span-2 mt-2 text-xs text-gray-500 dark:text-gray-400 truncate'>
           Txn ID: {txn.transactionId}
         </div>
       )}
@@ -171,7 +224,7 @@ export default function GroupOrderPage() {
   const [payer, setPayer] = useState<string | null>(null);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [savingItems, setSavingItems] = useState(false);
-
+  const [openPolicyModal, setOpenPolicyModal] = useState(false);
   const [menuItems, setMenuItems] = useState<
     { _id: string; name: string; price: number }[]
   >([]);
@@ -179,6 +232,27 @@ export default function GroupOrderPage() {
     null
   );
   const [newItemQuantity, setNewItemQuantity] = useState<number>(1);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Simple mobile detection
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIfMobile(); // Initial check
+    window.addEventListener('resize', checkIfMobile); // Update on resize
+
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
+  const handleClick = () => {
+    if (isMobile) {
+      router.push(`/refund-policy`);
+    } else {
+      setOpenPolicyModal(true);
+    }
+  };
 
   const groupLink = searchParams.get('link');
   if (!groupLink) {
@@ -284,14 +358,17 @@ export default function GroupOrderPage() {
         items: updatedItems,
       };
 
-      const res = await fetch(`https://campusbites-mxpe.onrender.com/api/v1/groupOrder/items`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updatePayload),
-      });
+      const res = await fetch(
+        `https://campusbites-mxpe.onrender.com/api/v1/groupOrder/items`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(updatePayload),
+        }
+      );
 
       if (!res.ok) {
         const errResp = await res.json();
@@ -561,19 +638,22 @@ export default function GroupOrderPage() {
         order_id: transaction.razorpayOrderId,
         handler: async function (response: any) {
           try {
-            await fetch(`https://campusbites-mxpe.onrender.com/api/v1/payments/verify`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                transactionId: transaction.transactionId,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpaySignature: response.razorpay_signature,
-              }),
-            });
+            await fetch(
+              `https://campusbites-mxpe.onrender.com/api/v1/payments/verify`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  transactionId: transaction.transactionId,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpayOrderId: response.razorpay_order_id,
+                  razorpaySignature: response.razorpay_signature,
+                }),
+              }
+            );
 
             toast({
               title: 'Payment successful',
@@ -616,14 +696,17 @@ export default function GroupOrderPage() {
         toast({ title: 'Already a member' });
         return;
       }
-      const res = await fetch('https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ link: groupLink }),
-      });
+      const res = await fetch(
+        'https://campusbites-mxpe.onrender.com/api/v1/groupOrder/join',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ link: groupLink }),
+        }
+      );
       if (!res.ok) {
         const errResp = await res.json();
         throw new Error(errResp.message || 'Failed to join group');
@@ -687,7 +770,8 @@ export default function GroupOrderPage() {
               className='w-24 h-24 sm:w-32 sm:h-32'
             />
             <p className='mt-2 break-all text-xs sm:text-sm text-center sm:text-left text-gray-600 dark:text-gray-400'>
-              Group Link: <span className='font-mono'>{groupOrder.groupLink}</span>
+              Group Link:{' '}
+              <span className='font-mono'>{groupOrder.groupLink}</span>
             </p>
           </div>
           <div className='grid grid-cols-2 gap-4 mt-4 sm:mt-0 w-full sm:w-auto'>
@@ -1288,8 +1372,8 @@ export default function GroupOrderPage() {
                                 ?._id === user?.id
                             }
                             amount={
-                              amounts.find((a) => a.user === txn.user)?.amount ||
-                              0
+                              amounts.find((a) => a.user === txn.user)
+                                ?.amount || 0
                             }
                           />
                         ))}
@@ -1313,7 +1397,8 @@ export default function GroupOrderPage() {
                               ?._id === user?.id
                           }
                           amount={
-                            amounts.find((a) => a.user === txn.user)?.amount || 0
+                            amounts.find((a) => a.user === txn.user)?.amount ||
+                            0
                           }
                         />
                       </div>
@@ -1325,6 +1410,16 @@ export default function GroupOrderPage() {
           )}
         </>
       )}
+      <div
+        onClick={handleClick}
+        className='text-center mt-4 text-sm text-gray-600 cursor-pointer'>
+        By placing your order, you agree to our Refund Policy
+      </div>
+
+      <RefundPolicyModal
+        onOpenChange={() => setOpenPolicyModal(!openPolicyModal)}
+        onOpen={openPolicyModal}
+      />
     </div>
   );
 }
