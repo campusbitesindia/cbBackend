@@ -26,8 +26,7 @@ export const register = async (payload: RegisterPayload) => {
 };
 
 export const adminLogin = async (payload: { username: string; password: string }) => {
-  const response = await api.post('/api/v1/admin/login', payload, {
-    withCredentials: true 
-  });
-  return response.data;
+  const adminRes = await api.post('/api/v1/admin/login', payload, { withCredentials: true });
+  const adminToken: string | undefined = adminRes?.data?.token;
+  return { success: true, token: adminToken};
 };

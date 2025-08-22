@@ -255,48 +255,49 @@ const CanteenMenuPage = () => {
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800 transition-colors duration-500'>
-      <header className='relative h-64 md:h-80'>
-        <Image
-          src={canteen.image || '/placeholder.svg'}
-          alt={canteen.name}
-          layout='fill'
-          objectFit='cover'
-          className='opacity-70'
-        />
-        <div className='absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent' />
-        <div className='absolute bottom-0 left-0 p-8'>
-          <Link
-            href='/menu'
-            className='flex items-center gap-2 text-white mb-4 hover:underline transition-colors'>
-            <ArrowLeft size={16} /> Back to Restaurants
-          </Link>
-          <h1 className='text-5xl font-bold text-white drop-shadow-md'>
-            {canteen.name}
-          </h1>
-          <p className='text-lg text-gray-200 drop-shadow-sm'>
-            {canteen.cuisine}
-          </p>
-          <div className='flex items-center gap-4 mt-2 text-gray-200'>
-            <div className='flex items-center gap-1'>
-              <Star className='w-5 h-5 text-yellow-400 fill-yellow-400' />
-              <span>{canteen.rating}</span>
-            </div>
-            <div className='flex items-center gap-1'>
-              <Clock className='w-5 h-5' />
-              <span>{canteen.deliveryTime}</span>
-            </div>
-            <div className='flex items-center gap-1'>
-              <MapPin className='w-5 h-5' />
-              <span>{canteen.distance}</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <header className="relative h-48 sm:h-64 md:h-80">
+  <Image
+    src={canteen.image || '/placeholder.svg'}
+    alt={canteen.name}
+    fill
+    className="object-cover opacity-70"
+    priority
+  />
+  <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 to-transparent" />
+  <div className="absolute bottom-0 left-0 p-4 sm:p-8">
+    <Link
+      href="/menu"
+      className="flex items-center gap-2 text-white mb-2 sm:mb-4 hover:underline"
+    >
+      <ArrowLeft size={14} className="sm:size-4" /> 
+      <span className="text-sm sm:text-base">Back to Restaurants</span>
+    </Link>
+    <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-md">
+      {canteen.name}
+    </h1>
+    <p className="text-sm sm:text-lg text-gray-200 drop-shadow-sm">{canteen.cuisine}</p>
+    <div className="flex flex-wrap items-center gap-3 mt-2 text-gray-200 text-xs sm:text-sm">
+      <div className="flex items-center gap-1">
+        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-yellow-400" />
+        <span>{canteen.rating}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span>{canteen.deliveryTime}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <MapPin className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span>{canteen.distance}</span>
+      </div>
+    </div>
+  </div>
+</header>
+
 
       <div className='container mx-auto px-4 py-8'>
         {/* Filter Bar */}
         <div className='flex flex-col gap-6 mb-8 bg-white dark:bg-gray-900 p-6 rounded-lg shadow-md border border-gray-200 dark:border-gray-700'>
-          <div className='flex flex-col md:flex-row gap-4 items-center'>
+          <div className='flex flex-col md:flex-row flex-wrap gap-4 items-center'>
             <div className='relative w-full md:w-1/3'>
               <Search className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5' />
               <Input
@@ -308,7 +309,7 @@ const CanteenMenuPage = () => {
               />
             </div>
             <select
-              className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
+              className='w-full sm:w-1/4 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
               value={selectedItemType}
               onChange={(e) => setSelectedItemType(e.target.value)}>
               {itemTypes.map((type) => (
@@ -318,7 +319,7 @@ const CanteenMenuPage = () => {
               ))}
             </select>
             <select
-              className='border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
+              className=' w-full sm:w-1/4 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full md:w-1/4'
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}>
               {categories.map((category) => (
@@ -353,7 +354,7 @@ const CanteenMenuPage = () => {
               <span className='text-gray-900 dark:text-white text-sm font-medium mb-2'>
                 Price Range: ₹{priceRange[0]} - ₹{priceRange[1]}
               </span>
-              <div className='flex gap-4'>
+              <div className='flex flex-col sm:flex-row gap-4 w-full'>
                 <input
                   type='range'
                   id='min-price'
@@ -380,90 +381,94 @@ const CanteenMenuPage = () => {
         <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
           <main className='md:col-span-4'>
             {filteredMenuItems.length > 0 ? (
-              <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'>
                 {filteredMenuItems.map((item) => {
                   const quantity = getCartItemQuantity(item._id);
                   return (
                     <Card
-                      key={item._id}
-                      className='flex flex-col rounded-2xl shadow-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 relative'>
-                      <div className='relative w-full h-48'>
-                        {item.image ? (
-                          <Image
-                            src={item.image}
-                            alt={item.name}
-                            fill
-                            style={{ objectFit: 'cover' }}
-                            className='w-full h-full object-cover'
-                          />
-                        ) : (
-                          <div className='w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center'>
-                            <Utensils className='w-12 h-12 text-gray-400' />
+                    key={item._id}
+                    className="flex flex-row md:flex-col rounded-2xl shadow-lg overflow-hidden bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+                  >
+                    
+                    {/* Image Section */}
+                    <div className="relative w-2/5 md:w-full h-full md:h-40 min-h-32">
+                      {item.image ? (
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                          <Utensils className="w-10 h-10 text-gray-400" />
+                        </div>
+                      )}
+                       <div className='absolute top-3 left-3 z-10'>
+    <Badge className='bg-green-500 text-white rounded-full px-3 py-1 text-xs shadow'>
+      Active
+    </Badge>
+  </div>
+  <div className='absolute top-3 right-3 z-10'>
+    <Badge
+      className={
+        item.isVeg
+          ? 'bg-green-100 text-green-700'
+          : 'bg-red-100 text-red-700'
+      }>
+      {item.isVeg ? 'VEG' : 'NON-VEG'}
+    </Badge>
+  </div>
+                    </div>
+                  
+                    {/* Content Section */}
+                    <div className="flex flex-col flex-1 p-4 gap-2 justify-between">
+                      <div>
+                        <span className="font-bold text-base md:text-lg capitalize text-gray-900 dark:text-white">
+                          {item.name}
+                        </span>
+                        <p className="text-gray-600 dark:text-gray-300 text-xs md:text-sm line-clamp-2">
+                          {item.description || "No description available"}
+                        </p>
+                      </div>
+                  
+                      <div className="flex flex-col gap-2">
+                      <span className="font-bold text-orange-500 text-sm md:text-lg">
+                            ₹{item.price || "N/A"}
+                          </span>
+
+  {quantity === 0 ? (
+    <div className="w-full flex md:justify-center">
+      <Button
+        onClick={() => handleAddToCart(item)}
+        className="w-full bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold py-4 px-6 text-base transition-colors flex items-center justify-center gap-2 shadow-md"
+      >
+        <Plus size={16} className="mr-2" /> Add to cart
+      </Button>
+    </div>
+) : (
+  <div className='flex items-center justify-between mt-4'>
+    <Button
+      size='icon'
+      onClick={() => handleDecrement(item)}
+      className='bg-red-500 hover:bg-red-600 text-white rounded-full'>
+      <Minus size={16} />
+    </Button>
+    <span className='font-bold text-lg'>
+      {quantity}
+    </span>
+    <Button
+      size='icon'
+      onClick={() => handleIncrement(item)}
+      className='bg-green-500 hover:bg-green-600 text-white rounded-full'>
+      <Plus size={16} />
+    </Button>
                           </div>
                         )}
-                        <div className='absolute top-3 left-3 z-10'>
-                          <Badge className='bg-green-500 text-white rounded-full px-3 py-1 text-xs shadow'>
-                            Active
-                          </Badge>
-                        </div>
-                        <div className='absolute top-3 right-3 z-10'>
-                          <Badge
-                            className={
-                              item.isVeg
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-red-100 text-red-700'
-                            }>
-                            {item.isVeg ? 'VEG' : 'NON-VEG'}
-                          </Badge>
-                        </div>
                       </div>
-                      <div className='flex flex-col flex-1 p-5 gap-2'>
-                        <div className='flex flex-col gap-1'>
-                          <span className='font-bold text-lg capitalize text-gray-900 dark:text-white'>
-                            {item.name}
-                          </span>
-                          <span className='text-gray-600 dark:text-gray-300 text-sm'>
-                            {item.description
-                              ? item.description
-                              : 'No description available'}
-                          </span>
-                        </div>
-                        <div className='flex items-center gap-2 mt-2'>
-                          <span className='font-bold text-orange-500 text-lg'>
-                            ₹{item.price || 'N/A'}
-                          </span>
-                          <Badge className='bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium ml-2'>
-                            {item.category || 'Uncategorized'}
-                          </Badge>
-                        </div>
-                        <div className='flex-1' />
-                        {quantity === 0 ? (
-                          <Button
-                            onClick={() => handleAddToCart(item)}
-                            className='w-full bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold mt-4 py-2 transition-colors'>
-                            <Plus size={16} className='mr-2' /> Add to cart
-                          </Button>
-                        ) : (
-                          <div className='flex items-center justify-between mt-4'>
-                            <Button
-                              size='icon'
-                              onClick={() => handleDecrement(item)}
-                              className='bg-red-500 hover:bg-red-600 text-white rounded-full'>
-                              <Minus size={16} />
-                            </Button>
-                            <span className='font-bold text-lg'>
-                              {quantity}
-                            </span>
-                            <Button
-                              size='icon'
-                              onClick={() => handleIncrement(item)}
-                              className='bg-green-500 hover:bg-green-600 text-white rounded-full'>
-                              <Plus size={16} />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
+                    </div>
+                  </Card>
+                  
                   );
                 })}
               </div>

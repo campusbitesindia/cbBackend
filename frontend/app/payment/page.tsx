@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Card,
@@ -28,6 +29,7 @@ import { useAuth } from '@/context/auth-context';
 import { useSocket } from '@/context/socket-context';
 import { disconnect } from 'node:process';
 import { useCart } from '@/context/cart-context';
+import { RefundPolicyModal } from '@/components/RefundPolicyModal/RefundPolicyModal';
 
 interface OrderDetailsType {
   id: string;
@@ -46,8 +48,31 @@ export default function PaymentPage() {
   const [orderDetails, setOrderDetails] = useState<OrderDetailsType | null>(
     null
   );
+  const [openPolicyModal, setOpenPolicyModal] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'upi'>('cod');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Simple mobile detection
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkIfMobile(); // Initial check
+    window.addEventListener('resize', checkIfMobile); // Update on resize
+
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
+  const handleClick = () => {
+    if (isMobile) {
+      router.push(`/refund-policy?orderId=${orderId}`);
+    } else {
+      setOpenPolicyModal(true);
+    }
+  };
 
   // Query param
   const orderId = searchParams.get('orderId');
@@ -106,7 +131,7 @@ export default function PaymentPage() {
   const handleCashOnDelivery = async (paymentData: object) => {
     try {
       const response = await axios.post(
-        "https://campusbites-mxpe.onrender.com/api/v1/payments/COD",
+        'https://campusbites-mxpe.onrender.com/api/v1/payments/COD',
         paymentData,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -135,7 +160,7 @@ export default function PaymentPage() {
   const verifypayment = async (data: object) => {
     try {
       const response = await axios.post(
-        "https://campusbites-mxpe.onrender.com/api/v1/payments/verify",
+        'https://campusbites-mxpe.onrender.com/api/v1/payments/verify',
         data,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -181,7 +206,8 @@ export default function PaymentPage() {
     try {
       // Pass custom transaction ID to your backend for order creation
       const response = await axios.post(
-        "https://campusbites-mxpe.onrender.com/api/v1/payments/create-order",paymentData,
+        'https://campusbites-mxpe.onrender.com/api/v1/payments/create-order',
+        paymentData,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -306,7 +332,7 @@ export default function PaymentPage() {
               onValueChange={(value: 'cod' | 'upi') => setPaymentMethod(value)}
               className='space-y-4'>
               {/* Cash on Delivery */}
-              <div className='flex items-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-50'>
+              <div className='flex items-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-50/10'>
                 <RadioGroupItem value='cod' id='cod' />
                 <Label htmlFor='cod' className='flex-1 cursor-pointer'>
                   <div className='flex items-center space-x-3'>
@@ -324,7 +350,7 @@ export default function PaymentPage() {
               </div>
 
               {/* UPI Payment */}
-              <div className='flex items-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-50'>
+              <div className='flex items-center space-x-2 p-4 border rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-50/10'>
                 <RadioGroupItem value='upi' id='upi' />
                 <Label htmlFor='upi' className='flex-1 cursor-pointer'>
                   <div className='flex items-center space-x-3'>
@@ -369,9 +395,19 @@ export default function PaymentPage() {
                 <span>Your payment information is secure and encrypted</span>
               </div>
             </div>
+            <div
+              onClick={handleClick}
+              className='text-center mt-4 text-sm text-gray-600 cursor-pointer'>
+              By placing your order, you agree to our Refund Policy
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      <RefundPolicyModal
+        onOpenChange={() => setOpenPolicyModal(!openPolicyModal)}
+        onOpen={openPolicyModal}
+      />
     </div>
   );
 }

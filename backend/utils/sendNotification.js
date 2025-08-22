@@ -3,7 +3,7 @@ const Notification=require("../models/Notification");
 const User=require("../models/User")
 const SendNotification=async(userId,title,message,type)=>{
     try{
-        console.log("started")
+        
         const user=await User.findOne({_id:userId});
         console.log(user)
         if(!user){

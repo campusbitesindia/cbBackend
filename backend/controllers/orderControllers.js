@@ -125,7 +125,9 @@ exports.CreateOrder=async(req,res)=>{
 exports.UpdateOrderStatus = async (req, res) => {
   try {
     const { id: OrderId } = req.params;
+    console.log(req.body)
     const { status } = req.body;
+    
     const role=req.user.role;
 
     // Validate input

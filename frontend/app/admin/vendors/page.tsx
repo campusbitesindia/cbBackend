@@ -22,7 +22,7 @@ export default function AdminVendorsPage() {
   const [payoutsLoading, setPayoutsLoading] = useState<{ [vendorId: string]: boolean }>({});
   const [approveLoading, setApproveLoading] = useState<{ [vendorId: string]: boolean }>({});
   const [ratingLoading, setRatingLoading] = useState<{ [vendorId: string]: boolean }>({});
-  const [owners, setOwners] = useState<any[]>([]); // <-- new
+  const [owners, setOwners] = useState<any[]>([]);
   const { toast } = useToast();
 
   async function fetchVendors() {
@@ -36,7 +36,7 @@ export default function AdminVendorsPage() {
       // Ensure consistent data structure for all vendors
       const processedVendors = canteens.map((vendor: any) => ({
         ...vendor,
-        _id: vendor._id?.toString(), // Ensure ID is a string for consistent comparison
+        _id: vendor._id?.toString(),
         owner: vendor.owner || null,
         isSuspended: vendor.isSuspended || false,
         isBanned: vendor.isBanned || false,
@@ -65,7 +65,7 @@ export default function AdminVendorsPage() {
       const res = await api.get("/api/v1/admin/users/list-by-role");
       setOwners(res.data.canteenOwners || []);
     } catch (err) {
-      // ignore for now
+      console.error("Error fetching owners:", err);
     }
   }
 
@@ -90,27 +90,32 @@ export default function AdminVendorsPage() {
 
   async function handleBanVendor(userId: string, ban: boolean, canteenId: string) {
     setActionLoading((l) => ({ ...l, [userId]: true }));
-    const res = await api.post("/api/v1/admin/suspendCanteen", { canteenId, suspend: ban });
-    setActionLoading((l) => ({ ...l, [userId]: false }));
-    if (res.status === 200) {
-      toast({ title: res.data.message || (ban ? "Vendor banned" : "Vendor unbanned") });
-      setVendors((vendors) =>
-        vendors.map((v) =>
-          v.owner && v.owner._id === userId
-            ? { ...v, owner: { ...v.owner, isBanned: ban } }
-            : v
-        )
-      );
-      setFilteredVendors((vendors) =>
-        vendors.map((v) =>
-          v.owner && v.owner._id === userId
-            ? { ...v, owner: { ...v.owner, isBanned: ban } }
-            : v
-        )
-      );
-      fetchVendors();
-    } else {
-      toast({ title: res.data.message || "Failed to update vendor", variant: "destructive" });
+    
+    try {
+      const res = await api.post("/api/v1/admin/suspendCanteen", { 
+        canteenId, 
+        suspend: ban 
+      });
+      
+      if (res.status === 200) {
+        toast({ 
+          title: res.data.message || (ban ? "Vendor banned" : "Vendor unbanned"),
+          variant: "default"
+        });
+        
+        // Refresh the vendors list to get updated data
+        await fetchVendors();
+      } else {
+        throw new Error(res.data.message || "Failed to update vendor");
+      }
+    } catch (error: any) {
+      console.error("Error banning vendor:", error);
+      toast({ 
+        title: error.response?.data?.message || error.message || "Failed to update vendor", 
+        variant: "destructive" 
+      });
+    } finally {
+      setActionLoading((l) => ({ ...l, [userId]: false }));
     }
   }
 
@@ -151,7 +156,7 @@ export default function AdminVendorsPage() {
           headers: {
             'Content-Type': 'application/json'
           },
-          withCredentials: true // Important for sending cookies with the request
+          withCredentials: true
         }
       );
       
@@ -260,6 +265,7 @@ export default function AdminVendorsPage() {
     );
   }
 
+  // Updated approve vendor function with better error handling and email confirmation
   async function handleApproveVendor(canteenId: string) {
     const vendorId = canteenId?.toString();
     if (!vendorId) {
@@ -289,7 +295,7 @@ export default function AdminVendorsPage() {
       );
       
       if (approveRes.status === 200) {
-        // Update the vendor's approval status without refreshing the whole list
+        // Update the vendor's approval status
         setVendors(prevVendors => 
           prevVendors.map(vendor => 
             vendor._id === vendorId 
@@ -303,19 +309,34 @@ export default function AdminVendorsPage() {
           )
         );
         
+        // Show success message - the backend response should include the email confirmation
+        const vendorName = vendors.find(v => v._id === vendorId)?.name || "Vendor";
+        const ownerEmail = vendors.find(v => v._id === vendorId)?.owner?.email || "owner";
+        
         toast({ 
-          title: "Vendor Approved",
-          description: "The vendor has been successfully approved.",
+          title: "Vendor Approved Successfully!",
+          description: `${vendorName} has been approved and email notification sent to ${ownerEmail}`,
           variant: "default"
         });
+        
+        console.log("Vendor approved successfully. Email notification sent via backend.");
       } else {
         throw new Error(approveRes.data?.message || "Failed to approve vendor");
       }
     } catch (err: any) {
       console.error("Error approving vendor:", err);
+      
+      // More detailed error handling
+      let errorMessage = "An error occurred while approving the vendor.";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       toast({ 
         title: "Approval Failed",
-        description: err.response?.data?.message || err.message || "An error occurred while approving the vendor.",
+        description: errorMessage,
         variant: "destructive" 
       });
     } finally {
@@ -355,6 +376,13 @@ export default function AdminVendorsPage() {
     return '-';
   }
 
+  // Helper to get owner email for display
+  function getOwnerEmail(owner: any) {
+    if (!owner) return '-';
+    if (typeof owner === 'object' && owner.email) return owner.email;
+    return '-';
+  }
+
   return (
     <div className="max-w-7xl mx-auto p-8">
       <h1 className="text-3xl font-bold mb-6 text-white">All Vendors</h1>
@@ -385,7 +413,7 @@ export default function AdminVendorsPage() {
             <tbody>
               {filteredVendors.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-8 text-slate-400">No vendors found.</td>
+                  <td colSpan={5} className="text-center py-8 text-slate-400">No vendors found.</td>
                 </tr>
               ) : (
                 filteredVendors.map((vendor) => (
@@ -395,11 +423,16 @@ export default function AdminVendorsPage() {
                         {vendor.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-2 text-white">{getOwnerName(vendor.owner)}</td>
+                    <td className="px-4 py-2 text-white">
+                      <div className="flex flex-col">
+                        <span>{getOwnerName(vendor.owner)}</span>
+                        <span className="text-xs text-gray-400">{getOwnerEmail(vendor.owner)}</span>
+                      </div>
+                    </td>
                     <td className="px-4 py-2">
                       <Badge
                         variant={vendor.isSuspended || vendor.isBanned ? "destructive" : "secondary"}
-                        className={vendor.isSuspended || vendor.isBanned ? "bg-green-500/90 text-white" : "bg-gray-700/80 text-white"}
+                        className={vendor.isSuspended || vendor.isBanned ? "bg-red-500/90 text-white" : "bg-gray-700/80 text-white"}
                       >
                         {(vendor.isSuspended || vendor.isBanned) ? "Yes" : "No"}
                       </Badge>
@@ -468,7 +501,7 @@ export default function AdminVendorsPage() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Approve
+                                Approve & Send Email
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -485,93 +518,3 @@ export default function AdminVendorsPage() {
     </div>
   );
 }
-
-import { useEffect as useEffect2, useState as useState2 } from "react";
-
-function VendorMetrics({ vendor }: { vendor: any }) {
-  const [metrics, setMetrics] = useState2<any>(null);
-  const [loading, setLoading] = useState2(true);
-  const [error, setError] = useState2("");
-  useEffect2(() => {
-    async function fetchMetrics() {
-      setLoading(true);
-      setError("");
-      try {
-        // Fetch vendor canteen details and stats
-        const res = await api.get(`/api/v1/admin/vendors/${vendor.canteenId || vendor.canteen || vendor._id}/details`);
-        setMetrics(res.data.data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load metrics");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchMetrics();
-  }, [vendor]);
-  if (loading) return <div className="text-slate-400">Loading metrics...</div>;
-  if (error) return <div className="text-red-400">{error}</div>;
-  if (!metrics) return <div className="text-slate-400">No metrics found.</div>;
-  const { statistics, canteen } = metrics;
-  return (
-    <div className="space-y-2">
-      <div><span className="font-semibold">Today's Revenue:</span> ₹{statistics?.totalRevenue || 0}</div>
-      <div><span className="font-semibold">Total Orders:</span> {statistics?.totalOrders || 0}</div>
-      <div><span className="font-semibold">Completed Orders:</span> {statistics?.completedOrders || 0}</div>
-      <div><span className="font-semibold">Canteen Name:</span> {canteen?.name || '-'}</div>
-      <div><span className="font-semibold">Approval Status:</span> {canteen?.approvalStatus || '-'}</div>
-      <div><span className="font-semibold">Owner:</span> {canteen?.owner?.name || '-'}</div>
-      {/* Add more metrics as needed */}
-    </div>
-  );
-}
-
-function VendorPayouts({ vendor }: { vendor: any }) {
-  const [payouts, setPayouts] = useState2<any[]>([]);
-  const [loading, setLoading] = useState2(true);
-  const [error, setError] = useState2("");
-  useEffect2(() => {
-    async function fetchPayouts() {
-      setLoading(true);
-      setError("");
-      try {
-        const canteenId = vendor.canteenId || vendor.canteen || vendor._id;
-        const res = await api.get(`/api/v1/admin/payouts/canteen/${canteenId}`);
-        setPayouts(res.data.payouts || []);
-      } catch (err: any) {
-        setError(err.message || "Failed to load payouts");
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchPayouts();
-  }, [vendor]);
-  if (loading) return <div className="text-slate-400">Loading payouts...</div>;
-  if (error) return <div className="text-red-400">{error}</div>;
-  if (!payouts.length) return <div className="text-slate-400">No payouts found.</div>;
-  return (
-    <div className="overflow-x-auto bg-white/5 rounded-xl">
-      <table className="min-w-full text-white bg-white/5 rounded-xl overflow-hidden">
-        <thead>
-          <tr className="bg-white/10">
-            <th className="px-4 py-2 font-semibold">Transaction ID</th>
-            <th className="px-4 py-2 font-semibold">Date</th>
-            <th className="px-4 py-2 font-semibold">Amount</th>
-            <th className="px-4 py-2 font-semibold">Notes</th>
-            <th className="px-4 py-2 font-semibold">Admin</th>
-          </tr>
-        </thead>
-        <tbody>
-          {payouts.map((p) => (
-            <tr key={p._id} className="border-b border-white/10 hover:bg-white/10 transition group">
-              <td className="px-4 py-2">{p.trnId}</td>
-              <td className="px-4 py-2">{p.date ? new Date(p.date).toLocaleDateString() : "-"}</td>
-              <td className="px-4 py-2">₹{p.amount}</td>
-              <td className="px-4 py-2">{p.notes || "-"}</td>
-              <td className="px-4 py-2">{p.admin?.name || "-"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-} 

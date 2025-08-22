@@ -187,8 +187,8 @@ function Navbar() {
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant='ghost'
-                        className='relative p-0 rounded-full h-10 w-10'>
-                        <div className='relative w-10 h-10 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
+                        className='relative p-0 rounded-full h-12 w-12'>
+                        <div className='relative w-12 h-12 rounded-full overflow-hidden border border-gray-300/50 dark:border-white/10'>
                           <Image
                             src={profileImageSrc}
                             alt={displayUser?.name || 'User'}
@@ -200,40 +200,41 @@ function Navbar() {
                             }}
                           />
                         </div>
-                        <span className='absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
+                        <span className='absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-white dark:ring-gray-900' />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align='end'
                       className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
                       <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
-                        <div className='flex items-center space-x-3'>
-                          <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
-                            <Image
-                              src={profileImageSrc}
-                              alt={displayUser?.name || 'User'}
-                              fill
-                              className='object-cover'
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = '/placeholder-user.jpg';
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <p className='font-semibold text-gray-900 dark:text-white'>
-                              {displayUser?.name}
-                            </p>
-                            <p className='text-sm text-gray-600 dark:text-gray-400'>
-                              {displayUser?.email}
-                            </p>
-                            {displayUser?.role && (
-                              <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
-                                {displayUser.role}
-                              </p>
-                            )}
-                          </div>
+                        <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shrink-0">
+                          <Image
+                            src={profileImageSrc}
+                            alt={displayUser?.name || 'User'}
+                            fill
+                            className="object-cover rounded-full"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-user.jpg';
+                            }}
+                          />
                         </div>
+                        <div className="flex flex-col">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {displayUser?.name}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[180px]">
+                            {displayUser?.email}
+                          </p>
+                          {displayUser?.role && (
+                            <p className="text-xs text-red-500 dark:text-red-400 capitalize">
+                              {displayUser.role}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
                       </div>
 
                       <DropdownMenuItem
@@ -410,35 +411,36 @@ function Navbar() {
                 <DropdownMenuContent
                   align='end'
                   className='w-64 bg-white/90 dark:bg-gray-900/80 backdrop-blur-lg border border-gray-200/50 dark:border-white/10 shadow-2xl rounded-2xl mt-2 p-2 text-gray-900 dark:text-white'>
-                  <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
-                    <div className='flex items-center space-x-3'>
-                      <div className='relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700'>
-                        <Image
-                          src={profileImageSrc}
-                          alt={displayUser?.name || 'User'}
-                          fill
-                          className='object-cover'
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/placeholder-user.jpg';
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <p className='font-semibold text-gray-900 dark:text-white'>
-                          {displayUser?.name}
-                        </p>
-                        <p className='text-sm text-gray-600 dark:text-gray-400'>
-                          {displayUser?.email}
-                        </p>
-                        {displayUser?.role && (
-                          <p className='text-xs text-red-500 dark:text-red-400 capitalize'>
-                            {displayUser.role}
+                 <div className='p-2 border-b border-gray-200/50 dark:border-white/10'>
+                        <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shrink-0">
+                          <Image
+                            src={profileImageSrc}
+                            alt={displayUser?.name || 'User'}
+                            fill
+                            className="object-cover rounded-full"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = '/placeholder-user.jpg';
+                            }}
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {displayUser?.name}
                           </p>
-                        )}
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[180px]">
+                            {displayUser?.email}
+                          </p>
+                          {displayUser?.role && (
+                            <p className="text-xs text-red-500 dark:text-red-400 capitalize">
+                              {displayUser.role}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </div>
+
+                      </div>
 
                   <DropdownMenuItem
                     asChild
@@ -585,7 +587,9 @@ function Navbar() {
                       <Button
                         asChild
                         variant='outline'
-                        className='w-full h-12 rounded-xl border-white/20 text-lg text-white hover:bg-white/10 hover:text-white'>
+                        className='w-full bg-gray-200 text-white dark:text-black font-semibold rounded-xl py-4 shadow-md 
+             transition-colors transition-transform duration-300 hover:scale-105 
+             hover:bg-gray-300'>
                         <Link
                           href='/login'
                           onClick={() => setIsMenuOpen(false)}>

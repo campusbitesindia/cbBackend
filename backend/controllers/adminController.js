@@ -5,7 +5,7 @@ const Transaction = require("../models/Transaction")
 const Penalty=require("../models/penaltySchema");
 const CampusRequest = require("../models/campusRequest")
 const Payout = require("../models/Payout")
-
+const SendNotification=require("../utils/sendNotification")
 exports.getTotalCounts = async (req, res) => {
   try {
     const [userCount, campusCount, canteenCount] = await Promise.all([
@@ -738,6 +738,9 @@ exports.reviewCampusRequest = async (req, res) => {
     request.isReviewed = true
     request.approved = approved
     await request.save()
+    const Owner=await User.findOne({email:request.email});
+    await SendNotification(Owner._id,"Campus Request",`Your request has been ${approved}`);
+    await 
     res.status(200).json({ success: true, message: `Campus request ${approved ? "approved" : "rejected"}.` })
   } catch (error) {
     res.status(500).json({ success: false, message: "Server Error" })
@@ -807,7 +810,8 @@ exports.createAdminAccount = async (req, res) => {
   }
 }
 
-const jwt = require("jsonwebtoken")
+const jwt = require("jsonwebtoken");
+const { sendMail } = require("../utils/sendMail");
 
 exports.adminLogin = (req, res) => {
   const { username, password } = req.body
@@ -906,7 +910,8 @@ exports.approveVendor = async (req, res) => {
     }
 
     await canteen.save()
-
+    const Owner=await User.findById(canteen.owner);
+    await sendMail(Owner.email,"Canteen Request Update",`Request for Your canteen has been ${approved}`)
     // Update user status if needed
     const owner = canteen.owner
     if (owner) {

@@ -3,10 +3,23 @@
 @tailwind utilities;
 
 @layer base {
-  html {
+  /* Root elements full height and smooth scroll */
+  html, body, #__next {
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
     scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
+    margin: 0;
+    padding: 0;
   }
-  
+
+  /* Prevent horizontal scroll */
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Tailwind variables */
   :root {
     --background: 0 0% 100%;
     --foreground: 224 71.4% 4.1%;
@@ -61,262 +74,23 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
-}
 
-@layer base {
+  /* Apply border color */
   * {
     @apply border-border;
   }
-  html,
-  body {
-    overflow-x: hidden;
-  }
+
+  /* Background and text colors */
   body {
     @apply bg-background text-foreground transition-colors duration-500;
   }
 }
 
-/* Custom Animations */
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
-}
-
-@keyframes float-delayed {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-15px);
-  }
-}
-
-@keyframes bounce-slow {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes bounce-gentle {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes spin-slow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes spin-reverse {
-  from {
-    transform: rotate(360deg);
-  }
-  to {
-    transform: rotate(0deg);
-  }
-}
-
-@keyframes orbit {
-  from {
-    transform: rotate(0deg) translateX(60px) rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg) translateX(60px) rotate(-360deg);
-  }
-}
-
-@keyframes orbit-reverse {
-  from {
-    transform: rotate(360deg) translateX(50px) rotate(-360deg);
-  }
-  to {
-    transform: rotate(0deg) translateX(50px) rotate(0deg);
-  }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-float-delayed {
-  animation: float-delayed 8s ease-in-out infinite;
-}
-
-.animate-bounce-slow {
-  animation: bounce-slow 4s ease-in-out infinite;
-}
-
-.animate-bounce-gentle {
-  animation: bounce-gentle 3s ease-in-out infinite;
-}
-
-.animate-slide-in-left {
-  animation: slide-in-left 0.8s ease-out;
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 0.8s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.6s ease-out;
-}
-
-.animate-fade-in {
-  animation: fade-in 1s ease-out;
-}
-
-.animate-spin-slow {
-  animation: spin-slow 20s linear infinite;
-}
-
-.animate-spin-reverse {
-  animation: spin-reverse 15s linear infinite;
-}
-
-.animate-orbit {
-  animation: orbit 10s linear infinite;
-}
-
-.animate-orbit-reverse {
-  animation: orbit-reverse 12s linear infinite;
-}
-
-.delay-200 {
-  animation-delay: 200ms;
-}
-
-.delay-300 {
-  animation-delay: 300ms;
-}
-
-.delay-500 {
-  animation-delay: 500ms;
-}
-
-.delay-1000 {
-  animation-delay: 1000ms;
-}
-
-.delay-2000 {
-  animation-delay: 2000ms;
-}
-
-/* Animation delays for background effects */
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
-/* Blob animation for light mode */
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
-}
-
-.animate-blob {
-  animation: blob 7s infinite;
-}
-
-/* Line clamp utilities */
-.line-clamp-1 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-}
-
-.line-clamp-2 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.line-clamp-3 {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
+/* Your existing animations and other styles below... */
 
 /* Hide scrollbar but keep functionality */
 .scrollbar-hide {
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  -ms-overflow-style: none; /* IE 10+ */
   scrollbar-width: none; /* Firefox */
 }
 

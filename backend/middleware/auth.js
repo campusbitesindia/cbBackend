@@ -5,7 +5,7 @@ const Canteen = require("../models/Canteen")
 exports.isAuthenticated = async (req, res, next) => {
   try {
     const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.replace("Bearer ", ""))
-
+    console.log(token)
     if (!token || token === "j:null" || token === "null") {
       return res.status(401).json({
         success: false,

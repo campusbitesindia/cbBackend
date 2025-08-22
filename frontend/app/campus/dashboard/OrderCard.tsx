@@ -129,7 +129,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         description: `Order status changed to ${getStatusLabel(newStatus)}`,
       });
 
-      // Call the parent callback to refresh the order list
       if (onStatusUpdate) {
         onStatusUpdate(order._id, newStatus);
       }
@@ -151,23 +150,23 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const canUpdateStatus = nextStatusOptions.length > 0 && !updatingStatus;
 
   return (
-    <div className='bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200 group'>
+    <div className='w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md hover:border-gray-200 transition-all duration-200 group'>
       {/* Header Section */}
-      <div className='flex justify-between items-start mb-6'>
+      <div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6'>
         <div className='flex items-center space-x-3'>
-          <div className='bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-3 shadow-sm'>
-            <Receipt className='w-5 h-5' />
+          <div className='bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-2 sm:p-3 shadow-sm flex-shrink-0'>
+            <Receipt className='w-4 h-4 sm:w-5 sm:h-5' />
           </div>
-          <div>
-            <h3 className='font-bold text-xl text-gray-900'>
+          <div className='min-w-0 flex-1'>
+            <h3 className='font-bold text-lg sm:text-xl text-gray-900 truncate'>
               Order #
               {order.OrderNumber
                 ? order.OrderNumber.replace(/[^0-9]/g, '')
                 : order._id.slice(-6)}
             </h3>
             <div className='flex items-center space-x-2 mt-1'>
-              <Calendar className='w-3 h-3 text-gray-400' />
-              <span className='text-sm text-gray-500'>
+              <Calendar className='w-3 h-3 text-gray-400 flex-shrink-0' />
+              <span className='text-sm text-gray-500 truncate'>
                 {new Date(order.createdAt).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -180,54 +179,54 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </div>
 
-        <div className='text-right'>
-          <div className='text-2xl font-bold text-gray-900'>
+        <div className='text-left sm:text-right flex-shrink-0'>
+          <div className='text-xl sm:text-2xl font-bold text-gray-900'>
             ₹{order.total.toFixed(2)}
           </div>
           <Badge
-            className={`${getStatusColor(order.status)} border font-medium`}>
+            className={`${getStatusColor(order.status)} border font-medium mt-2 sm:mt-0`}>
             {getStatusIcon(order.status)}
-            <span className='ml-1'>{getStatusLabel(order.status)}</span>
+            <span className='ml-1 text-xs sm:text-sm'>{getStatusLabel(order.status)}</span>
           </Badge>
         </div>
       </div>
 
       {/* Customer and Payment Info */}
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mb-6'>
-        <div className='bg-gray-50 rounded-xl p-4'>
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6'>
+        <div className='bg-gray-50 rounded-xl p-3 sm:p-4'>
           <div className='flex items-center space-x-2 mb-2'>
-            <User className='w-4 h-4 text-gray-500' />
+            <User className='w-4 h-4 text-gray-500 flex-shrink-0' />
             <span className='font-semibold text-gray-700 text-sm'>
               Customer
             </span>
           </div>
-          <p className='text-gray-900 font-medium'>
+          <p className='text-gray-900 font-medium text-sm sm:text-base break-words'>
             {typeof order.student === 'string'
               ? order.student
               : order.student?.name || 'N/A'}
           </p>
         </div>
 
-        <div className='bg-gray-50 rounded-xl p-4'>
+        <div className='bg-gray-50 rounded-xl p-3 sm:p-4'>
           <div className='flex items-center space-x-2 mb-2'>
-            <Store className='w-4 h-4 text-gray-500' />
+            <Store className='w-4 h-4 text-gray-500 flex-shrink-0' />
             <span className='font-semibold text-gray-700 text-sm'>Canteen</span>
           </div>
-          <p className='text-gray-900 font-medium'>
+          <p className='text-gray-900 font-medium text-sm sm:text-base break-words'>
             {order.canteen?.name || 'N/A'}
           </p>
         </div>
       </div>
 
       {/* Payment Method */}
-      <div className='bg-blue-50 rounded-xl p-4 mb-6'>
+      <div className='bg-blue-50 rounded-xl p-3 sm:p-4 mb-6'>
         <div className='flex items-center space-x-2 mb-2'>
-          <CreditCard className='w-4 h-4 text-blue-600' />
+          <CreditCard className='w-4 h-4 text-blue-600 flex-shrink-0' />
           <span className='font-semibold text-blue-700 text-sm'>
             Payment Method
           </span>
         </div>
-        <p className='text-blue-900 font-medium'>
+        <p className='text-blue-900 font-medium text-sm sm:text-base break-words'>
           {order.payment?.method?.toUpperCase() ||
             order?.paymentStatus?.toUpperCase() ||
             'N/A'}
@@ -236,26 +235,26 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Order Items */}
       <div className='mb-6'>
-        <h4 className='font-semibold text-gray-900 mb-3 flex items-center'>
-          <Package className='w-4 h-4 mr-2 text-gray-500' />
+        <h4 className='font-semibold text-gray-900 mb-3 flex items-center text-sm sm:text-base'>
+          <Package className='w-4 h-4 mr-2 text-gray-500 flex-shrink-0' />
           Order Items ({order.items.length})
         </h4>
         <div className='space-y-2'>
           {order.items.map((item: any, idx: any) => (
             <div
               key={item._id || idx}
-              className='flex justify-between items-center bg-gray-50 rounded-lg p-3'>
-              <div className='flex-1'>
-                <p className='font-medium text-gray-900'>
+              className='flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-50 rounded-lg p-3 gap-2 sm:gap-0'>
+              <div className='flex-1 min-w-0'>
+                <p className='font-medium text-gray-900 text-sm sm:text-base break-words'>
                   {item.nameAtPurchase || item.item?.name || 'Unknown Item'}
                 </p>
-                <p className='text-sm text-gray-500'>
+                <p className='text-xs sm:text-sm text-gray-500 mt-1'>
                   Qty: {item.quantity} × ₹
                   {(item.priceAtPurchase || item.item?.price || 0).toFixed(2)}
                 </p>
               </div>
-              <div className='text-right'>
-                <p className='font-semibold text-gray-900'>
+              <div className='text-left sm:text-right flex-shrink-0'>
+                <p className='font-semibold text-gray-900 text-sm sm:text-base'>
                   ₹
                   {(
                     (item.quantity || 0) *
@@ -270,16 +269,16 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
       {/* Status Update Section */}
       {canUpdateStatus && (
-        <div className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-4 border border-blue-100'>
-          <h4 className='font-semibold text-blue-900 mb-3'>
+        <div className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-3 sm:p-4 mb-4 border border-blue-100'>
+          <h4 className='font-semibold text-blue-900 mb-3 text-sm sm:text-base'>
             Update Order Status
           </h4>
-          <div className='flex items-center space-x-3'>
+          <div className='flex flex-col sm:flex-row items-stretch sm:items-center gap-3'>
             <Select
               value={selectedStatus}
               onValueChange={setSelectedStatus}
               disabled={updatingStatus}>
-              <SelectTrigger className='w-48 bg-white border-blue-200 text-black'>
+              <SelectTrigger className='w-full sm:w-48 bg-white border-blue-200 text-black'>
                 <SelectValue placeholder='Select new status' />
               </SelectTrigger>
               <SelectContent>
@@ -296,7 +295,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 size='sm'
                 onClick={() => handleStatusUpdate(selectedStatus)}
                 disabled={updatingStatus}
-                className='bg-blue-600 hover:bg-blue-700 text-black px-6'>
+                className='bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 w-full sm:w-auto'>
                 {updatingStatus ? (
                   <Loader2 className='w-4 h-4 animate-spin' />
                 ) : (
@@ -313,11 +312,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         <Button
           variant='outline'
           onClick={() => onOrderClick(order._id)}
-          className='w-full bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 group-hover:shadow-md font-medium py-3 relative overflow-hidden'>
+          className='w-full bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 hover:border-blue-300 text-blue-700 hover:text-blue-800 transition-all duration-300 group-hover:shadow-md font-medium py-2 sm:py-3 relative overflow-hidden'>
           <div className='absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
           <div className='relative flex items-center justify-center space-x-2'>
             <Eye className='w-4 h-4' />
-            <span>View Full Details</span>
+            <span className='text-sm sm:text-base'>View Full Details</span>
             <div className='w-1 h-1 bg-blue-500 rounded-full animate-pulse' />
           </div>
         </Button>

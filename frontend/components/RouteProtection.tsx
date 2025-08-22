@@ -27,13 +27,19 @@ export function RouteProtection({
     '/register',
     '/campus/register',
     '/auth/callback',
-    '/forgot-password',
-    '/verify-email',
+    '/forgotpassword',
+    '/account/verify-email',
+    '/termsconditions',
+    '/privacypolicy',
+    '/resetPassword',
+    '/about-us',
+    '/FAQ',
   ];
 
   // Check if current route is public
-  const isPublicRoute = publicRoutes.includes(pathname);
-
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
   useEffect(() => {
     setMounted(true);
   }, []);

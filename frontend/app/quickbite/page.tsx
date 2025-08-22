@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useRouter } from 'next/navigation';
 
 // Add custom animations
@@ -79,200 +79,212 @@ interface QuickBiteItemProps {
   onCanteenClick?: (canteenId: string) => void;
 }
 
-const QuickBiteItemCard: React.FC<QuickBiteItemProps> = ({
-  item,
-  onAddToCart,
-  onUpdateQuantity,
-  currentQuantity,
-  onCanteenClick,
-}) => {
-  const canteenId =
-    typeof item.canteen === 'object' && item.canteen && '_id' in item.canteen
-      ? item.canteen._id
-      : typeof item.canteen === 'string'
-      ? item.canteen
-      : '';
+const QuickBiteItemCard: React.FC<QuickBiteItemProps> = memo(
+  ({
+    item,
+    onAddToCart,
+    onUpdateQuantity,
+    currentQuantity,
+    onCanteenClick,
+  }) => {
+    const { canteenId, canteenName, isCanteenValid } = useMemo(() => {
+      const id =
+        typeof item.canteen === 'object' &&
+        item.canteen &&
+        '_id' in item.canteen
+          ? item.canteen._id
+          : typeof item.canteen === 'string'
+          ? item.canteen
+          : '';
 
-  const canteenName =
-    typeof item.canteen === 'object' && item.canteen && 'name' in item.canteen
-      ? item.canteen.name
-      : 'Unknown Canteen';
+      const name =
+        typeof item.canteen === 'object' &&
+        item.canteen &&
+        'name' in item.canteen
+          ? item.canteen.name
+          : 'Unknown Canteen';
 
-  const isCanteenValid = canteenId && canteenName !== 'Unknown Canteen';
-  return (
-    <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full'>
-      {/* Enhanced Image Section */}
-      <div className='relative overflow-hidden rounded-t-2xl bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-700 dark:via-slate-600 dark:to-slate-800'>
-        <div className='aspect-square relative overflow-hidden'>
-          <img
-            src={item.image || '/placeholder.svg'}
-            alt={item.name}
-            className='w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
-          />
-          <div className='absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent' />
-          <div className='absolute inset-0 bg-gradient-to-br from-red-500/0 via-transparent to-orange-500/0 group-hover:from-red-500/10 group-hover:to-orange-500/10 transition-all duration-500' />
-        </div>
-
-        {/* Enhanced Status Badges */}
-        <div className='absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-0'>
-          {/* Ready Badge */}
-          <span className='inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border border-emerald-400/50 backdrop-blur-sm shadow-lg shadow-emerald-500/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-emerald-500/40'>
-            <CheckCircle className='w-3 h-3 sm:w-3.5 sm:h-3.5 animate-pulse' />
-            <span className='hidden sm:inline'>Ready Now!</span>
-            <span className='sm:hidden'>Ready</span>
-          </span>
-
-          {/* Enhanced Veg/Non-Veg Badge */}
-          <span
-            className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-sm border shadow-lg transition-all duration-300 group-hover:scale-105 ${
-              item.isVeg
-                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400/50 shadow-green-500/25 group-hover:shadow-green-500/40'
-                : 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-orange-400/50 shadow-orange-500/25 group-hover:shadow-orange-500/40'
-            }`}>
-            <Leaf
-              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${
-                !item.isVeg ? 'rotate-180' : ''
-              } transition-transform duration-300`}
+      return {
+        canteenId: id,
+        canteenName: name,
+        isCanteenValid: id && name !== 'Unknown Canteen',
+      };
+    }, [item.canteen]);
+    return (
+      <Card className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full flex flex-row sm:flex-col  '>
+        {/* Enhanced Image Section */}
+       
+          <div className='relative w-full h-48 overflow-hidden rounded-t-2xl'>
+            <img
+              src={item.image || '/placeholder.svg'}
+              alt={item.name}
+              className='md:w-full w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
             />
-            <span className='hidden sm:inline'>
-              {item.isVeg ? '🥬 Veg' : '🍖 Non-Veg'}
-            </span>
-            <span className='sm:hidden'>{item.isVeg ? '🥬' : '🍖'}</span>
-          </span>
-        </div>
-      </div>
+            <div className='absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent' />
+            <div className='absolute inset-0 bg-gradient-to-br from-red-500/0 via-transparent to-orange-500/0 group-hover:from-red-500/10 group-hover:to-orange-500/10 transition-all duration-500' />
+          </div>
 
-      {/* Enhanced Content Section */}
-      <CardContent className='p-3 sm:p-4 space-y-2 sm:space-y-3'>
-        {/* Enhanced Header */}
-        <div className='space-y-2'>
-          <div className='space-y-1'>
-            <h3 className='font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100 leading-tight line-clamp-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-300'>
-              {item.name}
-            </h3>
-            {/* Enhanced Canteen Name */}
-            <div className='flex items-center gap-1'>
-              <MapPin
-                className={`w-3 h-3 ${
-                  isCanteenValid
-                    ? 'text-slate-400 dark:text-slate-500'
-                    : 'text-red-400 dark:text-red-500'
-                }`}
+          {/* Enhanced Status Badges */}
+          <div className='absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 flex flex-col sm:flex-row justify-between items-start gap-1 sm:gap-0'>
+            {/* Ready Badge */}
+            <span className='inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white border border-emerald-400/50 backdrop-blur-sm shadow-lg shadow-emerald-500/25 transition-all duration-300 group-hover:scale-105 group-hover:shadow-emerald-500/40'>
+              <CheckCircle className='w-3 h-3 sm:w-3.5 sm:h-3.5 animate-pulse' />
+              <span className='hidden sm:inline'>Ready Now!</span>
+              <span className='sm:hidden'>Ready</span>
+            </span>
+
+            {/* Enhanced Veg/Non-Veg Badge */}
+            <span
+              className={`inline-flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2 sm:px-3 py-1 sm:py-2 rounded-lg sm:rounded-xl backdrop-blur-sm border shadow-lg transition-all duration-300 group-hover:scale-105 ${
+                item.isVeg
+                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white border-green-400/50 shadow-green-500/25 group-hover:shadow-green-500/40'
+                  : 'bg-gradient-to-r from-orange-500 to-red-500 text-white border-orange-400/50 shadow-orange-500/25 group-hover:shadow-orange-500/40'
+              }`}>
+              <Leaf
+                className={`w-2.5 h-2.5 sm:w-3 sm:h-3 ${
+                  !item.isVeg ? 'rotate-180' : ''
+                } transition-transform duration-300`}
               />
-              {isCanteenValid ? (
-                <button
-                  onClick={() => onCanteenClick?.(canteenId)}
-                  className='text-xs text-slate-500 dark:text-slate-400 font-medium truncate hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200 hover:underline cursor-pointer'>
-                  {canteenName}
-                </button>
-              ) : (
-                <div className='flex items-center gap-1'>
-                  <p className='text-xs text-red-500 dark:text-red-400 font-medium truncate'>
-                    Canteen Unavailable
-                  </p>
-                  <span className='text-xs text-red-400'>⚠️</span>
-                </div>
+              <span className='hidden sm:inline'>
+                {item.isVeg ? '🥬 Veg' : '🍖 Non-Veg'}
+              </span>
+              <span className='sm:hidden'>{item.isVeg ? '🥬' : '🍖'}</span>
+            </span>
+          </div>
+        
+
+        {/* Enhanced Content Section */}
+        <CardContent className='p-3 sm:p-4 space-y-2 sm:space-y-3'>
+          {/* Enhanced Header */}
+          <div className='space-y-2'>
+            <div className='space-y-1'>
+              <h3 className='font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100 leading-tight line-clamp-1 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors duration-300'>
+                {item.name}
+              </h3>
+              {/* Enhanced Canteen Name */}
+              <div className='flex items-center gap-1'>
+                <MapPin
+                  className={`w-3 h-3 ${
+                    isCanteenValid
+                      ? 'text-slate-400 dark:text-slate-500'
+                      : 'text-red-400 dark:text-red-500'
+                  }`}
+                />
+                {isCanteenValid ? (
+                  <button
+                    onClick={() => onCanteenClick?.(canteenId)}
+                    className='text-xs text-slate-500 dark:text-slate-400 font-medium truncate hover:text-red-500 dark:hover:text-red-400 transition-colors duration-200 hover:underline cursor-pointer'>
+                    {canteenName}
+                  </button>
+                ) : (
+                  <div className='flex items-center gap-1'>
+                    <p className='text-xs text-red-500 dark:text-red-400 font-medium truncate'>
+                      Canteen Unavailable
+                    </p>
+                    <span className='text-xs text-red-400'>⚠️</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {item.description && (
+              <p className='text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed'>
+                {item.description}
+              </p>
+            )}
+          </div>
+
+          {/* Enhanced Price, Rating and Category */}
+          <div className='space-y-2'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <span className='text-lg sm:text-xl font-bold bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 bg-clip-text text-transparent'>
+                  ₹{item.price}
+                </span>
+                <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'></span>
+              </div>
+
+              {/* Rating Display */}
+              <div className='flex items-center gap-1 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 px-2 py-1 rounded-full border border-yellow-400/30'>
+                <Star className='w-3 h-3 fill-yellow-500 text-yellow-500' />
+                <span className='text-xs font-bold text-yellow-600 dark:text-yellow-400'>
+                  {getItemRating(item).toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            <div className='flex items-center justify-between gap-1'>
+              {item.category && (
+                <Badge
+                  variant='secondary'
+                  className='text-xs bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2 sm:px-3 py-1 rounded-full font-medium truncate flex-shrink-0'>
+                  <span className='truncate max-w-[60px] sm:max-w-none'>
+                    {item.category}
+                  </span>
+                </Badge>
+              )}
+
+              {/* Cuisine Badge - Hide Continental */}
+              {getItemCuisine(item) !== 'Continental' && (
+                <Badge
+                  variant='outline'
+                  className='text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 px-2 sm:px-3 py-1 rounded-full font-medium truncate flex-shrink-0'>
+                  <span className='truncate max-w-[60px] sm:max-w-none'>
+                    {getItemCuisine(item)}
+                  </span>
+                </Badge>
               )}
             </div>
           </div>
-          {item.description && (
-            <p className='text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed'>
-              {item.description}
-            </p>
+
+          {/* Enhanced Add to Cart Button or Quantity Controls */}
+          {currentQuantity === 0 ? (
+            <Button
+              onClick={() => onAddToCart(item)}
+              disabled={!isCanteenValid}
+              className={`w-full font-bold transition-all duration-300 rounded-xl shadow-lg py-2 sm:py-2.5 text-xs sm:text-sm ${
+                isCanteenValid
+                  ? 'bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 dark:from-red-600 dark:via-red-700 dark:to-red-800 dark:hover:from-red-700 dark:hover:via-red-800 dark:hover:to-red-900 text-white hover:shadow-xl hover:shadow-red-500/25 dark:hover:shadow-red-400/25 hover:scale-105'
+                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              }`}
+              size='sm'>
+              <div className='flex items-center gap-2'>
+                <span></span>
+                <span>{isCanteenValid ? 'Add' : 'Unavailable'}</span>
+              </div>
+            </Button>
+          ) : (
+            <div className='flex items-center justify-between bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-600/50 rounded-xl p-2 sm:p-2.5 border border-slate-200/50 dark:border-slate-600/50'>
+              <Button
+                onClick={() => onUpdateQuantity(item, currentQuantity - 1)}
+                variant='ghost'
+                size='sm'
+                className='h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-500 border border-red-200 dark:border-red-700/50 transition-all duration-300 hover:scale-110'>
+                <Minus className='h-4 w-4' />
+              </Button>
+
+              <div className='flex flex-col items-center px-2 sm:px-3'>
+                <span className='text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100'>
+                  {currentQuantity}
+                </span>
+                <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'>
+                  in cart 🛒
+                </span>
+              </div>
+
+              <Button
+                onClick={() => onUpdateQuantity(item, currentQuantity + 1)}
+                variant='ghost'
+                size='sm'
+                className='h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-500 border border-emerald-200 dark:border-emerald-700/50 transition-all duration-300 hover:scale-110'>
+                <Plus className='h-4 w-4' />
+              </Button>
+            </div>
           )}
-        </div>
-
-        {/* Enhanced Price, Rating and Category */}
-        <div className='space-y-2'>
-          <div className='flex items-center justify-between'>
-            <div className='flex items-center gap-2'>
-              <span className='text-lg sm:text-xl font-bold bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 bg-clip-text text-transparent'>
-                ₹{item.price}
-              </span>
-              <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'></span>
-            </div>
-
-            {/* Rating Display */}
-            <div className='flex items-center gap-1 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 px-2 py-1 rounded-full border border-yellow-400/30'>
-              <Star className='w-3 h-3 fill-yellow-500 text-yellow-500' />
-              <span className='text-xs font-bold text-yellow-600 dark:text-yellow-400'>
-                {getItemRating(item).toFixed(1)}
-              </span>
-            </div>
-          </div>
-
-          <div className='flex items-center justify-between gap-1'>
-            {item.category && (
-              <Badge
-                variant='secondary'
-                className='text-xs bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-600 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 px-2 sm:px-3 py-1 rounded-full font-medium truncate flex-shrink-0'>
-                <span className='truncate max-w-[60px] sm:max-w-none'>
-                  {item.category}
-                </span>
-              </Badge>
-            )}
-
-            {/* Cuisine Badge - Hide Continental */}
-            {getItemCuisine(item) !== 'Continental' && (
-              <Badge
-                variant='outline'
-                className='text-xs bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 px-2 sm:px-3 py-1 rounded-full font-medium truncate flex-shrink-0'>
-                <span className='truncate max-w-[60px] sm:max-w-none'>
-                  {getItemCuisine(item)}
-                </span>
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Enhanced Add to Cart Button or Quantity Controls */}
-        {currentQuantity === 0 ? (
-          <Button
-            onClick={() => onAddToCart(item)}
-            disabled={!isCanteenValid}
-            className={`w-full font-bold transition-all duration-300 rounded-xl shadow-lg py-2 sm:py-2.5 text-xs sm:text-sm ${
-              isCanteenValid
-                ? 'bg-gradient-to-r from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:via-red-700 hover:to-red-800 dark:from-red-600 dark:via-red-700 dark:to-red-800 dark:hover:from-red-700 dark:hover:via-red-800 dark:hover:to-red-900 text-white hover:shadow-xl hover:shadow-red-500/25 dark:hover:shadow-red-400/25 hover:scale-105'
-                : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-            }`}
-            size='sm'>
-            <div className='flex items-center gap-2'>
-              <span></span>
-              <span>{isCanteenValid ? 'Add' : 'Unavailable'}</span>
-            </div>
-          </Button>
-        ) : (
-          <div className='flex items-center justify-between bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700/50 dark:to-slate-600/50 rounded-xl p-2 sm:p-2.5 border border-slate-200/50 dark:border-slate-600/50'>
-            <Button
-              onClick={() => onUpdateQuantity(item, currentQuantity - 1)}
-              variant='ghost'
-              size='sm'
-              className='h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-slate-500 border border-red-200 dark:border-red-700/50 transition-all duration-300 hover:scale-110'>
-              <Minus className='h-4 w-4' />
-            </Button>
-
-            <div className='flex flex-col items-center px-2 sm:px-3'>
-              <span className='text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100'>
-                {currentQuantity}
-              </span>
-              <span className='text-xs text-slate-500 dark:text-slate-400 font-medium'>
-                in cart 🛒
-              </span>
-            </div>
-
-            <Button
-              onClick={() => onUpdateQuantity(item, currentQuantity + 1)}
-              variant='ghost'
-              size='sm'
-              className='h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-lg bg-white dark:bg-slate-600 shadow-lg hover:shadow-xl text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-500 border border-emerald-200 dark:border-emerald-700/50 transition-all duration-300 hover:scale-110'>
-              <Plus className='h-4 w-4' />
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
+        </CardContent>
+      </Card>
+    );
+  }
+);
 
 type SortOption =
   | 'relevance'
@@ -356,7 +368,6 @@ const getItemSpiceLevel = (item: MenuItem): SpiceLevel => {
 
 export default function QuickBitePage() {
   const [readyItems, setReadyItems] = useState<MenuItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState<Record<string, number>>({});
   const [showCanteenConflictDialog, setShowCanteenConflictDialog] =
@@ -392,167 +403,178 @@ export default function QuickBitePage() {
     setCartItems({});
   }, []);
 
-  // Sort function
-  const sortItems = (items: MenuItem[], sortOption: SortOption): MenuItem[] => {
-    const sortedItems = [...items];
+  // Memoized sort function
+  const sortItems = useCallback(
+    (items: MenuItem[], sortOption: SortOption): MenuItem[] => {
+      const sortedItems = [...items];
 
-    switch (sortOption) {
-      case 'relevance':
-        // Sort by search query relevance, then by rating
-        return sortedItems.sort((a, b) => {
-          if (filters.searchQuery) {
-            const queryLower = filters.searchQuery.toLowerCase();
-            const aNameMatch = a.name.toLowerCase().includes(queryLower);
-            const bNameMatch = b.name.toLowerCase().includes(queryLower);
+      switch (sortOption) {
+        case 'relevance':
+          // Sort by search query relevance, then by rating
+          return sortedItems.sort((a, b) => {
+            if (filters.searchQuery) {
+              const queryLower = filters.searchQuery.toLowerCase();
+              const aNameMatch = a.name.toLowerCase().includes(queryLower);
+              const bNameMatch = b.name.toLowerCase().includes(queryLower);
 
-            if (aNameMatch && !bNameMatch) return -1;
-            if (!aNameMatch && bNameMatch) return 1;
-          }
+              if (aNameMatch && !bNameMatch) return -1;
+              if (!aNameMatch && bNameMatch) return 1;
+            }
 
-          // Secondary sort by rating
-          return getItemRating(b) - getItemRating(a);
-        });
+            // Secondary sort by rating
+            return getItemRating(b) - getItemRating(a);
+          });
 
-      case 'name':
-        return sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+        case 'name':
+          return sortedItems.sort((a, b) => a.name.localeCompare(b.name));
 
-      case 'price-low':
-        return sortedItems.sort((a, b) => a.price - b.price);
+        case 'price-low':
+          return sortedItems.sort((a, b) => a.price - b.price);
 
-      case 'price-high':
-        return sortedItems.sort((a, b) => b.price - a.price);
+        case 'price-high':
+          return sortedItems.sort((a, b) => b.price - a.price);
 
-      case 'rating':
-        return sortedItems.sort((a, b) => getItemRating(b) - getItemRating(a));
+        case 'rating':
+          return sortedItems.sort(
+            (a, b) => getItemRating(b) - getItemRating(a)
+          );
 
-      case 'campus':
-        return sortedItems.sort((a, b) => {
-          const campusA =
-            typeof a.canteen === 'object' && a.canteen && 'campus' in a.canteen
-              ? typeof a.canteen.campus === 'object' &&
-                a.canteen.campus &&
-                'name' in a.canteen.campus
-                ? a.canteen.campus.name
-                : String(a.canteen.campus)
-              : 'Unknown Campus';
-          const campusB =
-            typeof b.canteen === 'object' && b.canteen && 'campus' in b.canteen
-              ? typeof b.canteen.campus === 'object' &&
-                b.canteen.campus &&
-                'name' in b.canteen.campus
-                ? b.canteen.campus.name
-                : String(b.canteen.campus)
-              : 'Unknown Campus';
-          return campusA.localeCompare(campusB);
-        });
+        case 'campus':
+          return sortedItems.sort((a, b) => {
+            const campusA =
+              typeof a.canteen === 'object' &&
+              a.canteen &&
+              'campus' in a.canteen
+                ? typeof a.canteen.campus === 'object' &&
+                  a.canteen.campus &&
+                  'name' in a.canteen.campus
+                  ? a.canteen.campus.name
+                  : String(a.canteen.campus)
+                : 'Unknown Campus';
+            const campusB =
+              typeof b.canteen === 'object' &&
+              b.canteen &&
+              'campus' in b.canteen
+                ? typeof b.canteen.campus === 'object' &&
+                  b.canteen.campus &&
+                  'name' in b.canteen.campus
+                  ? b.canteen.campus.name
+                  : String(b.canteen.campus)
+                : 'Unknown Campus';
+            return campusA.localeCompare(campusB);
+          });
 
-      case 'canteen':
-        return sortedItems.sort((a, b) => {
-          const canteenA =
-            typeof a.canteen === 'object' && a.canteen && 'name' in a.canteen
-              ? a.canteen.name
+        case 'canteen':
+          return sortedItems.sort((a, b) => {
+            const canteenA =
+              typeof a.canteen === 'object' && a.canteen && 'name' in a.canteen
+                ? a.canteen.name
+                : 'Unknown Canteen';
+            const canteenB =
+              typeof b.canteen === 'object' && b.canteen && 'name' in b.canteen
+                ? b.canteen.name
+                : 'Unknown Canteen';
+            return canteenA.localeCompare(canteenB);
+          });
+
+        case 'category':
+          return sortedItems.sort((a, b) => {
+            const categoryA = a.category || 'Other';
+            const categoryB = b.category || 'Other';
+            return categoryA.localeCompare(categoryB);
+          });
+
+        default:
+          return sortedItems;
+      }
+    },
+    [filters.searchQuery]
+  );
+
+  // Memoized comprehensive filter function
+  const applyFilters = useCallback(
+    (items: MenuItem[]): MenuItem[] => {
+      let filtered = [...items];
+
+      // Apply search filter
+      if (filters.searchQuery) {
+        const query = filters.searchQuery.toLowerCase();
+        filtered = filtered.filter(
+          (item) =>
+            item.name.toLowerCase().includes(query) ||
+            (item.description &&
+              item.description.toLowerCase().includes(query)) ||
+            (typeof item.canteen === 'object' &&
+              item.canteen &&
+              'name' in item.canteen &&
+              item.canteen.name.toLowerCase().includes(query)) ||
+            getItemCuisine(item).toLowerCase().includes(query)
+        );
+      }
+
+      // Apply canteen filter
+      if (filters.selectedCanteens.length > 0) {
+        filtered = filtered.filter((item) => {
+          const canteenName =
+            typeof item.canteen === 'object' &&
+            item.canteen &&
+            'name' in item.canteen
+              ? item.canteen.name
               : 'Unknown Canteen';
-          const canteenB =
-            typeof b.canteen === 'object' && b.canteen && 'name' in b.canteen
-              ? b.canteen.name
-              : 'Unknown Canteen';
-          return canteenA.localeCompare(canteenB);
+          return filters.selectedCanteens.includes(canteenName);
         });
+      }
 
-      case 'category':
-        return sortedItems.sort((a, b) => {
-          const categoryA = a.category || 'Other';
-          const categoryB = b.category || 'Other';
-          return categoryA.localeCompare(categoryB);
-        });
+      // Apply cuisine filter
+      if (filters.selectedCuisines.length > 0) {
+        filtered = filtered.filter((item) =>
+          filters.selectedCuisines.includes(getItemCuisine(item))
+        );
+      }
 
-      default:
-        return sortedItems;
-    }
-  };
+      // Apply diet type filter
+      if (filters.dietType === 'veg') {
+        filtered = filtered.filter((item) => item.isVeg);
+      } else if (filters.dietType === 'non-veg') {
+        filtered = filtered.filter((item) => !item.isVeg);
+      } else if (filters.dietType === 'vegan') {
+        // For now, treat vegan same as veg (in real app, would have separate vegan field)
+        filtered = filtered.filter((item) => item.isVeg);
+      }
 
-  // Comprehensive filter function
-  const applyFilters = (items: MenuItem[]): MenuItem[] => {
-    let filtered = [...items];
+      // Apply spice level filter
+      if (filters.spiceLevel !== 'any') {
+        filtered = filtered.filter(
+          (item) => getItemSpiceLevel(item) === filters.spiceLevel
+        );
+      }
 
-    // Apply search filter
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
+      // Apply price range filter
       filtered = filtered.filter(
         (item) =>
-          item.name.toLowerCase().includes(query) ||
-          (item.description &&
-            item.description.toLowerCase().includes(query)) ||
-          (typeof item.canteen === 'object' &&
-            item.canteen &&
-            'name' in item.canteen &&
-            item.canteen.name.toLowerCase().includes(query)) ||
-          getItemCuisine(item).toLowerCase().includes(query)
+          item.price >= filters.priceRange[0] &&
+          item.price <= filters.priceRange[1]
       );
-    }
 
-    // Apply canteen filter
-    if (filters.selectedCanteens.length > 0) {
-      filtered = filtered.filter((item) => {
-        const canteenName =
-          typeof item.canteen === 'object' &&
-          item.canteen &&
-          'name' in item.canteen
-            ? item.canteen.name
-            : 'Unknown Canteen';
-        return filters.selectedCanteens.includes(canteenName);
-      });
-    }
+      // Apply rating filter
+      if (filters.minRating > 0) {
+        filtered = filtered.filter(
+          (item) => getItemRating(item) >= filters.minRating
+        );
+      }
 
-    // Apply cuisine filter
-    if (filters.selectedCuisines.length > 0) {
-      filtered = filtered.filter((item) =>
-        filters.selectedCuisines.includes(getItemCuisine(item))
-      );
-    }
+      // Apply sorting
+      filtered = sortItems(filtered, filters.sortBy);
 
-    // Apply diet type filter
-    if (filters.dietType === 'veg') {
-      filtered = filtered.filter((item) => item.isVeg);
-    } else if (filters.dietType === 'non-veg') {
-      filtered = filtered.filter((item) => !item.isVeg);
-    } else if (filters.dietType === 'vegan') {
-      // For now, treat vegan same as veg (in real app, would have separate vegan field)
-      filtered = filtered.filter((item) => item.isVeg);
-    }
+      return filtered;
+    },
+    [filters, sortItems]
+  );
 
-    // Apply spice level filter
-    if (filters.spiceLevel !== 'any') {
-      filtered = filtered.filter(
-        (item) => getItemSpiceLevel(item) === filters.spiceLevel
-      );
-    }
-
-    // Apply price range filter
-    filtered = filtered.filter(
-      (item) =>
-        item.price >= filters.priceRange[0] &&
-        item.price <= filters.priceRange[1]
-    );
-
-    // Apply rating filter
-    if (filters.minRating > 0) {
-      filtered = filtered.filter(
-        (item) => getItemRating(item) >= filters.minRating
-      );
-    }
-
-    // Apply sorting
-    filtered = sortItems(filtered, filters.sortBy);
-
-    return filtered;
-  };
-
-  // Filter and sort items based on all filters
-  useEffect(() => {
-    const filtered = applyFilters(readyItems);
-    setFilteredItems(filtered);
-  }, [readyItems, filters]);
+  // Memoize filtered items to prevent unnecessary recalculations
+  const filteredItems = useMemo(() => {
+    return applyFilters(readyItems);
+  }, [readyItems, applyFilters]);
 
   const loadReadyItems = async () => {
     setLoading(true);
@@ -674,71 +696,78 @@ export default function QuickBitePage() {
     });
   };
 
-  const handleAddToCart = (item: MenuItem) => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Please login',
-        description: 'You need to be logged in to add items to cart',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validate canteen information
-    const canteenId =
-      typeof item.canteen === 'object' && item.canteen && '_id' in item.canteen
-        ? item.canteen._id
-        : typeof item.canteen === 'string'
-        ? item.canteen
-        : '';
-
-    const canteenName =
-      typeof item.canteen === 'object' && item.canteen && 'name' in item.canteen
-        ? item.canteen.name
-        : 'Unknown Canteen';
-
-    // Prevent adding items with invalid canteen data
-    if (!canteenId || canteenName === 'Unknown Canteen') {
-      toast({
-        title: 'Canteen Not Available',
-        description:
-          'This item cannot be added to cart as the canteen information is not available. Please try refreshing the page.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    addToCart(
-      {
-        id: item._id,
-        name: item.name,
-        price: item.price,
-        image: item.image ?? '',
-        canteenId,
-        quantity: 1,
-      },
-      () => {
-        // Handle canteen conflict
-        setPendingItem(item);
-        setShowCanteenConflictDialog(true);
+  const handleAddToCart = useCallback(
+    (item: MenuItem) => {
+      if (!isAuthenticated) {
+        toast({
+          title: 'Please login',
+          description: 'You need to be logged in to add items to cart',
+          variant: 'destructive',
+        });
+        return;
       }
-    );
 
-    // Only update local state and show toast if no conflict
-    const wasAdded = cart.length === 0 || cart[0].canteenId === canteenId;
-    if (wasAdded) {
-      // Update local state
-      setCartItems((prev) => ({
-        ...prev,
-        [item._id]: 1,
-      }));
+      // Validate canteen information
+      const canteenId =
+        typeof item.canteen === 'object' &&
+        item.canteen &&
+        '_id' in item.canteen
+          ? item.canteen._id
+          : typeof item.canteen === 'string'
+          ? item.canteen
+          : '';
 
-      toast({
-        title: 'Added to cart',
-        description: `${item.name} has been added to your cart from ${canteenName}`,
-      });
-    }
-  };
+      const canteenName =
+        typeof item.canteen === 'object' &&
+        item.canteen &&
+        'name' in item.canteen
+          ? item.canteen.name
+          : 'Unknown Canteen';
+
+      // Prevent adding items with invalid canteen data
+      if (!canteenId || canteenName === 'Unknown Canteen') {
+        toast({
+          title: 'Canteen Not Available',
+          description:
+            'This item cannot be added to cart as the canteen information is not available. Please try refreshing the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      addToCart(
+        {
+          id: item._id,
+          name: item.name,
+          price: item.price,
+          image: item.image ?? '',
+          canteenId,
+          quantity: 1,
+        },
+        () => {
+          // Handle canteen conflict
+          setPendingItem(item);
+          setShowCanteenConflictDialog(true);
+        }
+      );
+
+      // Only update local state and show toast if no conflict
+      const wasAdded = cart.length === 0 || cart[0].canteenId === canteenId;
+      if (wasAdded) {
+        // Update local state
+        setCartItems((prev) => ({
+          ...prev,
+          [item._id]: 1,
+        }));
+
+        toast({
+          title: 'Added to cart',
+          description: `${item.name} has been added to your cart from ${canteenName}`,
+        });
+      }
+    },
+    [isAuthenticated, toast, addToCart, cart]
+  );
 
   const handleConfirmCanteenSwitch = () => {
     if (pendingItem) {
@@ -776,78 +805,88 @@ export default function QuickBitePage() {
     setPendingItem(null);
   };
 
-  const handleUpdateQuantity = (item: MenuItem, quantity: number) => {
-    if (!isAuthenticated) {
-      toast({
-        title: 'Please login',
-        description: 'You need to be logged in to update cart',
-        variant: 'destructive',
-      });
-      return;
-    }
+  const handleUpdateQuantity = useCallback(
+    (item: MenuItem, quantity: number) => {
+      if (!isAuthenticated) {
+        toast({
+          title: 'Please login',
+          description: 'You need to be logged in to update cart',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    // Validate canteen information
-    const canteenId =
-      typeof item.canteen === 'object' && item.canteen && '_id' in item.canteen
-        ? item.canteen._id
-        : typeof item.canteen === 'string'
-        ? item.canteen
-        : '';
+      // Validate canteen information
+      const canteenId =
+        typeof item.canteen === 'object' &&
+        item.canteen &&
+        '_id' in item.canteen
+          ? item.canteen._id
+          : typeof item.canteen === 'string'
+          ? item.canteen
+          : '';
 
-    const canteenName =
-      typeof item.canteen === 'object' && item.canteen && 'name' in item.canteen
-        ? item.canteen.name
-        : 'Unknown Canteen';
+      const canteenName =
+        typeof item.canteen === 'object' &&
+        item.canteen &&
+        'name' in item.canteen
+          ? item.canteen.name
+          : 'Unknown Canteen';
 
-    // Prevent updating items with invalid canteen data
-    if (!canteenId || canteenName === 'Unknown Canteen') {
-      toast({
-        title: 'Canteen Not Available',
-        description:
-          'This item cannot be updated as the canteen information is not available. Please try refreshing the page.',
-        variant: 'destructive',
-      });
-      return;
-    }
+      // Prevent updating items with invalid canteen data
+      if (!canteenId || canteenName === 'Unknown Canteen') {
+        toast({
+          title: 'Canteen Not Available',
+          description:
+            'This item cannot be updated as the canteen information is not available. Please try refreshing the page.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
-    if (quantity <= 0) {
-      // Remove item from cart
-      setCartItems((prev) => {
-        const newItems = { ...prev };
-        delete newItems[item._id];
-        return newItems;
-      });
+      if (quantity <= 0) {
+        // Remove item from cart
+        setCartItems((prev) => {
+          const newItems = { ...prev };
+          delete newItems[item._id];
+          return newItems;
+        });
 
-      toast({
-        title: 'Removed from cart',
-        description: `${item.name} has been removed from your cart`,
-      });
-    } else {
-      // Update quantity using addToCart (which should handle updates)
-      addToCart({
-        id: item._id,
-        name: item.name,
-        price: item.price,
-        image: item.image ?? '',
-        canteenId,
-        quantity,
-      });
+        toast({
+          title: 'Removed from cart',
+          description: `${item.name} has been removed from your cart`,
+        });
+      } else {
+        // Update quantity using addToCart (which should handle updates)
+        addToCart({
+          id: item._id,
+          name: item.name,
+          price: item.price,
+          image: item.image ?? '',
+          canteenId,
+          quantity,
+        });
 
-      setCartItems((prev) => ({
-        ...prev,
-        [item._id]: quantity,
-      }));
+        setCartItems((prev) => ({
+          ...prev,
+          [item._id]: quantity,
+        }));
 
-      toast({
-        title: 'Cart updated',
-        description: `${item.name} quantity updated to ${quantity}`,
-      });
-    }
-  };
+        toast({
+          title: 'Cart updated',
+          description: `${item.name} quantity updated to ${quantity}`,
+        });
+      }
+    },
+    [isAuthenticated, toast, addToCart]
+  );
 
-  const handleCanteenClick = (canteenId: string) => {
-    router.push(`/menu/${canteenId}`);
-  };
+  const handleCanteenClick = useCallback(
+    (canteenId: string) => {
+      router.push(`/menu/${canteenId}`);
+    },
+    [router]
+  );
 
   return (
     <React.Fragment>
@@ -857,13 +896,6 @@ export default function QuickBitePage() {
       </style>
 
       <div className='min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 pt-24 pb-12 transition-colors duration-300 relative overflow-hidden'>
-        {/* Background Decorations */}
-        <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-          <div className='absolute -top-4 -right-4 w-72 h-72 bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-full blur-3xl animate-pulse'></div>
-          <div className='absolute top-1/4 -left-20 w-96 h-96 bg-gradient-to-br from-emerald-500/5 to-green-500/5 rounded-full blur-3xl animate-pulse delay-1000'></div>
-          <div className='absolute bottom-20 right-1/4 w-64 h-64 bg-gradient-to-br from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-pulse delay-2000'></div>
-        </div>
-
         <div className='container mx-auto px-4 sm:px-6 lg:px-8 relative z-10'>
           {/* Enhanced Header Card with Dynamic Elements */}
           <div className='max-w-6xl mx-auto mb-12'>
@@ -898,30 +930,12 @@ export default function QuickBitePage() {
                   </div>
 
                   <h1 className='text-5xl md:text-7xl font-black text-slate-900 dark:text-white mb-4 relative z-10 tracking-tight transform hover:scale-105 transition-transform duration-300'>
-                    <span className='inline-block hover:animate-bounce'>Q</span>
-                    <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.1s' }}>
-                      u
-                    </span>
-                    <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.2s' }}>
-                      i
-                    </span>
-                    <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.3s' }}>
-                      c
-                    </span>
-                    <span
-                      className='inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.4s' }}>
-                      k
-                    </span>
-                    <span
-                      className='text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 animate-gradient-x inline-block hover:animate-bounce'
-                      style={{ animationDelay: '0.5s' }}>
+                    <span className='inline-block'>Q</span>
+                    <span className='inline-block '>u</span>
+                    <span className='inline-block '>i</span>
+                    <span className='inline-block '>c</span>
+                    <span className='inline-block '>k</span>
+                    <span className='text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-600 to-orange-500 dark:from-red-400 dark:via-red-500 dark:to-orange-400 animate-gradient-x inline-block'>
                       Bites
                     </span>
                   </h1>
@@ -1157,7 +1171,13 @@ export default function QuickBitePage() {
                 </div>
 
                 {/* Enhanced Items Grid */}
-                <div className='grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6 max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
+                <div className='  grid 
+  grid-cols-1       
+  sm:grid-cols-2     
+  md:grid-cols-3     
+  xl:grid-cols-4 
+  gap-3 sm:gap-6 
+  max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
                   {filteredItems.map((item, index) => (
                     <div
                       key={item._id}

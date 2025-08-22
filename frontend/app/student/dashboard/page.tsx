@@ -45,13 +45,14 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import axios from 'axios';
 
 function StudentDashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [restaurants, setRestaurants] = useState<Canteen[]>([]);
   const [userCampusId, setUserCampusId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGroupOrderModalOpen, setIsGroupOrderModalOpen] = useState(false);
   const [selectedCanteen, setSelectedCanteen] = useState<string | null>(null);
@@ -163,46 +164,35 @@ function StudentDashboardContent() {
     setIsGroupOrderModalOpen(false);
   };
 
-  // Fetch canteens based on campus
-  useEffect(() => {
-    const fetchCanteens = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        let url = 'https://campusbites-mxpe.onrender.com/api/v1/canteens';
-        if (userCampusId) {
-          url += `?campus=${userCampusId}`;
-        }
-
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error('Failed to fetch canteens');
-        }
-
-        const data = await response.json();
-
-        const processedCanteens =
-          data.canteens?.map((canteen: any) => ({
-            ...canteen,
-            image:
-              canteen.owner?.profileImage ||
-              canteen.image ||
-              '/placeholder.svg',
-          })) || [];
-
-        console.log('Processed Canteens:', processedCanteens);
+  const fetchCanteens = async () => {
+    setLoading(true)
+    try{
+      const response = await axios.get(`https://campusbites-mxpe.onrender.com/api/v1/canteens?campus=${userCampusId}`)
+      if(response?.status === 200) {
+           const processedCanteens =
+        response?.data?.canteens?.map((canteen: any) => ({
+          ...canteen,
+          image:
+            canteen.owner?.profileImage ||
+            canteen.image ||
+            '/placeholder.svg',
+        })) || [];
         setRestaurants(processedCanteens);
-      } catch (error) {
-        console.error('Error fetching canteens:', error);
-        setError('Failed to load restaurants');
-        setRestaurants([]);
-      } finally {
         setLoading(false);
       }
-    };
+    } catch {
+      setLoading(false);
+      ('Failed to load restaurants');
+      setRestaurants([]);
+    }
+  };
 
-    fetchCanteens();
+  // Fetch canteens based on campus
+  useEffect(() => {
+    if(userCampusId) {
+
+      fetchCanteens();
+    }
   }, [userCampusId]);
 
   const categories = [
@@ -229,7 +219,7 @@ function StudentDashboardContent() {
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
-        <div className='text-foreground text-xl'>Loading restaurants...</div>
+         <div className='w-12 h-12 border-4 border-t-transparent border-white rounded-full animate-spin mb-4'></div>
       </div>
     );
   }
@@ -249,6 +239,16 @@ function StudentDashboardContent() {
       </div>
     );
   }
+  const handleClick = () => {
+    setLoading(true);
+
+    // Simulate an async action (like API call)
+    setTimeout(() => {
+      setLoading(false);
+      // Add your actual order logic here
+      console.log('Order placed!');
+    }, 1000);
+  };
 
   return (
     <div className='min-h-screen bg-background'>
@@ -530,18 +530,27 @@ function StudentDashboardContent() {
             <h2 className='text-2xl font-bold text-white mb-6'>
               All Restaurants
             </h2>
-            <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-              {filteredRestaurants?.map((restaurant) => (
+                          <div className='  grid 
+                grid-cols-1       
+                sm:grid-cols-2     
+                md:grid-cols-3     
+                xl:grid-cols-4 
+                gap-3 sm:gap-6 
+                max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
+              {filteredRestaurants?.map((restaurant, index) => (
+                <div
+                key={restaurant._id}
+                className='w-full animate-fade-in-up'
+                style={{ animationDelay: `${index * 100}ms` }}>
                 <Card
                 key={restaurant._id}
-                className='bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700/30 backdrop-blur-xl hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-300 hover:scale-105 group overflow-hidden'>              
-                  <div className='relative'>
+                className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full flex flex-row sm:flex-col h-full'>              
+                  <div className='relative overflow-hidden rounded-l-2xl sm:rounded-t-2xl w-36 sm:w-full aspect-[4/3]'>
                     <Image
                       src={restaurant.image || '/placeholder.svg'}
                       alt={restaurant.name || 'Restaurant'}
-                      width={300}
-                      height={200}
-                      className='w-full h-32 sm:h-48 object-cover group-hover:scale-110 transition-transform duration-300'
+                      fill
+                      className='object-cover h-full w-full transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
                     />
                     {restaurant.discount && (
                       <Badge className='absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1'>
@@ -569,10 +578,12 @@ function StudentDashboardContent() {
                       </div>
                     )}
                   </div>
+                  <div className='flex-1 flex flex-col justify-between'>
+
                   <CardHeader className='pb-3'>
                     <div className='flex items-start justify-between'>
                       <div>
-                        <CardTitle className='text-lg text-black dark:text-white mb-1'>
+                        <CardTitle className='text-sm md:text-lg text-black dark:text-white mb-1'>
                           {restaurant.name}
                         </CardTitle>
                         <CardDescription className='text-gray-600 dark:text-gray-400'>
@@ -599,14 +610,23 @@ function StudentDashboardContent() {
                       </div>
                     </div>
                     <Link href={`/menu/${restaurant._id}`}>
-                      <Button
-                        className='w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300'
-                        disabled={!restaurant.isOpen}>
-                        {restaurant.isOpen ? 'Order Now' : 'Closed'}
-                      </Button>
+                    <Button
+      className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300 ${
+        !restaurant.isOpen || loading ? 'opacity-70 cursor-not-allowed' : ''
+      }`}
+      disabled={!restaurant.isOpen || loading}
+      onClick={handleClick}
+    >
+      {loading && (
+        <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+      )}
+      {restaurant.isOpen ? (loading ? 'Ordering...' : 'Order Now') : 'Closed'}
+    </Button>
                     </Link>
                   </CardContent>
+                  </div>
                 </Card>
+                </div>
               ))}
             </div>
           </div>
