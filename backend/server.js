@@ -17,7 +17,8 @@ const io = new Server(server, {
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       "https://campus-bites-c7pe.vercel.app",
-      "https://campus-bites-eta.vercel.app"
+      "https://campus-bites-eta.vercel.app",
+      "https://www.campusbites.in"
     ],
     methods: ["GET", "POST"],
     credentials: true
