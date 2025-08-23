@@ -1,4 +1,3 @@
-// Performance monitoring utilities
 import { useEffect, useLayoutEffect } from 'react';
 
 export class PerformanceMonitor {
@@ -145,13 +144,13 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle utility for frequent events
-export function throttle<T extends (...args: any[]) => any>(
-  func: T,
+export function throttle<T extends (...args: any[]) => any, This = unknown>(
+  func: (this: This, ...args: Parameters<T>) => ReturnType<T>,
   limit: number
-): (...args: Parameters<T>) => void {
+): (this: This, ...args: Parameters<T>) => void {
   let inThrottle: boolean;
 
-  return function executedFunction(...args: Parameters<T>) {
+  return function executedFunction(this: This, ...args: Parameters<T>) {
     if (!inThrottle) {
       func.apply(this, args);
       inThrottle = true;

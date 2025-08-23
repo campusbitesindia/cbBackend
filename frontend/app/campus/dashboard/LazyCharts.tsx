@@ -1,9 +1,33 @@
 'use client';
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, ComponentType } from 'react';
 import { Loader2 } from 'lucide-react';
 
-// Lazy load the heavy chart library
+// Define the expected data shape for charts
+interface ChartData {
+  name: string;
+  value: number;
+}
+
+// Define props for Pie component
+interface PieProps {
+  data: ChartData[];
+  cx?: string | number;
+  cy?: string | number;
+  labelLine?: boolean;
+  label?: (props: { name: string; percent: number }) => string;
+  outerRadius?: number;
+  fill?: string;
+  dataKey: string;
+}
+
+// Define props for Bar component
+interface BarProps {
+  dataKey: string;
+  fill?: string;
+}
+
+// Lazy load the heavy chart library components
 const ResponsiveContainer = lazy(() =>
   import('recharts').then((module) => ({ default: module.ResponsiveContainer }))
 );
@@ -11,7 +35,7 @@ const PieChart = lazy(() =>
   import('recharts').then((module) => ({ default: module.PieChart }))
 );
 const Pie = lazy(() =>
-  import('recharts').then((module) => ({ default: module.Pie }))
+  import('recharts').then((module) => ({ default: module.Pie as unknown as ComponentType<PieProps> }))
 );
 const Cell = lazy(() =>
   import('recharts').then((module) => ({ default: module.Cell }))
@@ -38,7 +62,7 @@ const BarChart = lazy(() =>
   import('recharts').then((module) => ({ default: module.BarChart }))
 );
 const Bar = lazy(() =>
-  import('recharts').then((module) => ({ default: module.Bar }))
+  import('recharts').then((module) => ({ default: module.Bar as unknown as ComponentType<BarProps> }))
 );
 const Legend = lazy(() =>
   import('recharts').then((module) => ({ default: module.Legend }))
@@ -54,13 +78,13 @@ const ChartLoadingSpinner = () => (
   </div>
 );
 
-// Lazy-loaded chart components
+// Lazy-loaded PieChart component
 export const LazyPieChart = ({
   data,
   colors,
   height = 300,
 }: {
-  data: any[];
+  data: ChartData[];
   colors: string[];
   height?: number;
 }) => (
@@ -72,22 +96,23 @@ export const LazyPieChart = ({
           cx='50%'
           cy='50%'
           labelLine={false}
-          label={({ name, percent }: any) =>
+          label={({ name, percent }: { name: string; percent: number }) =>
             `${name} ${(percent * 100).toFixed(0)}%`
           }
           outerRadius={80}
           fill='#8884d8'
-          dataKey='value'>
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-          ))}
-        </Pie>
+          dataKey='value'
+        />
+        {data.map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+        ))}
         <Tooltip />
       </PieChart>
     </ResponsiveContainer>
   </Suspense>
 );
 
+// Lazy-loaded LineChart component
 export const LazyLineChart = ({
   data,
   dataKey,
@@ -115,13 +140,14 @@ export const LazyLineChart = ({
   </Suspense>
 );
 
+// Lazy-loaded BarChart component
 export const LazyBarChart = ({
   data,
   dataKey,
   height = 300,
   fill = '#8884d8',
 }: {
-  data: any[];
+  data: ChartData[];
   dataKey: string;
   height?: number;
   fill?: string;
@@ -141,4 +167,3 @@ export const LazyBarChart = ({
 );
 
 export { ChartLoadingSpinner };
-
