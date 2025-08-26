@@ -165,18 +165,20 @@ function StudentDashboardContent() {
   };
 
   const fetchCanteens = async () => {
-    setLoading(true)
-    try{
-      const response = await axios.get(`https://campusbites-mxpe.onrender.com/api/v1/canteens?campus=${userCampusId}`)
-      if(response?.status === 200) {
-           const processedCanteens =
-        response?.data?.canteens?.map((canteen: any) => ({
-          ...canteen,
-          image:
-            canteen.owner?.profileImage ||
-            canteen.image ||
-            '/placeholder.svg',
-        })) || [];
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `https://campusbites-mxpe.onrender.com/api/v1/canteens?campus=${userCampusId}`
+      );
+      if (response?.status === 200) {
+        const processedCanteens =
+          response?.data?.canteens?.map((canteen: any) => ({
+            ...canteen,
+            image:
+              canteen.owner?.profileImage ||
+              canteen.image ||
+              '/placeholder.svg',
+          })) || [];
         setRestaurants(processedCanteens);
         setLoading(false);
       }
@@ -189,8 +191,7 @@ function StudentDashboardContent() {
 
   // Fetch canteens based on campus
   useEffect(() => {
-    if(userCampusId) {
-
+    if (userCampusId) {
       fetchCanteens();
     }
   }, [userCampusId]);
@@ -219,7 +220,7 @@ function StudentDashboardContent() {
   if (loading) {
     return (
       <div className='min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center'>
-         <div className='w-12 h-12 border-4 border-t-transparent border-white rounded-full animate-spin mb-4'></div>
+        <div className='w-12 h-12 border-4 border-t-transparent border-white rounded-full animate-spin mb-4'></div>
       </div>
     );
   }
@@ -530,7 +531,8 @@ function StudentDashboardContent() {
             <h2 className='text-2xl font-bold text-white mb-6'>
               All Restaurants
             </h2>
-                          <div className='  grid 
+            <div
+              className='  grid 
                 grid-cols-1       
                 sm:grid-cols-2     
                 md:grid-cols-3     
@@ -539,93 +541,101 @@ function StudentDashboardContent() {
                 max-w-screen-2xl mx-auto px-2 sm:px-4 py-10'>
               {filteredRestaurants?.map((restaurant, index) => (
                 <div
-                key={restaurant._id}
-                className='w-full animate-fade-in-up'
-                style={{ animationDelay: `${index * 100}ms` }}>
-                <Card
-                key={restaurant._id}
-                className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full flex flex-row sm:flex-col h-full'>              
-                  <div className='relative overflow-hidden rounded-l-2xl sm:rounded-t-2xl w-36 sm:w-full aspect-[4/3]'>
-                    <Image
-                      src={restaurant.image || '/placeholder.svg'}
-                      alt={restaurant.name || 'Restaurant'}
-                      fill
-                      className='object-cover h-full w-full transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
-                    />
-                    {restaurant.discount && (
-                      <Badge className='absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1'>
-                        {restaurant.discount}
-                      </Badge>
-                    )}
-                    {restaurant.featured && (
-                      <Badge className='absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-3 py-1'>
-                        ⭐ Featured
-                      </Badge>
-                    )}
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      className='absolute bottom-3 right-3 border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'>
-                      <Heart className='w-4 h-4' />
-                    </Button>
-                    {!restaurant.isOpen && (
-                      <div className='absolute inset-0 bg-black/60 flex items-center justify-center'>
-                        <Badge
-                          variant='destructive'
-                          className='text-lg px-4 py-2'>
-                          Closed
-                        </Badge>
+                  key={restaurant._id}
+                  className='w-full animate-fade-in-up'
+                  style={{ animationDelay: `${index * 100}ms` }}>
+                  <Link
+                    href={`/menu/${restaurant._id}`}
+                    className='block h-full'>
+                    <Card
+                      key={restaurant._id}
+                      className='group relative overflow-hidden bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/60 dark:border-slate-700/60 shadow-xl rounded-2xl transition-all duration-500 hover:shadow-2xl hover:shadow-red-500/10 dark:hover:shadow-red-400/10 hover:-translate-y-2 hover:scale-[1.02] hover:bg-white dark:hover:bg-slate-800 w-full flex flex-row sm:flex-col h-full'>
+                      <div className='relative overflow-hidden rounded-l-2xl sm:rounded-t-2xl w-36 sm:w-full aspect-[4/3]'>
+                        <Image
+                          src={restaurant.image || '/placeholder.svg'}
+                          alt={restaurant.name || 'Restaurant'}
+                          fill
+                          className='object-cover h-full w-full transition-all duration-700 group-hover:scale-110 group-hover:rotate-1'
+                        />
+                        {restaurant.discount && (
+                          <Badge className='absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold px-3 py-1'>
+                            {restaurant.discount}
+                          </Badge>
+                        )}
+                        {restaurant.featured && (
+                          <Badge className='absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold px-3 py-1'>
+                            ⭐ Featured
+                          </Badge>
+                        )}
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='absolute bottom-3 right-3 border-white/20 bg-white/10 backdrop-blur-sm text-white hover:bg-white/20'>
+                          <Heart className='w-4 h-4' />
+                        </Button>
+                        {!restaurant.isOpen && (
+                          <div className='absolute inset-0 bg-black/60 flex items-center justify-center'>
+                            <Badge
+                              variant='destructive'
+                              className='text-lg px-4 py-2'>
+                              Closed
+                            </Badge>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className='flex-1 flex flex-col justify-between'>
-
-                  <CardHeader className='pb-3'>
-                    <div className='flex items-start justify-between'>
-                      <div>
-                        <CardTitle className='text-sm md:text-lg text-black dark:text-white mb-1'>
-                          {restaurant.name}
-                        </CardTitle>
-                        <CardDescription className='text-gray-600 dark:text-gray-400'>
-                          {restaurant.cuisine}
-                        </CardDescription>
+                      <div className='flex-1 flex flex-col justify-between'>
+                        <CardHeader className='pb-3'>
+                          <div className='flex items-start justify-between'>
+                            <div>
+                              <CardTitle className='text-sm md:text-lg text-black dark:text-white mb-1'>
+                                {restaurant.name}
+                              </CardTitle>
+                              <CardDescription className='text-gray-600 dark:text-gray-400'>
+                                {restaurant.cuisine}
+                              </CardDescription>
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <Star className='w-4 h-4 text-yellow-400 fill-current' />
+                              <span className='text-white font-semibold text-sm'>
+                                {restaurant.rating}
+                              </span>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className='pt-0'>
+                          <div className='flex items-center justify-between text-sm text-gray-400 mb-4'>
+                            <div className='flex items-center gap-1'>
+                              <Clock className='w-4 h-4' />
+                              <span>{restaurant.deliveryTime}</span>
+                            </div>
+                            <div className='flex items-center gap-1'>
+                              <MapPin className='w-4 h-4' />
+                              <span>{restaurant.distance}</span>
+                            </div>
+                          </div>
+                          <Link href={`/menu/${restaurant._id}`}>
+                            <Button
+                              className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300 ${
+                                !restaurant.isOpen || loading
+                                  ? 'opacity-70 cursor-not-allowed'
+                                  : ''
+                              }`}
+                              disabled={!restaurant.isOpen || loading}
+                              onClick={handleClick}>
+                              {loading && (
+                                <div className='w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin'></div>
+                              )}
+                              {restaurant.isOpen
+                                ? loading
+                                  ? 'Ordering...'
+                                  : 'Order Now'
+                                : 'Closed'}
+                            </Button>
+                          </Link>
+                        </CardContent>
                       </div>
-                      <div className='flex items-center gap-1'>
-                        <Star className='w-4 h-4 text-yellow-400 fill-current' />
-                        <span className='text-white font-semibold text-sm'>
-                          {restaurant.rating}
-                        </span>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className='pt-0'>
-                    <div className='flex items-center justify-between text-sm text-gray-400 mb-4'>
-                      <div className='flex items-center gap-1'>
-                        <Clock className='w-4 h-4' />
-                        <span>{restaurant.deliveryTime}</span>
-                      </div>
-                      <div className='flex items-center gap-1'>
-                        <MapPin className='w-4 h-4' />
-                        <span>{restaurant.distance}</span>
-                      </div>
-                    </div>
-                    <Link href={`/menu/${restaurant._id}`}>
-                    <Button
-      className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold py-2 rounded-xl transition-all duration-300 ${
-        !restaurant.isOpen || loading ? 'opacity-70 cursor-not-allowed' : ''
-      }`}
-      disabled={!restaurant.isOpen || loading}
-      onClick={handleClick}
-    >
-      {loading && (
-        <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
-      )}
-      {restaurant.isOpen ? (loading ? 'Ordering...' : 'Order Now') : 'Closed'}
-    </Button>
-                    </Link>
-                  </CardContent>
-                  </div>
-                </Card>
+                    </Card>
+                  </Link>
                 </div>
               ))}
             </div>

@@ -113,19 +113,17 @@ export default function LandingPageClient() {
               </motion.div>
 
               <motion.h1
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{ delay: 0.2, duration: 0.8 }}
-  className="text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8 text-left"
->
-  <span className="block text-gray-900 dark:text-white">
-    One Tap
-  </span>
-  <span className="block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent">
-    Endless Bites
-  </span>
-</motion.h1>
-
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.8 }}
+                className='text-5xl md:text-6xl lg:text-7xl font-extrabold mb-8 text-left'>
+                <span className='block text-gray-900 dark:text-white'>
+                  One Tap
+                </span>
+                <span className='block bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'>
+                  Endless Bites
+                </span>
+              </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0 }}
@@ -230,7 +228,7 @@ export default function LandingPageClient() {
         <div className='container mx-auto px-4'>
           <div className='text-center mb-12'>
             <h2 className='text-4xl font-bold mb-4 text-gray-900 dark:text-white'>
-              Why <span className='text-red-600'>CampusBites</span>?
+              Why <span className='text-red-600'>Campus Bites</span>?
             </h2>
             <p className='text-gray-700 dark:text-gray-400 max-w-2xl mx-auto'>
               We're not just another food app. We're built by students, for
@@ -301,24 +299,21 @@ export default function LandingPageClient() {
 
             {/* Step 2 */}
             <motion.div
-  initial={{ opacity: 0, x: 50 }}
-  whileInView={{ opacity: 1, x: 0 }}
-  viewport={{ once: true }}
-  transition={{ duration: 0.6 }}
-  className='bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-lg hover:shadow-xl transition-all p-8 md:grid md:grid-cols-2 md:gap-12 items-center backdrop-blur-sm'
->
-  <div className='text-center md:text-left'>
-    <h3 className='text-3xl font-bold mb-3 text-red-600'>
-      2. Place Your Order
-    </h3>
-    <p className='text-gray-700 dark:text-gray-300'>
-      Add items to your cart, choose your payment method, and
-      confirm your order in a few taps.
-    </p>
-  </div>
-</motion.div>
-
-
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className='bg-white/90 dark:bg-gray-800/90 rounded-xl shadow-lg hover:shadow-xl transition-all p-8 md:grid md:grid-cols-2 md:gap-12 items-center backdrop-blur-sm'>
+              <div className='text-center md:text-left'>
+                <h3 className='text-3xl font-bold mb-3 text-red-600'>
+                  2. Place Your Order
+                </h3>
+                <p className='text-gray-700 dark:text-gray-300'>
+                  Add items to your cart, choose your payment method, and
+                  confirm your order in a few taps.
+                </p>
+              </div>
+            </motion.div>
 
             {/* Step 3 */}
             <motion.div
