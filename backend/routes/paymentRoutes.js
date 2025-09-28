@@ -11,6 +11,7 @@ const {
   getRefundStatus,
 } = require("../controllers/paymentController")
 const { CreateCODTransaction } = require("../controllers/cashOnDelivery")
+const { verifyPayments, createPaymentPhonePe } = require("../controllers/PhonePe")
 
 const router = express.Router()
 
@@ -59,6 +60,8 @@ router.post(
 // Get refund status
 router.get("/refund/:transactionId", isAuthenticated, getRefundStatus)
 
+router.post("/create-payment",isAuthenticated,createPaymentPhonePe);
+router.post("/callback/:id",isAuthenticated,verifyPayments);
 // router for cod transaction
 router.post("/COD",isAuthenticated,CreateCODTransaction)
 
