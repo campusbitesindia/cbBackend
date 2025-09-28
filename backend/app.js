@@ -43,7 +43,7 @@ app.use(passport.initialize())
 // Middleware - Enhanced CORS for development
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000", 'https://campus-bites-c7pe.vercel.app', 'https://www.campusbites.in'], // Allow frontend
+    origin: ["http://localhost:3000", "http://127.0.0.1:3000", 'https://campus-bites-c7pe.vercel.app'], // Allow frontend
     credentials: true, // Allow cookies
     optionsSuccessStatus: 200, // For legacy browser support
   }),
