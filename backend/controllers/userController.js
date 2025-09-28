@@ -390,6 +390,13 @@ exports.loginUser = async (req, res, next) => {
       })
     }
 
+    if(!(await bcrypt.compare(password,user1.password))){
+      return res.status(401).json({
+        success:false,
+        message:"Email id or password is incorrect"
+      })
+    }
+
     // Generate JWT token
     const token = JWT.sign(
       {
