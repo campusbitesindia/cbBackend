@@ -98,8 +98,8 @@ exports.getTopUsersBySpending = async (req, res) => {
 exports.getUsersByRoleList = async (req, res) => {
   try {
     const [students, owners] = await Promise.all([
-      User.find({ role: "student" }).select("name email isBanned"),
-      User.find({ role: "canteen" }).select("name email isBanned"),
+      User.find({ role: "student" }).select("name email role isBanned"),
+      User.find({ role: "canteen" }).select("name email role isBanned"),
     ])
     res.json({ students, canteenOwners: owners })
   } catch (error) {
@@ -552,10 +552,10 @@ exports.banUser = async (req, res) => {
   try {
     const { userId, ban } = req.body
     await User.findByIdAndUpdate(userId, { isBanned: ban })
-    res.json({ message: ban ? "User has been banned." : "User has been unbanned." })
+    res.json({ message: ban ? "User has been banned." : "User has been unbanned." ,success:true})
   } catch (error) {
     console.error("Error banning user:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ message: "Server error",succcess:false })
   }
 }
 
@@ -566,10 +566,10 @@ exports.suspendCanteen = async (req, res) => {
     if (canteen?.owner) {
       await User.findByIdAndUpdate(canteen.owner, { isBanned: suspend })
     }
-    res.json({ message: suspend ? "Canteen suspended and owner banned." : "Canteen unsuspended and owner unbanned." })
+    res.json({ success:true,  message: suspend ? "Canteen suspended and owner banned." : "Canteen unsuspended and owner unbanned." })
   } catch (error) {
     console.error("Error suspending/unsuspending canteen:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ success:false, message: "Server error" })
   }
 }
 
@@ -584,10 +584,10 @@ exports.adminRateVendor = async (req, res) => {
     canteen.adminRatings.push({ rating, feedback, date: new Date() })
     await canteen.save()
 
-    res.json({ message: "Admin rating submitted." })
+    res.json({ message: "Admin rating submitted.",success:true })
   } catch (error) {
     console.error("Error rating vendor:", error)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({ message: "Server error",success:false })
   }
 }
 
@@ -817,6 +817,8 @@ exports.adminLogin = (req, res) => {
   const { username, password } = req.body
   const ADMIN_USERNAME = process.env.ADMIN_USERNAME
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
+
+  console.log(username,ADMIN_USERNAME,password,ADMIN_PASSWORD)
 
   if (username !== ADMIN_USERNAME || password !== ADMIN_PASSWORD) {
     return res.status(401).json({ success: false, message: "Invalid admin credentials" })

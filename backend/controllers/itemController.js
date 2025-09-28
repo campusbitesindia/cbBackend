@@ -34,10 +34,10 @@ exports.getItems = async (req, res) => {
 exports.createItem = async (req, res) => {
   try {
     const { name, price, canteenId,available,description,isVeg,category,quantity,portion } = req.body;
-  
+    console.log(name, price, canteenId,available,description,isVeg,category,quantity,portion )
     const Image = req.file;
-   
-    if (!name || !price || !canteenId || !Image ||available || description || isVeg || category || quantity || portion ) {
+   console.log(Image)
+    if (!name || !price || !canteenId || !Image || !available || !description || !isVeg || !category || !quantity || !portion ) {
       return res.status(400).json({
         success: false,
         message: 'name ,price,Image or canteenId is missing',
@@ -232,7 +232,8 @@ exports.getReadyItems = async (req, res) => {
             data: items
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({success:false,
+           error: err.message });
     }
 };
 

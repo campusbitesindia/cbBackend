@@ -4,7 +4,8 @@ const { isAuthenticated } = require("../middleware/auth");
 const upload = require("../middleware/uploadMiddleware");
 const passport = require("passport");
 const { smartLoginMonitoring } = require("../middleware/smartSecurity");
-
+const dotenv=require('dotenv');
+dotenv.config();
 const router = express.Router();
 
 router.route("/register").post(registerUser);
@@ -23,10 +24,10 @@ router.route("/profile/image").post(isAuthenticated, upload.single('profileImage
 // // Google OAuth
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 router.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'https://campus-bites-c7pe.vercel.app/login', session: false }),
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_HOST}/login`, session: false }),
   (req, res) => { 
     // On success, redirect with a token
-    res.redirect(`https://campus-bites-c7pe.vercel.app/login?token=${req.user}`);
+    res.redirect(`${FRONTEND_HOST}/login?token=${req.user}`);
   }
 );
 router.post("/google",getUserDetails)

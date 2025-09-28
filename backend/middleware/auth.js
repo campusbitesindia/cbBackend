@@ -5,17 +5,18 @@ const Canteen = require("../models/Canteen")
 exports.isAuthenticated = async (req, res, next) => {
   try {
     const token = req.cookies.token || (req.headers.authorization && req.headers.authorization.replace("Bearer ", ""))
-    console.log(token)
+    
     if (!token || token === "j:null" || token === "null") {
       return res.status(401).json({
         success: false,
         message: "Not logged in currently. Please login to access this resource.",
       })
     }
-
+    
     const decodedData = jwt.verify(token, process.env.JWT_SECRET)
+    console.log(decodedData);
     const user1 = await user.findById(decodedData.id).populate("campus canteenId")
-
+    
     if (!user1) {
       return res.status(401).json({
         success: false,
@@ -33,9 +34,9 @@ exports.isAuthenticated = async (req, res, next) => {
     // Attach user with consistent ID format
     req.user = {
       ...user1.toObject(),
-      id: user1._id.toString(), // Ensure consistent ID format
+      id: user1._id.toString(), // Ensure consistent ID format 
     }
-
+    
     next()
   } catch (error) {
     res.status(500).json({
@@ -98,6 +99,7 @@ exports.isVendor = async (req, res, next) => {
 
     // Attach canteen info to request
     req.canteen = canteen
+    
     next()
   } catch (err) {
     return res.status(500).json({

@@ -12,7 +12,7 @@ const {
 const { isAuthenticated, isVendor } = require("../middleware/auth")
 
 // Updated to accept min 1, max 3 images
-router.post("/create", isAuthenticated, isVendor, upload.array("images", 3), createCanteen)
+router.post("/create", upload.array("images", 3), createCanteen)
 router.get("/", getAllCanteens)
 router.get("/my-canteen", isAuthenticated, isVendor, getMyCanteen)
 router.get("/:id", getCanteenById)

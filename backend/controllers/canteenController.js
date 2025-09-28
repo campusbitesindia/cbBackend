@@ -1,6 +1,6 @@
 const Canteen = require("../models/Canteen")
 const cloudinary = require("../utils/cloudinary")
-
+const bcrypt=require("bcrypt")
 // Create Canteen with image support and business details
 exports.createCanteen = async (req, res) => {
   try {
@@ -10,6 +10,7 @@ exports.createCanteen = async (req, res) => {
       adhaarNumber,
       panNumber,
       gstNumber,
+      password,
       fssaiLicense,
       contactPersonName,
       mobile,
@@ -19,173 +20,110 @@ exports.createCanteen = async (req, res) => {
       closingHours,
       operatingDays,
       description,
-    } = req.body
-    const userRole = req.user.role
+      role,
+    } = req.body;
 
-    // Only canteen owners can create canteens
-    if (userRole !== "canteen") {
+    // 1. Only canteen owners can create canteens
+    if (role !== "canteen") {
       return res.status(403).json({
         success: false,
         message: "Only canteen owners can create canteens",
-      })
+      });
     }
 
-    // Validate required fields
-    if (
-      !name ||
-      !campus ||
-      !adhaarNumber ||
-      !panNumber ||
-      !gstNumber ||
-      !contactPersonName ||
-      !mobile ||
-      !email ||
-      !address ||
-      !openingHours ||
-      !closingHours
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "All required fields must be provided",
-        required: [
-          "name",
-          "campus",
-          "adhaarNumber",
-          "panNumber",
-          "gstNumber",
-          "contactPersonName",
-          "mobile",
-          "email",
-          "address",
-          "openingHours",
-          "closingHours",
-        ],
-      })
+    // 2. Validate required fields
+    const requiredFields = [
+      "name",
+      "campus",
+      "adhaarNumber",
+      "panNumber",
+      "gstNumber",
+      "contactPersonName",
+      "mobile",
+      "email",
+      "address",
+      "openingHours",
+      "closingHours",
+      "password",
+    ];
+    for (const field of requiredFields) {
+      if (!req.body[field]) {
+        return res.status(400).json({
+          success: false,
+          message: `Missing required field: ${field}`,
+        });
+      }
     }
 
-    // Validate time format
-    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/
+    // 3. Validate opening & closing time format
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(openingHours) || !timeRegex.test(closingHours)) {
       return res.status(400).json({
         success: false,
         message: "Opening and closing hours must be in HH:MM format (24-hour)",
-      })
+      });
     }
 
-    // Validate that closing time is after opening time
-    const [openHour, openMin] = openingHours.split(":").map(Number)
-    const [closeHour, closeMin] = closingHours.split(":").map(Number)
-    const openMinutes = openHour * 60 + openMin
-    const closeMinutes = closeHour * 60 + closeMin
-
+    // Ensure closing time is after opening time
+    const [openHour, openMin] = openingHours.split(":").map(Number);
+    const [closeHour, closeMin] = closingHours.split(":").map(Number);
+    const openMinutes = openHour * 60 + openMin;
+    const closeMinutes = closeHour * 60 + closeMin;
     if (closeMinutes <= openMinutes) {
       return res.status(400).json({
         success: false,
         message: "Closing time must be after opening time",
-      })
+      });
     }
 
-    // Verify that the campus exists and is not deleted
-    const Campus = require("../models/Campus")
-    const campusDoc = await Campus.findOne({ _id: campus, isDeleted: false })
+    // 4. Verify campus exists
+    const Campus = require("../models/Campus");
+    const campusDoc = await Campus.findOne({ _id: campus, isDeleted: false });
+    console.log(campusDoc)
     if (!campusDoc) {
       return res.status(400).json({
         success: false,
-        message: "Selected campus not found or is inactive. Please request campus creation if it doesn't exist.",
-      })
+        message:
+          "Selected campus not found or is inactive. Please request campus creation if it doesn't exist.",
+      });
     }
 
-    // Check if user already has a canteen
-    const existingCanteen = await Canteen.findOne({
-      owner: req.user._id,
-      isDeleted: false,
-    })
-    if (existingCanteen) {
-      return res.status(400).json({
-        success: false,
-        message: "You already have a canteen. Each vendor can only have one canteen.",
-      })
-    }
-
-    // Check for duplicate business details
-    const duplicateAdhaar = await Canteen.findOne({ adhaarNumber, isDeleted: false })
-    if (duplicateAdhaar) {
-      return res.status(400).json({
-        success: false,
-        message: "Adhaar number is already registered with another canteen",
-      })
-    }
-
-    const duplicatePAN = await Canteen.findOne({ panNumber, isDeleted: false })
-    if (duplicatePAN) {
-      return res.status(400).json({
-        success: false,
-        message: "PAN number is already registered with another canteen",
-      })
-    }
-
-    const duplicateGST = await Canteen.findOne({ gstNumber, isDeleted: false })
-    if (duplicateGST) {
-      return res.status(400).json({
-        success: false,
-        message: "GST number is already registered with another canteen",
-      })
-    }
-
-    // Check for duplicate mobile and email
-    const duplicateMobile = await Canteen.findOne({ mobile, isDeleted: false })
-    if (duplicateMobile) {
-      return res.status(400).json({
-        success: false,
-        message: "Mobile number is already registered with another canteen",
-      })
-    }
-
-    const duplicateEmail = await Canteen.findOne({ email, isDeleted: false })
-    if (duplicateEmail) {
-      return res.status(400).json({
-        success: false,
-        message: "Email address is already registered with another canteen",
-      })
-    }
-
-    if (fssaiLicense) {
-      const duplicateFSSAI = await Canteen.findOne({ fssaiLicense, isDeleted: false })
-      if (duplicateFSSAI) {
-        return res.status(400).json({
-          success: false,
-          message: "FSSAI license is already registered with another canteen",
-        })
+    // 6. Uniqueness checks (business details, contact info)
+    const duplicateChecks = [
+      { field: "adhaarNumber", value: adhaarNumber, msg: "Adhaar number is already registered" },
+      { field: "panNumber", value: panNumber, msg: "PAN number is already registered" },
+      { field: "gstNumber", value: gstNumber, msg: "GST number is already registered" },
+      { field: "mobile", value: mobile, msg: "Mobile number is already registered" },
+      { field: "email", value: email, msg: "Email address is already registered" },
+      { field: "fssaiLicense", value: fssaiLicense, msg: "FSSAI license is already registered" },
+    ];
+    console.log(email);
+    for (const check of duplicateChecks) {
+      if (check.value) {
+        const exists = await Canteen.findOne({ [check.field]: check.value, isDeleted: false });
+        console.log(exists)
+        if (exists) {
+          return res.status(400).json({ success: false, message: check.msg });
+        }
       }
     }
 
-    // Validate image requirements (min 1, max 3)
-    if (!req.files || req.files.length === 0) {
+    // 7. Validate image count
+    if (!req.files || req.files.length < 1) {
       return res.status(400).json({
         success: false,
-        message: "At least 1 image is required for canteen registration",
-        requirements: {
-          minImages: 1,
-          maxImages: 3,
-          currentImages: 0,
-        },
-      })
+        message: "At least 1 image is required",
+      });
     }
-
     if (req.files.length > 3) {
       return res.status(400).json({
         success: false,
-        message: "Maximum 3 images allowed for canteen",
-        requirements: {
-          minImages: 1,
-          maxImages: 3,
-          currentImages: req.files.length,
-        },
-      })
+        message: "Maximum 3 images allowed",
+      });
     }
 
-    // Handle image uploads (required: min 1, max 3)
-    let imageUrls = []
+    // 8. Upload images to Cloudinary
+    let imageUrls = [];
     try {
       const uploads = await Promise.all(
         req.files.map((file) =>
@@ -196,35 +134,47 @@ exports.createCanteen = async (req, res) => {
               { width: 800, height: 600, crop: "fill" },
               { quality: "auto", fetch_format: "auto" },
             ],
-          }),
-        ),
-      )
-      imageUrls = uploads.map((upload) => upload.secure_url)
+          })
+        )
+      );
+      imageUrls = uploads.map((u) => u.secure_url);
     } catch (uploadError) {
       return res.status(500).json({
         success: false,
-        message: "Failed to upload images",
+        message: "Image upload failed",
         error: uploadError.message,
-      })
+      });
     }
 
-    // Parse operating days if provided
-    let parsedOperatingDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    // 9. Parse operating days
+    let parsedOperatingDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     if (operatingDays) {
       try {
-        parsedOperatingDays = Array.isArray(operatingDays) ? operatingDays : JSON.parse(operatingDays)
-      } catch (error) {
+        parsedOperatingDays = Array.isArray(operatingDays)
+          ? operatingDays
+          : JSON.parse(operatingDays);
+      } catch {
         return res.status(400).json({
           success: false,
           message: "Invalid operating days format",
-        })
+        });
       }
     }
-
+      const User = require("../models/User");
+       const hashedPass = await bcrypt.hash(password, 10);
+       const newUser= await User.create({
+          name: contactPersonName,
+          password: hashedPass,
+          email,
+          role,
+          phone: mobile,
+          campus: campusDoc._id,
+        });
+    // 10. Create new canteen
     const newCanteen = await Canteen.create({
       name,
       campus: campusDoc._id,
-      owner: req.user._id,
+      owner: newUser._id,
       images: imageUrls,
       adhaarNumber,
       panNumber,
@@ -234,21 +184,21 @@ exports.createCanteen = async (req, res) => {
       mobile,
       email,
       address,
-      operatingHours: {
-        opening: openingHours,
-        closing: closingHours,
-      },
+      operatingHours: { opening: openingHours, closing: closingHours },
       operatingDays: parsedOperatingDays,
       description,
-      isOpen: false, // Closed until approved
+      isOpen: false,
       isApproved: false,
       approvalStatus: "pending",
-    })
+    });
 
-    // Update user's canteenId
-    const User = require("../models/User")
-    await User.findByIdAndUpdate(req.user._id, { canteenId: newCanteen._id })
+    // 11. Create corresponding user account
+  
 
+    newUser.canteenId=newCanteen._id;
+    await newUser.save();
+
+    // 12. Response
     res.status(201).json({
       success: true,
       message: "Canteen created successfully and is pending admin approval",
@@ -263,42 +213,33 @@ exports.createCanteen = async (req, res) => {
         operatingHours: newCanteen.operatingHours,
         operatingDays: newCanteen.operatingDays,
         approvalStatus: newCanteen.approvalStatus,
-        imageCount: imageUrls.length,
-        businessDetails: {
-          adhaarNumber: newCanteen.adhaarNumber,
-          panNumber: newCanteen.panNumber,
-          gstNumber: newCanteen.gstNumber,
-          fssaiLicense: newCanteen.fssaiLicense,
-          contactPersonName: newCanteen.contactPersonName,
-        },
       },
       nextSteps: [
         "Wait for admin approval",
         "Set up your bank details for payouts",
-        "Once approved, you can start adding menu items",
-        "Your canteen will operate during the specified hours",
+        "Once approved, add menu items",
+        "Operate during specified hours",
       ],
-    })
+    });
   } catch (error) {
-    console.error("Error in creating canteen:", error)
+    console.error("Error in creating canteen:", error);
 
-    // Handle validation errors
     if (error.name === "ValidationError") {
-      const validationErrors = Object.values(error.errors).map((err) => err.message)
+      const validationErrors = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({
         success: false,
         message: "Validation failed",
         errors: validationErrors,
-      })
+      });
     }
 
     res.status(500).json({
       success: false,
       message: "Internal server error",
       error: error.message,
-    })
+    });
   }
-}
+};
 
 exports.getAllCanteens = async (req, res) => {
   try {

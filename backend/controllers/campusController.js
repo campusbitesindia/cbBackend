@@ -90,10 +90,10 @@ exports.requestCampusCreation = async (req, res) => {
 exports.getAllCampuses = async (req, res) => {
   try {
     const campuses = await Campus.find({ isDeleted: false })
-    res.status(200).json({ campuses })
+    res.status(200).json({ success:true,data: campuses })
   } catch (err) {
     console.error("Error fetching campuses:", err)
-    res.status(500).json({ message: "Server error" })
+    res.status(500).json({success:false, message: "Server error" })
   }
 }
 

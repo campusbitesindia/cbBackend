@@ -13,8 +13,9 @@ const { oauth2Client } = require("../utils/googleOAuthClient")
 
 exports.registerUser = async (req, res) => {
   try {
+    
     const { name, email, password, role, campus, phone } = req.body
-    console.log(phone);
+ 
     if (!name || !email || !password || !role || !campus) {
       return res.status(400).json({
         success: false,
@@ -49,7 +50,7 @@ exports.registerUser = async (req, res) => {
     }
 
     // Handle both campus ID and campus name
-    let campusDoc
+    let campusDoc=null;
     if (mongoose.Types.ObjectId.isValid(campus)) {
       campusDoc = await Campus.findById(campus)
     } else {
@@ -139,7 +140,7 @@ exports.registerUser = async (req, res) => {
             isVerified: user.is_verified,
             approvalStatus: role === "canteen" ? "pending" : "approved",
           },
-          token,
+          token, 
           nextSteps:
             role === "canteen"
               ? [
@@ -168,7 +169,7 @@ exports.registerUser = async (req, res) => {
       })
     }
 
-    console.log("started")
+    
     const hashedPass = await bcrypt.hash(password, 10)
 
     // Create user data object conditionally
@@ -188,7 +189,7 @@ exports.registerUser = async (req, res) => {
 
     const user = await User.create(userData)
     
-    console.log(user)
+    
     console.log("User phone number:", user.phone) 
 
     // For vendors (canteen role), create a pending canteen that needs admin approval
@@ -202,6 +203,8 @@ exports.registerUser = async (req, res) => {
         closingHours,
         operatingDays,
       } = req.body
+
+      console.log(openingHours,closingHours)
 
       const newCanteen = await Canteen.create({
         name: canteenName || `${name}'s Canteen`,
@@ -354,8 +357,8 @@ exports.verifyEmail = async (req, res) => {
 
 exports.loginUser = async (req, res, next) => {
   try {
-    const { email, password } = req.body
-
+    const { email, password } = req.body 
+    console.log(email,password)
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -377,6 +380,13 @@ exports.loginUser = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: "This account was created with Google. Please use 'Sign in with Google' option.",
+      })
+    }
+   
+    if(!(await bcrypt.compare(password,user1.password))){
+      return res.status(401).json({
+        success:false,
+        message:"Email id or password is incorrect"
       })
     }
 
@@ -469,7 +479,7 @@ exports.forgotPass = async (req, res, next) => {
   const resetToken = user1.getresetpass()
   await user1.save({ validateBeforeSave: false })
 
-  const resetPassURL = `https://campus-bites-c7pe.vercel.app/resetPassword/${resetToken}`
+  const resetPassURL = `http://localhost:3000/resetPassword/${resetToken}`
 
   const message = `Your password reset token is: \n\n ${resetPassURL} \n\nIf you have not send this request, please ignore.`
 
