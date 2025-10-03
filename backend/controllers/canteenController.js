@@ -23,6 +23,8 @@ exports.createCanteen = async (req, res) => {
       role,
     } = req.body;
 
+    // ==================== VALIDATION SECTION START ====================
+
     // 1. Only canteen owners can create canteens
     if (role !== "canteen") {
       return res.status(403).json({
@@ -37,7 +39,7 @@ exports.createCanteen = async (req, res) => {
       "campus",
       "adhaarNumber",
       "panNumber",
-      "gstNumber",
+      "fssaiLicense",
       "contactPersonName",
       "mobile",
       "email",
@@ -55,7 +57,91 @@ exports.createCanteen = async (req, res) => {
       }
     }
 
-    // 3. Validate opening & closing time format
+    // 3. Validate Adhaar format (12 digits)
+    if (!/^\d{12}$/.test(adhaarNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "Adhaar number must be 12 digits",
+      });
+    }
+
+    // 4. Validate PAN format (ABCDE1234F)
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(panNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid PAN number format (e.g., ABCDE1234F)",
+      });
+    }
+
+    // 5. Validate GST format
+    if ( gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid GST number format",
+      });
+    }
+
+    // 6. Validate FSSAI format (optional, 14 digits)
+    if (!/^[0-9]{14}$/.test(fssaiLicense)) {
+      return res.status(400).json({
+        success: false,
+        message: "FSSAI license must be 14 digits",
+      });
+    }
+
+    // 7. Validate mobile format (10 digits)
+    if (!/^\d{10}$/.test(mobile)) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number must be 10 digits",
+      });
+    }
+
+    // 8. Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+
+    // 9. Validate contact person name length
+    if (contactPersonName.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Contact person name must be at least 2 characters",
+      });
+    }
+    if (contactPersonName.trim().length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Contact person name must not exceed 100 characters",
+      });
+    }
+
+    // 10. Validate address length
+    if (address.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Address cannot be empty",
+      });
+    }
+    if (address.trim().length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Address must not exceed 500 characters",
+      });
+    }
+
+    // 11. Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters long",
+      });
+    }
+
+    // 12. Validate opening & closing time format
     const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(openingHours) || !timeRegex.test(closingHours)) {
       return res.status(400).json({
@@ -64,7 +150,7 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // Ensure closing time is after opening time
+    // 13. Ensure closing time is after opening time
     const [openHour, openMin] = openingHours.split(":").map(Number);
     const [closeHour, closeMin] = closingHours.split(":").map(Number);
     const openMinutes = openHour * 60 + openMin;
@@ -76,10 +162,10 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // 4. Verify campus exists
+    // 14. Verify campus exists
     const Campus = require("../models/Campus");
     const campusDoc = await Campus.findOne({ _id: campus, isDeleted: false });
-    console.log(campusDoc)
+    console.log(campusDoc);
     if (!campusDoc) {
       return res.status(400).json({
         success: false,
@@ -88,7 +174,7 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // 6. Uniqueness checks (business details, contact info)
+    // 15. Uniqueness checks (business details, contact info)
     const duplicateChecks = [
       { field: "adhaarNumber", value: adhaarNumber, msg: "Adhaar number is already registered" },
       { field: "panNumber", value: panNumber, msg: "PAN number is already registered" },
@@ -101,14 +187,24 @@ exports.createCanteen = async (req, res) => {
     for (const check of duplicateChecks) {
       if (check.value) {
         const exists = await Canteen.findOne({ [check.field]: check.value, isDeleted: false });
-        console.log(exists)
+        console.log(exists);
         if (exists) {
           return res.status(400).json({ success: false, message: check.msg });
         }
       }
     }
 
-    // 7. Validate image count
+    // 16. Check if email already exists in User collection
+    const User = require("../models/User");
+    const existingUserEmail = await User.findOne({ email });
+    if (existingUserEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Email address is already registered with another user",
+      });
+    }
+
+    // 17. Validate image count
     if (!req.files || req.files.length < 1) {
       return res.status(400).json({
         success: false,
@@ -122,7 +218,56 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // 8. Upload images to Cloudinary
+    // 18. Validate image file types
+    const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    for (const file of req.files) {
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        return res.status(400).json({
+          success: false,
+          message: "Only JPEG, PNG, and WEBP images are allowed",
+        });
+      }
+    }
+
+    // 19. Validate image file sizes (max 5MB per image)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    for (const file of req.files) {
+      if (file.size > maxSize) {
+        return res.status(400).json({
+          success: false,
+          message: "Each image must be less than 5MB",
+        });
+      }
+    }
+
+    // 20. Parse and validate operating days
+    let parsedOperatingDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    if (operatingDays) {
+      try {
+        parsedOperatingDays = Array.isArray(operatingDays)
+          ? operatingDays
+          : JSON.parse(operatingDays);
+      } catch {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid operating days format",
+        });
+      }
+
+      // Validate day names
+      const validDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+      const invalidDays = parsedOperatingDays.filter((day) => !validDays.includes(day));
+      if (invalidDays.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid operating days: ${invalidDays.join(", ")}`,
+        });
+      }
+    }
+
+    // ==================== VALIDATION SECTION END ====================
+
+    // 21. Upload images to Cloudinary
     let imageUrls = [];
     try {
       const uploads = await Promise.all(
@@ -146,31 +291,18 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // 9. Parse operating days
-    let parsedOperatingDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    if (operatingDays) {
-      try {
-        parsedOperatingDays = Array.isArray(operatingDays)
-          ? operatingDays
-          : JSON.parse(operatingDays);
-      } catch {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid operating days format",
-        });
-      }
-    }
-      const User = require("../models/User");
-       const hashedPass = await bcrypt.hash(password, 10);
-       const newUser= await User.create({
-          name: contactPersonName,
-          password: hashedPass,
-          email,
-          role,
-          phone: mobile,
-          campus: campusDoc._id,
-        });
-    // 10. Create new canteen
+    // 22. Create corresponding user account
+    const hashedPass = await bcrypt.hash(password, 10);
+    const newUser = await User.create({
+      name: contactPersonName,
+      password: hashedPass,
+      email,
+      role,
+      phone: mobile,
+      campus: campusDoc._id,
+    });
+
+    // 23. Create new canteen
     const newCanteen = await Canteen.create({
       name,
       campus: campusDoc._id,
@@ -192,13 +324,11 @@ exports.createCanteen = async (req, res) => {
       approvalStatus: "pending",
     });
 
-    // 11. Create corresponding user account
-  
-
-    newUser.canteenId=newCanteen._id;
+    // 24. Update user with canteen ID
+    newUser.canteenId = newCanteen._id;
     await newUser.save();
 
-    // 12. Response
+    // 25. Response
     res.status(201).json({
       success: true,
       message: "Canteen created successfully and is pending admin approval",
@@ -240,7 +370,6 @@ exports.createCanteen = async (req, res) => {
     });
   }
 };
-
 exports.getAllCanteens = async (req, res) => {
   try {
     const { campus, includeUnapproved = false } = req.query

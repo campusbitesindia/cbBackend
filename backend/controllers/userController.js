@@ -737,3 +737,42 @@ exports.getUserDetails=async(req,res)=>{
     })
   }
 }
+
+exports.GoogleLogin=async(req,res)=>{
+  try{
+    const {code}=req.body;
+    const googleRes=await oauth2Client.getToken(code);
+    const userRes= await axios.get(
+            `https://www.googleapis.com/oauth2/v1/userinfo?alt=json&access_token=${googleRes.tokens.access_token}`
+        );
+    const {id:googleId}=userRes.data;
+    
+    const user=await User.findOne({googleId:googleId});
+    if(!user){
+      return res.status(400).json({
+        success:false,
+        message:"User not Found"
+      })
+    }
+
+    const payload={
+      id:user._id,
+      email:user.email,
+      role:user.role
+    }
+
+    const token=JWT.sign(payload,process.env.JWT_SECRET,{ expiresIn: "120h" },)
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,user1:user
+    });
+  }
+  catch(err){
+    return res.status(500).json({
+      success:false,
+      message:"internal server Error",
+      error:err.message
+    })
+  }
+}

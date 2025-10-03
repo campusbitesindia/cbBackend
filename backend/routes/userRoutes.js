@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail, getProfile, updateProfile, uploadProfileImage, getUserDetails } = require("../controllers/userController");
+const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail, getProfile, updateProfile, uploadProfileImage, getUserDetails, GoogleLogin } = require("../controllers/userController");
 const { isAuthenticated } = require("../middleware/auth");
 const upload = require("../middleware/uploadMiddleware");
 const passport = require("passport");
@@ -21,14 +21,20 @@ router.route("/profile").get(isAuthenticated, getProfile);
 router.route("/profile").put(isAuthenticated, updateProfile);
 router.route("/profile/image").post(isAuthenticated, upload.single('profileImage'), uploadProfileImage);
 
-// // Google OAuth
 router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
-router.get('/auth/google/callback',
+router.get(
+  '/auth/google/callback',
   passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_HOST}/login`, session: false }),
-  (req, res) => { 
-    // On success, redirect with a token
-    res.redirect(`${FRONTEND_HOST}/login?token=${req.user}`);
+  (req, res) => {
+
+    const userObj = req.user.toObject ? req.user.toObject() : req.user;
+    delete userObj.password;
+    delete userObj.__v;
+    const token = jwt.sign({ user: userObj }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    console.log(req.user)
+    res.redirect(`${process.env.FRONTEND_HOST}/login?token=${token}`);
   }
 );
 router.post("/google",getUserDetails)
+router.post("/googleLogin",GoogleLogin);
 module.exports = router;
