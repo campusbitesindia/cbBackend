@@ -486,7 +486,7 @@ exports.forgotPass = async (req, res, next) => {
   const resetToken = user1.getresetpass()
   await user1.save({ validateBeforeSave: false })
 
-  const resetPassURL = `http://localhost:3000/resetPassword/${resetToken}`
+  const resetPassURL = `https://www.campusbites.in/resetPassword/${resetToken}`
 
   const message = `Your password reset token is: \n\n ${resetPassURL} \n\nIf you have not send this request, please ignore.`
 
