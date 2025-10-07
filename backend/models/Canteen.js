@@ -6,8 +6,7 @@ const adminRatingSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
 })
 
-const CanteenSchema = new mongoose.Schema(
-  {
+const CanteenSchema = new mongoose.Schema({
     name: { type: String, required: true },
     campus: { type: mongoose.Schema.Types.ObjectId, ref: "Campus", required: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -17,8 +16,6 @@ const CanteenSchema = new mongoose.Schema(
     adminRatings: [adminRatingSchema],
     isDeleted: { type: Boolean, default: false },
     isSuspended: { type: Boolean, default: false },
-
-    // Approval system
     isApproved: { type: Boolean, default: false },
     approvalStatus: {
       type: String,
@@ -29,7 +26,6 @@ const CanteenSchema = new mongoose.Schema(
     approvedAt: { type: Date },
     rejectionReason: { type: String },
 
-    // Required Business details for approval
     adhaarNumber: {
       type: String,
       required: true,
@@ -54,6 +50,8 @@ const CanteenSchema = new mongoose.Schema(
       type: String,
       validate: {
         validator: (v) => {
+          // Allow empty/null GST numbers, but validate format if provided
+          if (!v || v.trim() === '') return true;
           return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v)
         },
         message: "Invalid GST number format",
@@ -61,10 +59,9 @@ const CanteenSchema = new mongoose.Schema(
     },
     fssaiLicense: {
       type: String,
-      required:true,
+      required: true,
       validate: {
         validator: (v) => {
-          if (!v) return true
           return /^[0-9]{14}$/.test(v)
         },
         message: "FSSAI license must be 14 digits",
@@ -74,8 +71,8 @@ const CanteenSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      minlength: 2,
-      maxlength: 100,
+      minlength: [2, 'Contact person name must be at least 2 characters'],
+      maxlength: [100, 'Contact person name must not exceed 100 characters'],
     },
 
     // New fields from the vendor onboarding form
@@ -103,7 +100,13 @@ const CanteenSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 500,
+      maxlength: [500, 'Address must not exceed 500 characters'],
+      validate: {
+        validator: (v) => {
+          return v && v.trim().length > 0;
+        },
+        message: "Address cannot be empty",
+      },
     },
 
     contactPhone: { type: String }, // Keep for backward compatibility

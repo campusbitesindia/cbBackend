@@ -36,7 +36,7 @@ exports.createCanteen = async (req, res) => {
     // 2. Validate required fields
     const requiredFields = [
       "name",
-      "campus",
+      "campus", 
       "adhaarNumber",
       "panNumber",
       "fssaiLicense",
@@ -73,15 +73,15 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // 5. Validate GST format
-    if ( gstNumber && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
+    // 5. Validate GST format (only if provided)
+    if (gstNumber && gstNumber.trim() && !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(gstNumber)) {
       return res.status(400).json({
         success: false,
         message: "Invalid GST number format",
       });
     }
 
-    // 6. Validate FSSAI format (optional, 14 digits)
+    // 6. Validate FSSAI format (14 digits)
     if (!/^[0-9]{14}$/.test(fssaiLicense)) {
       return res.status(400).json({
         success: false,
@@ -183,11 +183,10 @@ exports.createCanteen = async (req, res) => {
       { field: "email", value: email, msg: "Email address is already registered" },
       { field: "fssaiLicense", value: fssaiLicense, msg: "FSSAI license is already registered" },
     ];
-    console.log(email);
+    
     for (const check of duplicateChecks) {
-      if (check.value) {
+      if (check.value && check.value.trim()) {
         const exists = await Canteen.findOne({ [check.field]: check.value, isDeleted: false });
-        console.log(exists);
         if (exists) {
           return res.status(400).json({ success: false, message: check.msg });
         }
@@ -291,7 +290,7 @@ exports.createCanteen = async (req, res) => {
       });
     }
 
-    // 22. Create corresponding user account
+   
     const hashedPass = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       name: contactPersonName,
@@ -302,15 +301,15 @@ exports.createCanteen = async (req, res) => {
       campus: campusDoc._id,
     });
 
-    // 23. Create new canteen
+    // 22. Create new canteen with owner reference
     const newCanteen = await Canteen.create({
       name,
       campus: campusDoc._id,
-      owner: newUser._id,
+      owner: newUser._id, 
       images: imageUrls,
       adhaarNumber,
       panNumber,
-      gstNumber,
+      gstNumber: gstNumber || undefined, 
       fssaiLicense,
       contactPersonName,
       mobile,
@@ -324,11 +323,11 @@ exports.createCanteen = async (req, res) => {
       approvalStatus: "pending",
     });
 
-    // 24. Update user with canteen ID
+    // 23. Update user with canteen ID
     newUser.canteenId = newCanteen._id;
     await newUser.save();
 
-    // 25. Response
+    // 24. Response
     res.status(201).json({
       success: true,
       message: "Canteen created successfully and is pending admin approval",
@@ -353,8 +352,14 @@ exports.createCanteen = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in creating canteen:", error);
-
+    console.error("Full validation error:", error);
+    
     if (error.name === "ValidationError") {
+      console.error("Validation error details:", error.errors);
+      Object.keys(error.errors || {}).forEach(field => {
+        console.error(`Field ${field}:`, error.errors[field].message);
+      });
+      
       const validationErrors = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({
         success: false,
@@ -370,6 +375,8 @@ exports.createCanteen = async (req, res) => {
     });
   }
 };
+
+
 exports.getAllCanteens = async (req, res) => {
   try {
     const { campus, includeUnapproved = false } = req.query
