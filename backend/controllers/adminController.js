@@ -1073,9 +1073,9 @@ exports.getSuspectedUser=async(req,res)=>{
         ]
       });
       if(AllSuspectedUser.length===0){
-        return res.status(400).json({
-          success:false,
-          message:"No suspected User"
+        return res.status(200).json({
+          success:true,
+          data:[]
         })
       }
       const penalties=await Penalty.find({isPaid:false}).populate({path:"user",select:"email"}).populate({path:"Order",select:"OrderNumber"}).select("student Amount deviceId  isPaid")
@@ -1099,13 +1099,6 @@ exports.getSuspectedUser=async(req,res)=>{
       }
     }
       
-      if(UsersWithPenalty.length===0){
-        return res.status(400).json({
-          success:false,
-          message:"No suspected User"
-        })
-      }
-
       return res.status(200).json({
         success:true,
         data:UsersWithPenalty
