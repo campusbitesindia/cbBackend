@@ -234,6 +234,12 @@ exports.UpdateOrderStatus = async (req, res) => {
         { orderId: OrderId },
         { status: "paid", paidAt: new Date(Date.now()) }
       );
+      const canteen=await Canteen.findById(order.canteen);
+      canteen.totalEarnings+=order.total;
+      if(order.paymentStatus!=="COD"){
+        canteen.availableBalance+=order.total;
+      }
+      await canteen.save();
     }
 
     // For normal status updates

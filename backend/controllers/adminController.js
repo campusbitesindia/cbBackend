@@ -1007,23 +1007,40 @@ exports.getVendorDetails = async (req, res) => {
 // Create a payout record (admin to vendor)
 exports.createPayout = async (req, res) => {
   try {
-    const { canteenId, trnId, date, amount, notes } = req.body
-    const adminId = req.user._id
+    const { canteenId, trnId, date, amount, notes } = req.body;
+    const adminId = req.user._id;
+
     if (!canteenId || !trnId || !date || !amount) {
-      return res.status(400).json({ success: false, message: "All fields except notes are required." })
+      return res.status(400).json({ success: false, message: "All fields except notes are required." });
     }
-    // Backend validation for amount
+
     if (typeof amount !== "number" || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: "Amount must be a positive number." })
+      return res.status(400).json({ success: false, message: "Amount must be a positive number." });
     }
-    // Backend validation for date
-    const payoutDate = new Date(date)
-    const today = new Date()
-    payoutDate.setHours(0, 0, 0, 0)
-    today.setHours(0, 0, 0, 0)
+
+    const payoutDate = new Date(date);
+    const today = new Date();
+    payoutDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
     if (payoutDate > today) {
-      return res.status(400).json({ success: false, message: "Date cannot be in the future." })
+      return res.status(400).json({ success: false, message: "Date cannot be in the future." });
     }
+
+    const canteen = await Canteen.findById(canteenId);
+    if (!canteen) {
+      return res.status(404).json({ success: false, message: "Canteen not found." });
+    }
+
+    if (canteen.availableBalance < amount) {
+      return res.status(400).json({ success: false, message: "Insufficient balance for payout." });
+    }
+
+    const updatedCanteen = await Canteen.findByIdAndUpdate(
+      canteenId,
+      { $inc: { totalPayouts: amount, availableBalance: -amount } },
+      { new: true }
+    );
+    console.log( "hogya update", updatedCanteen)
     const payout = await Payout.create({
       canteen: canteenId,
       admin: adminId,
@@ -1031,13 +1048,19 @@ exports.createPayout = async (req, res) => {
       date,
       amount,
       notes,
-    })
-    res.status(201).json({ success: true, message: "Payout recorded successfully", payout })
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Payout recorded successfully",
+      payout,
+      updatedCanteen,
+    });
   } catch (error) {
-    console.error("Error creating payout:", error)
-    res.status(500).json({ success: false, message: "Server error", error: error.message })
+    console.error("Error creating payout:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
-}
+};
 
 // Get all payouts (admin view)
 exports.getPayouts = async (req, res) => {

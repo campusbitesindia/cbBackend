@@ -193,7 +193,7 @@ exports.searchAll = async (req, res) => {
 
     // Search canteens
     const canteens = await Canteen.find({
-      isDeleted: false,
+      isDeleted: false,campus:req.user.campus,
       $or: [
         { name: { $regex: q, $options: 'i' } },
         { cuisine: { $regex: q, $options: 'i' } },
@@ -204,6 +204,7 @@ exports.searchAll = async (req, res) => {
       .limit(5);
 
     // Search items
+    const canteenIds = canteens.map(c => c._id);
     const items = await Item.find({
       isDeleted: false,
       available: true,
@@ -211,9 +212,7 @@ exports.searchAll = async (req, res) => {
         { name: { $regex: q, $options: 'i' } },
         { description: { $regex: q, $options: 'i' } },
       ],
-    })
-      .select('name price _id')
-      .limit(8);
+    }).limit(8);
 
     res.json({
       results: {

@@ -7,82 +7,59 @@ const Transaction = require("../models/Transaction")
 // Get vendor's current balance and earnings
 exports.getBalance = async (req, res) => {
   try {
-    const userId = req.user._id
+    const userId = req.user._id;
 
-    // Find canteen owned by user
+  
     const canteen = await Canteen.findOne({
       owner: userId,
       isDeleted: false,
-    })
+    });
 
     if (!canteen) {
       return res.status(404).json({
         success: false,
         message: "No canteen found for this vendor",
-      })
+      });
     }
 
-    // Calculate total earnings from completed orders
-    const earningsData = await Order.aggregate([
-      {
-        $match: {
-          canteen: canteen._id,
-          status: "completed",
-          paymentStatus: "paid",
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalEarnings: { $sum: "$total" },
-          totalOrders: { $sum: 1 },
-        },
-      },
-    ])
+  
+    const totalEarnings = canteen.totalEarnings || 0;
+    const totalPayouts = canteen.totalPayouts || 0;
+    const availableBalance = canteen.availableBalance || 0;
 
-    const totalEarnings = earningsData[0]?.totalEarnings || 0
-    const totalOrders = earningsData[0]?.totalOrders || 0
+   
+    const platformFeeRate = 0.05; // 5%
+    const platformFee = totalEarnings * platformFeeRate;
 
-    // Calculate total payouts made
-    const payoutData = await PayoutRequest.aggregate([
-      {
-        $match: {
-          canteen: canteen._id,
-          status: "completed",
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalPayouts: { $sum: "$requestedAmount" },
-          payoutCount: { $sum: 1 },
-        },
-      },
-    ])
-
-    const totalPayouts = payoutData[0]?.totalPayouts || 0
-    const payoutCount = payoutData[0]?.payoutCount || 0
-
-    // Calculate available balance (earnings - payouts - platform fee)
-    const platformFeeRate = 0.05 // 5% platform fee
-    const platformFee = totalEarnings * platformFeeRate
-    const availableBalance = Math.max(0, totalEarnings - totalPayouts - platformFee)
-
-    // Update canteen balance
-    await Canteen.findByIdAndUpdate(canteen._id, {
-      totalEarnings,
-      availableBalance,
-      totalPayouts,
-    })
-
-    // Get pending payout requests
     const pendingPayouts = await PayoutRequest.find({
       canteen: canteen._id,
       status: { $in: ["pending", "approved", "processing"] },
-    }).sort({ createdAt: -1 })
+    }).sort({ createdAt: -1 });
 
-    const pendingAmount = pendingPayouts.reduce((sum, payout) => sum + payout.requestedAmount, 0)
+    const pendingAmount = pendingPayouts.reduce(
+      (sum, payout) => sum + payout.requestedAmount,
+      0
+    );
 
+   
+    const orderStats = await Order.aggregate([
+      {
+        $match: {
+          canteen: canteen._id,
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalOrders = orderStats[0]?.totalOrders || 0;
+
+  
     res.status(200).json({
       success: true,
       message: "Balance information retrieved successfully",
@@ -92,15 +69,14 @@ exports.getBalance = async (req, res) => {
           name: canteen.name,
         },
         balance: {
-          totalEarnings,
-          totalPayouts,
+          totalEarnings: Math.round(totalEarnings * 100) / 100,
+          totalPayouts: Math.round(totalPayouts * 100) / 100,
           platformFee: Math.round(platformFee * 100) / 100,
           availableBalance: Math.round(availableBalance * 100) / 100,
-          pendingPayouts: pendingAmount,
+          pendingPayouts: Math.round(pendingAmount * 100) / 100,
         },
         statistics: {
           totalOrders,
-          completedPayouts: payoutCount,
           pendingPayoutRequests: pendingPayouts.length,
         },
         pendingRequests: pendingPayouts.map((p) => ({
@@ -110,16 +86,17 @@ exports.getBalance = async (req, res) => {
           requestedAt: p.createdAt,
         })),
       },
-    })
+    });
   } catch (error) {
-    console.error("Get balance error:", error)
+    console.error("Get balance error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to retrieve balance information",
       error: error.message,
-    })
+    });
   }
-}
+};
+
 
 // Request payout
 exports.requestPayout = async (req, res) => {
@@ -582,6 +559,7 @@ exports.processPayout = async (req, res) => {
     // Update canteen payout totals
     await Canteen.findByIdAndUpdate(payoutRequest.canteen._id, {
       $inc: { totalPayouts: payoutRequest.requestedAmount },
+      
     })
 
     res.status(200).json({

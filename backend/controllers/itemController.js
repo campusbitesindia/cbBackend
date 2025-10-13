@@ -316,3 +316,38 @@ exports.getReadyItemsofAllCanteens = async (req, res) => {
     });
   }
 };
+
+
+exports.GetItemsDetails=async(req,res)=>{
+  try{
+    const {id}=req.params;
+    if(!id){
+      return res.status(400).json({
+        success:false,
+        message:"Id not found"
+      })
+    }
+    const item=await Item.findById(id);
+    if(!item){
+      return res.status(400).json({
+        success:false,
+        message:"item not found with this Id"
+      })
+    }
+
+    return res.status(200).json({
+      success:true,
+      message:"Items found SuccessFully",
+      data:item
+    })
+
+  }
+  catch(err){
+    return res.status(500).json({
+      success:false,
+      message:"internal server error",
+      error:err.message
+      
+    })
+  }
+}
