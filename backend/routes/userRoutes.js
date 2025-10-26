@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail, getProfile, updateProfile, uploadProfileImage, getUserDetails, GoogleLogin } = require("../controllers/userController");
+const { registerUser, loginUser, logoutUser, forgotPass, resetPassword, loadUser, verifyEmail, getProfile, updateProfile, uploadProfileImage, getUserDetails, GoogleLogin, GoogleMobleLogin, GoogleMoileSignUp } = require("../controllers/userController");
 const { isAuthenticated } = require("../middleware/auth");
 const upload = require("../middleware/uploadMiddleware");
 const passport = require("passport");
@@ -37,4 +37,6 @@ router.get(
 );
 router.post("/google",getUserDetails)
 router.post("/googleLogin",GoogleLogin);
+router.post("/mobileGoogleLogin",GoogleMobleLogin);
+router.post("/mobileGoogleSignUp",GoogleMoileSignUp);
 module.exports = router;

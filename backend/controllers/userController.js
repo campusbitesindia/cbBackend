@@ -432,6 +432,7 @@ exports.loginUser = async (req, res, next) => {
         role: user1.role,
         campus: user1.campus,
         profileImage: user1.profileImage,
+        canteenId:user1.canteenId
       },
       token,
     }
@@ -740,6 +741,7 @@ exports.getUserDetails=async(req,res)=>{
 
 exports.GoogleLogin=async(req,res)=>{
   try{
+    console.log("started")
     const {code}=req.body;
     const googleRes=await oauth2Client.getToken(code);
     const userRes= await axios.get(
@@ -772,6 +774,77 @@ exports.GoogleLogin=async(req,res)=>{
     return res.status(500).json({
       success:false,
       message:"internal server Error",
+      error:err.message
+    })
+  }
+}
+
+
+exports.GoogleMobleLogin=async(req,res)=>{
+  try{
+    const {code}=req.body;
+    const googleRes=await oauth2Client.verifyIdToken({idToken:code});
+    const userRes=googleRes.getPayload();
+
+    console.log(userRes);
+    const {email}=userRes;
+    const user=await User.findOne({email});
+    if(!user){
+      return res.status(400).json({
+        success:false,
+        message:"User not found",
+      })
+    }
+    const payload={
+      id:user._id,
+      email:user.email,
+      role:user.role
+    }
+
+    const token=JWT.sign(payload,process.env.JWT_SECRET,{ expiresIn: "120h" },)
+    return res.status(200).json({
+      success:true,
+      message:"user logged In successFully",
+      token,user1:user
+    })
+  }
+  catch(err){
+    console.log(err.message);
+    return res.status(500).json({
+      success:false,
+      message:"internal server error",
+      error:err.message
+    })
+  }
+}
+
+exports.GoogleMoileSignUp=async(req,res)=>{
+  try{
+    const {code}=req.body;
+    const googleRes=await oauth2Client.verifyIdToken({idToken:code});
+    const userRes=googleRes.getPayload();
+
+    console.log(userRes);
+    const {email,name,picture,sub:googleId}=userRes;
+    const user=await User.findOne({email});
+    if(user){
+      return res.status(400).json({
+        success:false,
+        message:"User already exist please login",
+      })
+    }
+    const newUser=await User.create({email:email,name,profileImage:picture,googleId:googleId,role:"student"})
+    return res.status(200).json({
+      success:true,
+      message:"done",
+      data:newUser
+    })
+  }
+  catch(err){
+    console.log(err.message)
+    return res.status(500).json({
+      success:false,
+      message:"internal server error",
       error:err.message
     })
   }

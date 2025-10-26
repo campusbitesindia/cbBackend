@@ -193,7 +193,7 @@ exports.searchAll = async (req, res) => {
 
     // Search canteens
     const canteens = await Canteen.find({
-      isDeleted: false,campus:req.user.campus,
+      isDeleted: false,campus:req.user.campus._id,
       $or: [
         { name: { $regex: q, $options: 'i' } },
         { cuisine: { $regex: q, $options: 'i' } },
@@ -203,8 +203,7 @@ exports.searchAll = async (req, res) => {
       .select('name location _id')
       .limit(5);
 
-    // Search items
-    const canteenIds = canteens.map(c => c._id);
+    
     const items = await Item.find({
       isDeleted: false,
       available: true,
@@ -212,12 +211,16 @@ exports.searchAll = async (req, res) => {
         { name: { $regex: q, $options: 'i' } },
         { description: { $regex: q, $options: 'i' } },
       ],
-    }).limit(8);
-
+    }).populate({path:"canteen",select:"campus"}).limit(20);
+   
+    const filteredItems=items.filter((ele)=> {
+        const id=ele.canteen.campus.toString();
+        const userCampus=req.user.campus._id.toString();
+        return id===userCampus});
     res.json({
       results: {
         canteen: canteens.map(c => ({ ...c.toObject(), type: 'canteen' })),
-        item: items.map(i => ({ ...i.toObject(), type: 'item' })),
+        item: filteredItems.map(i => ({ ...i.toObject(), type: 'item' })),
       },
     });
   } catch (err) {
