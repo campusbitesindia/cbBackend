@@ -23,6 +23,8 @@ const bankDetailsRoutes = require("./routes/bankDetailsRoutes") // Bank Details 
 const payoutRoutes = require("./routes/payoutRoutes") // Payout Routes
 const groupOrderRoutes = require("./routes/groupOrderRoutes");
 const vendorAnalyticsRoutes = require("./routes/vendorAnalyticsRoutes");
+const offerRoutes=require("./routes/offferRoutes");
+
 
 const cookieParser = require("cookie-parser")
 const itemRoutes = require("./routes/itemRoutes")
@@ -94,7 +96,7 @@ app.use("/api/v1/bank-details", bankDetailsRoutes) // Bank Details API
 app.use("/api/v1/payouts", payoutRoutes) // Payout API
 app.use("/api/v1/groupOrder", groupOrderRoutes)
 app.use("/api/v1/vendorAnalytics", vendorAnalyticsRoutes)
-
+app.use("/api/v1/offers",offerRoutes);
 // Redirect for Google OAuth to allow shorter URL
 app.get("/api/auth/google", (req, res) => {
   res.redirect("/api/v1/users/auth/google")

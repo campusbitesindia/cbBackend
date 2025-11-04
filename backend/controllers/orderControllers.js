@@ -7,11 +7,87 @@ const SendNotification = require("../utils/sendNotification");
 const Penalty = require("../models/penaltySchema");
 const Transaction = require("../models/Transaction");
 const Counter = require("../models/CounterSchema");
+const Offer = require("../models/Offer");
+
+
+const applyOffer = async (Total, offer, userId) => {
+  const currentOffer = await Offer.findById(offer);
+  if (!currentOffer) {
+    return {
+      success: false,
+      message: "This offer does not exist anymore"
+    };
+  }
+
+  if (!currentOffer.isActive) {
+    return {
+      success: false,
+      message: "This offer is not active"
+    };
+  }
+
+  if (currentOffer.isUnique) {
+    const isClaimed = currentOffer.claimedUser.find((id)=>{
+      return toString(id)===toString(userId);
+
+    });
+    if (isClaimed) {
+      return {
+        success: false,
+        message: "You have already claimed this one-time offer"
+      };
+    }
+    currentOffer.claimedUser.push(userId);
+  }
+
+  // --- Enforce minimum order eligibility ---
+  if (Total < currentOffer.MinValue) {
+    return {
+      success: false,
+      message: `Order must be at least ₹${currentOffer.MinValue}`
+    };
+  }
+
+  // Save any user claim updates
+  await currentOffer.save();
+
+  // --- Extract numeric values safely ---
+  const minValue = Number(currentOffer.MinValue || 0);
+  const maxValue = Number(currentOffer.MaxValue || 0);
+  const maxDiscount = Number(currentOffer.MaxDiscount || 0);
+  const pct = Number(currentOffer.discount || 0); // e.g., 10 means 10%
+
+  // --- Calculate minimum discount based on MinValue ---
+  const minPossibleDiscount = (minValue * pct) / 100;
+
+  let discountAmount = 0;
+
+  // --- If Total ≥ MaxValue → give flat maxDiscount ---
+  if (maxValue && Total >= maxValue) {
+    discountAmount = maxDiscount;
+  } else {
+    // Percentage-based discount
+    const percentageDiscount = (Total * pct) / 100;
+
+    // Bound discount between minPossibleDiscount and maxDiscount
+    discountAmount = Math.min(Math.max(percentageDiscount, minPossibleDiscount), maxDiscount);
+  }
+
+  // --- Apply discount ---
+  const finalTotal = Math.max(0, Total - discountAmount);
+
+  return {
+    success: true,
+    Total: finalTotal,
+    discountGiven: discountAmount,
+  };
+};
+
 exports.CreateOrder = async (req, res) => {
   try {
     const UserId = req.user._id;
     const campusId = req.user.campus;
-    const { items: _items, pickUpTime, canteenId } = req.body;
+    const { items: _items, pickUpTime, canteenId,offer } = req.body;
     const deviceId = req.deviceInfo.deviceId;
     //assuming the Items is array which is converted to string by JSON.stringy method in frontEnd
     const Items = JSON.parse(_items); //converting _items to an Json array;
@@ -101,6 +177,14 @@ exports.CreateOrder = async (req, res) => {
     });
     for (const data of penalty) {
       Total += data.Amount;
+    }
+
+    if(offer){
+      const result=await applyOffer(Total,offer,UserId);
+      if(!result.success){
+        return res.status(400).json(result)
+      }
+      Total=result.Total;
     }
 
     const order = await Order.create({
