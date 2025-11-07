@@ -98,7 +98,7 @@ exports.getTopUsersBySpending = async (req, res) => {
 exports.getUsersByRoleList = async (req, res) => {
   try {
     const [students, owners] = await Promise.all([
-      User.find({ role: "student" }).select("name email role isBanned"),
+      User.find({ role: "student" }).select("name email role isBanned phone"),
       User.find({ role: "canteen" }).select("name email role isBanned"),
     ])
     res.json({ students, canteenOwners: owners })
