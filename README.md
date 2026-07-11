@@ -22,8 +22,6 @@
 - [🤝 Contributing](#-contributing)  
 - [📄 License](#-license)
 
----
-
 ## ✨ Features
 
 - 🔐 JWT-based authentication with Google OAuth2
