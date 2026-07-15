@@ -300,7 +300,7 @@ exports.getReadyItemsofAllCanteens = async (req, res) => {
         success: false,
         message: "No items found in ready state"
       });
-    }
+    } 
 
     return res.status(200).json({
       success: true,

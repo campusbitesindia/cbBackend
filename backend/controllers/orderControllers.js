@@ -158,7 +158,19 @@ exports.CreateOrder = async (req, res) => {
     if (!isValidPickUpTime) {
       return res.status(400).json({
         success: false,
-        message: "PickUp time Can't Be less than 10 minutes",
+        message: "Pickup time must align to a 15-minute slot",
+      });
+    }
+
+    const pickupDate = new Date(pickUpTime);
+    const isAlignedToSlot =
+      [0, 15, 30, 45].includes(pickupDate.getMinutes()) &&
+      pickupDate.getSeconds() === 0;
+ 
+    if (!isAlignedToSlot) {
+      return res.status(400).json({
+        success: false,
+        message: "Pickup time must align to a 15-minute slot",
       });
     }
 
