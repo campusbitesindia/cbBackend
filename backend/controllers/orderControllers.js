@@ -151,14 +151,40 @@ exports.CreateOrder = async (req, res) => {
     }
 
     //checking or valid pickup time and the difference will be in mircoseconds
-    const isValidPickUpTime =
-      new Date(pickUpTime) - Date.now() >= 10 * 60 * 1000 ? true : false;
+    // const isValidPickUpTime =
+    //   new Date(pickUpTime) - Date.now() >= 10 * 60 * 1000 ? true : false;
 
-    // if pickup time is less than 10 minutes return erro
-    if (!isValidPickUpTime) {
+    // // if pickup time is less than 10 minutes return erro
+    // if (!isValidPickUpTime) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Pickup time must align to a 15-minute slot",
+    //   });
+    // }
+
+    const pickupDate = new Date(pickUpTime);
+    const now = new Date();
+
+    const FIFTEEN_MINUTES = 15 * 60 * 1000;
+
+    // Check slot alignment
+    const isAlignedToSlot =
+      pickupDate.getMinutes() % 15 === 0 &&
+      pickupDate.getSeconds() === 0 &&
+      pickupDate.getMilliseconds() === 0;
+
+    if (!isAlignedToSlot) {
       return res.status(400).json({
         success: false,
-        message: "PickUp time Can't Be less than 10 minutes",
+        message: "Pickup time must align to a 15-minute slot",
+      });
+    }
+
+    // Check minimum pickup time
+    if (pickupDate.getTime() < now.getTime() + FIFTEEN_MINUTES) {
+      return res.status(400).json({
+        success: false,
+        message: "Pickup time must be at least 15 minutes from now",
       });
     }
 
